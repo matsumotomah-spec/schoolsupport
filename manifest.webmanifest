@@ -1,0 +1,14 @@
+{
+  "name": "クラス支援ツール",
+  "short_name": "クラス支援",
+  "description": "教室と職員室で使う統合クラス支援ツール",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f7f6",
+  "theme_color": "#397257",
+  "lang": "ja",
+  "icons": [
+    {"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}

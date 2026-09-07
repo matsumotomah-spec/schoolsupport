@@ -1,0 +1,31 @@
+(function(){
+  'use strict';
+
+  const submissionLabels={submitted:'提出済み',forgotten:'忘れた',unsubmitted:'未提出',unconfirmed:'未確認',absent:'欠席'};
+  const assessmentLabels={evaluated:'評価済み',unsubmitted:'未提出',absent:'欠席'};
+  const dateOf=record=>record.dueDate||record.date||'';
+  function inRange(date,start,end){return date&&date>=start&&date<=end;}
+  function rosterInfo(roster){const byId=new Map(roster.map(row=>[row.student.id,{number:Number(row.enrollment.number)||'',name:row.student.name}]));return{byId,ordered:[...roster].sort((a,b)=>(Number(a.enrollment.number)||999)-(Number(b.enrollment.number)||999))};}
+  function row(className,date,kind,title,student,status,closed=''){return[className,date,kind,title,student.number,student.name,status,closed];}
+
+  function submissionRows({classItem,roster,records,start,end}){
+    const {byId,ordered}=rosterInfo(roster),rows=[];
+    const daily=records.filter(item=>item.type==='dailyHomework'&&inRange(item.date,start,end)&&!item.deletedAt),dailyDates=[...new Set(daily.map(item=>item.date))].sort();
+    for(const date of dailyDates){const map=new Map(daily.filter(item=>item.date===date).map(item=>[item.studentId,item]));for(const rosterRow of ordered){const item=map.get(rosterRow.student.id),student=byId.get(rosterRow.student.id),status=submissionLabels[item?.status||'unconfirmed']||item?.status||'未確認';rows.push(row(classItem.name,date,'毎日の宿題','毎日の宿題',student,item?.resolvedAt&&item?.status==='forgotten'?`${status}（解消済み）`:status));}}
+    const occurrences=records.filter(item=>item.type==='weeklyOccurrence'&&inRange(dateOf(item),start,end)&&!item.deletedAt).sort((a,b)=>dateOf(a).localeCompare(dateOf(b)));
+    const weekly=records.filter(item=>item.type==='weeklySubmission'&&!item.deletedAt);
+    for(const occurrence of occurrences){const map=new Map(weekly.filter(item=>item.occurrenceId===occurrence.id).map(item=>[item.studentId,item]));for(const rosterRow of ordered){const item=map.get(rosterRow.student.id),student=byId.get(rosterRow.student.id);rows.push(row(classItem.name,dateOf(occurrence),'週宿題',occurrence.title||'週宿題',student,submissionLabels[item?.status||'unsubmitted']||item?.status||'未提出'));}}
+    const items=records.filter(item=>item.type==='occasionalItem'&&inRange(dateOf(item),start,end)&&!item.deletedAt).sort((a,b)=>dateOf(a).localeCompare(dateOf(b))),occasional=records.filter(item=>item.type==='occasionalSubmission'&&!item.deletedAt);
+    for(const item of items){const map=new Map(occasional.filter(record=>record.itemId===item.id).map(record=>[record.studentId,record]));for(const rosterRow of ordered){const record=map.get(rosterRow.student.id),student=byId.get(rosterRow.student.id);rows.push(row(classItem.name,dateOf(item),'不定期提出物',item.title||'提出物',student,submissionLabels[record?.status||'unsubmitted']||record?.status||'未提出',item.archived?'完結':'継続中'));}}
+    return[['クラス','日付・提出予定日','種類','宿題・提出物名','出席番号','氏名','状態','管理状態'],...rows];
+  }
+
+  function assessmentRows({classItem,roster,records,start,end}){
+    const {byId}=rosterInfo(roster),rows=records.filter(item=>item.type==='notebookAssessment'&&inRange(item.date,start,end)&&!item.deletedAt).map(item=>{const student=byId.get(item.studentId)||{number:'',name:'名簿外'};return[classItem.name,item.date,item.subject||'',item.unit||'',item.title||'',student.number,student.name,item.grade||'',assessmentLabels[item.status]||item.status||''];}).sort((a,b)=>a[1].localeCompare(b[1])||String(a[2]).localeCompare(String(b[2]),'ja')||(Number(a[5])||999)-(Number(b[5])||999));
+    return[['クラス','日付','教科','単元','題名','出席番号','氏名','評価','状態'],...rows];
+  }
+
+  function cell(value){let text=String(value??'');if(/^[=+@]/.test(text)||/^-\D/.test(text))text=`'${text}`;return`"${text.replace(/"/g,'""')}"`;}
+  function csv(rows){return'\uFEFF'+rows.map(values=>values.map(cell).join(',')).join('\r\n');}
+  window.ClassCsvExport={submissionRows,assessmentRows,csv};
+})();

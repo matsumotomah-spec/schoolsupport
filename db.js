@@ -1,0 +1,148 @@
+(function(){
+  'use strict';
+
+  const DB_NAME='class-support-v1';
+  const DB_VERSION=1;
+  const STORES=['meta','years','classes','students','enrollments','records','trash'];
+
+  function requestResult(request){
+    return new Promise((resolve,reject)=>{
+      request.onsuccess=()=>resolve(request.result);
+      request.onerror=()=>reject(request.error);
+    });
+  }
+
+  function transactionDone(transaction){
+    return new Promise((resolve,reject)=>{
+      transaction.oncomplete=()=>resolve();
+      transaction.onerror=()=>reject(transaction.error);
+      transaction.onabort=()=>reject(transaction.error||new Error('保存処理が中断されました'));
+    });
+  }
+
+  function open(){
+    return new Promise((resolve,reject)=>{
+      const request=indexedDB.open(DB_NAME,DB_VERSION);
+      request.onupgradeneeded=()=>{
+        const db=request.result;
+        const meta=db.createObjectStore('meta',{keyPath:'key'});
+        meta.createIndex('updatedAt','updatedAt');
+
+        const years=db.createObjectStore('years',{keyPath:'id'});
+        years.createIndex('label','label',{unique:true});
+
+        const classes=db.createObjectStore('classes',{keyPath:'id'});
+        classes.createIndex('yearId','yearId');
+        classes.createIndex('yearOrder',['yearId','order']);
+
+        db.createObjectStore('students',{keyPath:'id'});
+
+        const enrollments=db.createObjectStore('enrollments',{keyPath:'id'});
+        enrollments.createIndex('classId','classId');
+        enrollments.createIndex('studentId','studentId');
+        enrollments.createIndex('classNumber',['classId','number']);
+
+        const records=db.createObjectStore('records',{keyPath:'id'});
+        records.createIndex('classId','classId');
+        records.createIndex('studentId','studentId');
+        records.createIndex('typeDate',['type','date']);
+
+        const trash=db.createObjectStore('trash',{keyPath:'id'});
+        trash.createIndex('purgeAfter','purgeAfter');
+      };
+      request.onsuccess=()=>resolve(request.result);
+      request.onerror=()=>reject(request.error);
+    });
+  }
+
+  async function withStore(storeName,mode,operation){
+    const db=await open();
+    const tx=db.transaction(storeName,mode);
+    const store=tx.objectStore(storeName);
+    const result=await operation(store,tx);
+    if(mode==='readwrite')await transactionDone(tx);
+    db.close();
+    return result;
+  }
+
+  function uid(prefix){
+    const value=crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    return `${prefix}_${value}`;
+  }
+
+  function now(){return new Date().toISOString();}
+
+  function deviceId(){
+    const key='class-support-device-id';
+    let value=localStorage.getItem(key);
+    if(!value){value=uid('device');localStorage.setItem(key,value);}
+    return value;
+  }
+
+  function stamp(item,isNew){
+    const timestamp=now();
+    return {...item,createdAt:isNew?(item.createdAt||timestamp):item.createdAt,updatedAt:timestamp,deviceId:deviceId()};
+  }
+
+  async function get(storeName,key){
+    return withStore(storeName,'readonly',store=>requestResult(store.get(key)));
+  }
+
+  async function getAll(storeName){
+    return withStore(storeName,'readonly',store=>requestResult(store.getAll()));
+  }
+
+  async function getAllByIndex(storeName,indexName,value){
+    return withStore(storeName,'readonly',store=>requestResult(store.index(indexName).getAll(value)));
+  }
+
+  async function put(storeName,item){
+    const current=item.id?await get(storeName,item.id):null;
+    const prepared=stamp(item,!current);
+    await withStore(storeName,'readwrite',store=>requestResult(store.put(prepared)));
+    return prepared;
+  }
+
+  async function putMany(storeName,items){
+    const prepared=items.map(item=>stamp(item,!item.createdAt));
+    await withStore(storeName,'readwrite',async store=>{
+      prepared.forEach(item=>store.put(item));
+    });
+    return prepared;
+  }
+
+  async function putRaw(storeName,item){
+    await withStore(storeName,'readwrite',store=>requestResult(store.put(item)));
+    return item;
+  }
+
+  async function putManyRaw(storeName,items){
+    await withStore(storeName,'readwrite',async store=>{items.forEach(item=>store.put(item));});
+    return items;
+  }
+
+  async function remove(storeName,key){
+    return withStore(storeName,'readwrite',store=>requestResult(store.delete(key)));
+  }
+
+  async function getMeta(key,fallback=null){
+    const row=await get('meta',key);
+    return row?row.value:fallback;
+  }
+
+  async function setMeta(key,value){
+    const timestamp=now();
+    await withStore('meta','readwrite',store=>requestResult(store.put({key,value,updatedAt:timestamp,deviceId:deviceId()})));
+    return value;
+  }
+
+  async function resetAll(){
+    const db=await open();
+    const tx=db.transaction(STORES,'readwrite');
+    STORES.forEach(name=>tx.objectStore(name).clear());
+    await transactionDone(tx);
+    db.close();
+  }
+
+  window.ClassDB={open,uid,now,deviceId,get,getAll,getAllByIndex,put,putMany,putRaw,putManyRaw,remove,getMeta,setMeta,resetAll};
+})();
