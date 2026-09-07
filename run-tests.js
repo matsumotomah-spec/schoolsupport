@@ -67,8 +67,9 @@ function testShellAndNavigation(){
   const styles=fs.readFileSync(path.join(root,'styles.css'),'utf8');
   const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-  assert.ok(app.includes('id="sync-placeholder">同期'));
-  assert.ok(app.includes('id="settings">設定'));
+  assert.ok(!app.includes('id="sync-placeholder">同期'),'右上の独立した同期ボタンを残さない');
+  assert.ok(app.includes('data-common-settings'),'共通ヘッダーから設定案内へ移動できる');
+  assert.ok(app.includes('home-button'),'ホームを共通ヘッダーで強調する');
   assert.ok(!app.includes("['roster','名簿']"),'名簿の独立タブを残さない');
   assert.ok(app.includes("state.classSettingsView='roster'"),'名簿画面へ直接移動できる');
   assert.ok(app.includes("showToast('先に名簿を登録してください')"));
@@ -93,7 +94,15 @@ function testShellAndNavigation(){
   assert.ok(app.includes("window.addEventListener('unhandledrejection'"),'非同期エラーを利用者へ通知する');
   assert.ok(app.includes('requireTeacher(renderHome)'),'起動時は教師ホームへの認証から開始する');
   assert.ok(app.includes('themePreference'),'ライト・ダークモードを保存する');
-  assert.ok(app.includes("['sync','同期']"),'設定タブから同期へ移動できる');
+  assert.ok(app.includes("['data','データ管理']"),'設定内にデータ管理をまとめる');
+  assert.ok(app.includes('renderSettingsGuide'),'設定の説明ページを用意する');
+  assert.ok(app.includes('openContextHelp'),'ページ別ヘルプを横から表示する');
+  assert.ok(app.includes('help-search'),'ヘルプを検索できる');
+  assert.ok(app.includes('teacherFooter'),'日常機能を下部から切り替えられる');
+  assert.ok(app.includes('＋ 新しい宿題を作る'),'週宿題の登録動線を明確にする');
+  assert.ok(app.includes('＋ 新しい提出物を作る'),'提出物の登録動線を明確にする');
+  assert.ok(app.includes('gradeLevel'),'一般級の学年を名簿へ引き継ぐ');
+  assert.ok(app.includes('復旧コードだけで年度パスワードを再設定'),'ローカルデータは復旧コードだけで開ける');
   assert.ok(app.includes('教師用PINは数字6桁で入力してください。'),'PIN桁数を日本語で案内する');
   assert.ok(!app.includes('NFPYM-8AEXB-QQS28'),'バックアップ画面の復旧コード例を表示しない');
   assert.ok(app.includes('data-shortage-subject'),'不足教科を指定して児童メモを開く');
@@ -105,6 +114,8 @@ function testShellAndNavigation(){
   assert.ok(!app.includes('<span></span><span></span>'),'ノート評価の空白スペーサーを残さない');
   assert.ok(styles.includes('grid-template-columns:repeat(6,minmax(0,1fr))'),'ノート評価を6分割で均等配置する');
   assert.ok(styles.includes('grid-column:3 / span 2;grid-row:2'),'Bを中央に配置する');
+  assert.ok(styles.includes('.teacher-footer'),'教師用の下部ナビを表示する');
+  assert.ok(styles.includes('.help-drawer'),'ページ別ヘルプをスライド表示する');
   const shellMatch=sw.match(/const SHELL=\[([^;]+)\];/s);
   assert.ok(shellMatch);
   const assets=[...shellMatch[1].matchAll(/'\.\/([^']+)'/g)].map(match=>match[1]).filter(Boolean);
