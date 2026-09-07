@@ -103,6 +103,14 @@ function testShellAndNavigation(){
   assert.ok(app.includes('＋ 新しい提出物を作る'),'提出物の登録動線を明確にする');
   assert.ok(app.includes('gradeLevel'),'一般級の学年を名簿へ引き継ぐ');
   assert.ok(app.includes('復旧コードだけで年度パスワードを再設定'),'ローカルデータは復旧コードだけで開ける');
+  assert.ok(app.includes('data-resolve-daily'),'児童概要から毎日の忘れ物を解決できる');
+  assert.ok(app.includes('data-resolve-weekly'),'児童概要から週宿題を提出済みにできる');
+  assert.ok(app.includes('data-resolve-occasional'),'児童概要から提出物を解決できる');
+  assert.ok(app.includes('openStudentQuickAdd'),'児童概要から記録を追加できる');
+  assert.ok(app.includes('openStudentMemoAdd'),'児童概要からメモを追加できる');
+  assert.ok(app.includes('openStudentAssessmentAdd'),'児童概要から評価を追加できる');
+  assert.ok(app.includes('openStudentCertificateAdd'),'児童概要から賞状を追加できる');
+  assert.ok(app.includes('openStudentSubmissionAdd'),'児童概要から提出物を追加できる');
   assert.ok(app.includes('教師用PINは数字6桁で入力してください。'),'PIN桁数を日本語で案内する');
   assert.ok(!app.includes('NFPYM-8AEXB-QQS28'),'バックアップ画面の復旧コード例を表示しない');
   assert.ok(app.includes('data-shortage-subject'),'不足教科を指定して児童メモを開く');
@@ -116,6 +124,7 @@ function testShellAndNavigation(){
   assert.ok(styles.includes('grid-column:3 / span 2;grid-row:2'),'Bを中央に配置する');
   assert.ok(styles.includes('.teacher-footer'),'教師用の下部ナビを表示する');
   assert.ok(styles.includes('.help-drawer'),'ページ別ヘルプをスライド表示する');
+  assert.ok(styles.includes('.unresolved-row'),'未解決項目を操作可能な一覧で表示する');
   const shellMatch=sw.match(/const SHELL=\[([^;]+)\];/s);
   assert.ok(shellMatch);
   const assets=[...shellMatch[1].matchAll(/'\.\/([^']+)'/g)].map(match=>match[1]).filter(Boolean);

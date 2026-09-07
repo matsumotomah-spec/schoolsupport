@@ -209,8 +209,12 @@ h3{font-size:1rem;margin-bottom:8px}
 .overview-layout{display:grid;grid-template-columns:1fr;gap:12px}
 .overview-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .overview-stat{background:var(--surface-2);border-radius:10px;padding:10px}
+.overview-stat{border:1px solid transparent;color:var(--text);text-align:left;display:grid;gap:7px;min-height:92px}
+.overview-stat.static{cursor:default}.overview-stat.actionable{cursor:pointer;border-color:var(--line)}.overview-stat.actionable:hover,.overview-stat.actionable:focus-visible{border-color:var(--class-color);outline:2px solid color-mix(in srgb,var(--class-color) 28%,transparent)}
+.overview-stat.needs-action{background:light-dark(#f5e9df,#49362d);border-color:light-dark(#c99871,#8f684e)}.overview-stat span{font-size:.75rem;color:var(--class-color);font-weight:700}
 .record-list{display:grid;gap:8px}
 .record-item{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:10px;text-align:left;color:var(--text)}
+.unresolved-list{display:grid;gap:9px}.unresolved-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-left:5px solid var(--warning);border-radius:11px;background:var(--surface-2);padding:11px 12px}.unresolved-row>div{display:grid;gap:4px}.unresolved-row span{font-size:.82rem;color:var(--muted)}
 .memo-shortage{border-left:5px solid var(--warning)}
 .shortage-row{width:100%;display:grid;grid-template-columns:minmax(120px,.7fr) 1.3fr;gap:10px;text-align:left;align-items:center;border-bottom:1px solid var(--line);color:var(--text);padding:10px 4px}
 .shortage-row:last-child{border-bottom:0}
@@ -353,6 +357,7 @@ h3{font-size:1rem;margin-bottom:8px}
   .tool-controls{grid-template-columns:1fr}
   .tool-controls .wide{grid-column:auto}
   .overview-stats{grid-template-columns:1fr}
+  .unresolved-row{grid-template-columns:1fr}.unresolved-row .button{width:100%}
   .sync-summary{grid-template-columns:1fr 1fr}
   .report-columns{grid-template-columns:1fr}
   .help-grid{grid-template-columns:1fr}

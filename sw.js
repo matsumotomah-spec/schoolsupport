@@ -1,4 +1,4 @@
-const CACHE_NAME='class-support-shell-v24';
+const CACHE_NAME='class-support-shell-v25';
 const SHELL=['./','./index.html','./styles.css','./db.js','./migration.js','./xlsx-reader.js','./csv-export.js','./app.js','./manifest.webmanifest','./icon.svg'];
 
 self.addEventListener('install',event=>{
