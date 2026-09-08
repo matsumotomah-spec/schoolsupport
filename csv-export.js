@@ -6,17 +6,18 @@
   const dateOf=record=>record.dueDate||record.date||'';
   function inRange(date,start,end){return date&&date>=start&&date<=end;}
   function rosterInfo(roster){const byId=new Map(roster.map(row=>[row.student.id,{number:Number(row.enrollment.number)||'',name:row.student.name}]));return{byId,ordered:[...roster].sort((a,b)=>(Number(a.enrollment.number)||999)-(Number(b.enrollment.number)||999))};}
+  function expectedOn(rosterRow,date){const periods=rosterRow.enrollments||[rosterRow.enrollment];return periods.some(item=>(item.startDate||'0000-01-01')<=date&&(!item.endDate||date<=item.endDate));}
   function row(className,date,kind,title,student,status,closed=''){return[className,date,kind,title,student.number,student.name,status,closed];}
 
   function submissionRows({classItem,roster,records,start,end}){
     const {byId,ordered}=rosterInfo(roster),rows=[];
     const daily=records.filter(item=>item.type==='dailyHomework'&&inRange(item.date,start,end)&&!item.deletedAt),dailyDates=[...new Set(daily.map(item=>item.date))].sort();
-    for(const date of dailyDates){const map=new Map(daily.filter(item=>item.date===date).map(item=>[item.studentId,item]));for(const rosterRow of ordered){const item=map.get(rosterRow.student.id),student=byId.get(rosterRow.student.id),status=submissionLabels[item?.status||'unconfirmed']||item?.status||'未確認';rows.push(row(classItem.name,date,'毎日の宿題','毎日の宿題',student,item?.resolvedAt&&item?.status==='forgotten'?`${status}（解消済み）`:status));}}
+    for(const date of dailyDates){const map=new Map(daily.filter(item=>item.date===date).map(item=>[item.studentId,item]));for(const rosterRow of ordered.filter(item=>expectedOn(item,date))){const item=map.get(rosterRow.student.id),student=byId.get(rosterRow.student.id),status=submissionLabels[item?.status||'unconfirmed']||item?.status||'未確認';rows.push(row(classItem.name,date,'毎日の宿題','毎日の宿題',student,item?.resolvedAt&&item?.status==='forgotten'?`${status}（解消済み）`:status));}}
     const occurrences=records.filter(item=>item.type==='weeklyOccurrence'&&inRange(dateOf(item),start,end)&&!item.deletedAt).sort((a,b)=>dateOf(a).localeCompare(dateOf(b)));
     const weekly=records.filter(item=>item.type==='weeklySubmission'&&!item.deletedAt);
-    for(const occurrence of occurrences){const map=new Map(weekly.filter(item=>item.occurrenceId===occurrence.id).map(item=>[item.studentId,item]));for(const rosterRow of ordered){const item=map.get(rosterRow.student.id),student=byId.get(rosterRow.student.id);rows.push(row(classItem.name,dateOf(occurrence),'週宿題',occurrence.title||'週宿題',student,submissionLabels[item?.status||'unsubmitted']||item?.status||'未提出'));}}
+    for(const occurrence of occurrences){const date=dateOf(occurrence),map=new Map(weekly.filter(item=>item.occurrenceId===occurrence.id).map(item=>[item.studentId,item]));for(const rosterRow of ordered.filter(item=>expectedOn(item,date))){const item=map.get(rosterRow.student.id),student=byId.get(rosterRow.student.id);rows.push(row(classItem.name,date,'週宿題',occurrence.title||'週宿題',student,submissionLabels[item?.status||'unsubmitted']||item?.status||'未提出'));}}
     const items=records.filter(item=>item.type==='occasionalItem'&&inRange(dateOf(item),start,end)&&!item.deletedAt).sort((a,b)=>dateOf(a).localeCompare(dateOf(b))),occasional=records.filter(item=>item.type==='occasionalSubmission'&&!item.deletedAt);
-    for(const item of items){const map=new Map(occasional.filter(record=>record.itemId===item.id).map(record=>[record.studentId,record]));for(const rosterRow of ordered){const record=map.get(rosterRow.student.id),student=byId.get(rosterRow.student.id);rows.push(row(classItem.name,dateOf(item),'不定期提出物',item.title||'提出物',student,submissionLabels[record?.status||'unsubmitted']||record?.status||'未提出',item.archived?'完結':'継続中'));}}
+    for(const item of items){const date=dateOf(item),map=new Map(occasional.filter(record=>record.itemId===item.id).map(record=>[record.studentId,record]));for(const rosterRow of ordered.filter(row=>expectedOn(row,date))){const record=map.get(rosterRow.student.id),student=byId.get(rosterRow.student.id);rows.push(row(classItem.name,date,'提出物',item.title||'提出物',student,submissionLabels[record?.status||'unsubmitted']||record?.status||'未提出',item.archived?'完結':'継続中'));}}
     return[['クラス','日付・提出予定日','種類','宿題・提出物名','出席番号','氏名','状態','管理状態'],...rows];
   }
 
