@@ -57,12 +57,20 @@
 
   async function withStore(storeName,mode,operation){
     const db=await open();
-    const tx=db.transaction(storeName,mode);
-    const store=tx.objectStore(storeName);
-    const result=await operation(store,tx);
-    if(mode==='readwrite')await transactionDone(tx);
-    db.close();
-    return result;
+    let tx;
+    try{
+      tx=db.transaction(storeName,mode);
+      const done=mode==='readwrite'?transactionDone(tx):null;
+      const store=tx.objectStore(storeName);
+      const result=await operation(store,tx);
+      if(done)await done;
+      return result;
+    }catch(error){
+      if(mode==='readwrite'&&tx)try{tx.abort();}catch{}
+      throw error;
+    }finally{
+      db.close();
+    }
   }
 
   function uid(prefix){
@@ -137,12 +145,34 @@
   }
 
   async function resetAll(){
-    const db=await open();
-    const tx=db.transaction(STORES,'readwrite');
-    STORES.forEach(name=>tx.objectStore(name).clear());
-    await transactionDone(tx);
-    db.close();
+    await applyBatch({clear:STORES});
   }
 
-  window.ClassDB={open,uid,now,deviceId,get,getAll,getAllByIndex,put,putMany,putRaw,putManyRaw,remove,getMeta,setMeta,resetAll};
+  async function applyBatch({clear=[],puts={},deletes={}}={}){
+    const names=[...new Set([...clear,...Object.keys(puts),...Object.keys(deletes)])];
+    if(!names.length)return;
+    for(const name of names)if(!STORES.includes(name))throw new Error(`保存先「${name}」は利用できません`);
+    const db=await open();
+    let tx;
+    try{
+      tx=db.transaction(names,'readwrite');
+      const done=transactionDone(tx);
+      for(const name of clear)tx.objectStore(name).clear();
+      for(const [name,items] of Object.entries(puts))for(const item of items||[])tx.objectStore(name).put(item);
+      for(const [name,keys] of Object.entries(deletes))for(const key of keys||[])tx.objectStore(name).delete(key);
+      await done;
+    }catch(error){
+      if(tx)try{tx.abort();}catch{}
+      throw error;
+    }finally{
+      db.close();
+    }
+  }
+
+  async function replaceAllRaw(data={}){
+    const puts=Object.fromEntries(STORES.map(name=>[name,Array.isArray(data[name])?data[name]:[]]));
+    await applyBatch({clear:STORES,puts});
+  }
+
+  window.ClassDB={open,uid,now,deviceId,get,getAll,getAllByIndex,put,putMany,putRaw,putManyRaw,remove,getMeta,setMeta,applyBatch,replaceAllRaw,resetAll};
 })();

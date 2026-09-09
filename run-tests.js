@@ -8,6 +8,8 @@ const vm=require('node:vm');
 const {execFileSync}=require('node:child_process');
 
 const root=path.resolve(__dirname,'..');
+const applicationFiles=['app-core.js','app-shell.js','app-settings.js','app-records.js','app-seating.js','app-reports.js','app-data.js','app.js'];
+const applicationSource=()=>applicationFiles.map(file=>fs.readFileSync(path.join(root,file),'utf8')).join('\n');
 global.window=global;
 global.localStorage={length:0,key(){return null;},getItem(){return null;},removeItem(){}};
 for(const file of ['csv-export.js','migration.js','xlsx-reader.js'])vm.runInThisContext(fs.readFileSync(path.join(root,file),'utf8'),{filename:file});
@@ -66,14 +68,16 @@ async function testXlsxRoster(){
 }
 
 function testShellAndNavigation(){
-  const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  const app=applicationSource();
   const styles=fs.readFileSync(path.join(root,'styles.css'),'utf8');
   const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
+  const db=fs.readFileSync(path.join(root,'db.js'),'utf8');
   assert.ok(!app.includes('id="sync-placeholder">同期'),'右上の独立した同期ボタンを残さない');
   assert.ok(app.includes('data-common-settings'),'共通ヘッダーから設定案内へ移動できる');
   assert.ok(app.includes('home-button'),'ホームを共通ヘッダーで強調する');
   assert.ok(app.includes('data-current-class'),'共通ヘッダーから現在のクラスを確認・切替できる');
+  assert.ok(app.includes('<small>操作中</small>'),'現在操作中のクラスを明示する');
   assert.ok(app.includes('mode-chip'),'教師用・児童用モードを常時表示する');
   assert.ok(!app.includes('data-focus-toggle'),'意味が伝わりにくい集中表示ボタンをヘッダーに残さない');
   assert.ok(app.includes('appearance-show-explanations'),'説明文の表示・非表示を設定で選べる');
@@ -93,6 +97,12 @@ function testShellAndNavigation(){
   assert.ok(app.includes('home-hint'),'件数バッジの凡例を表示する');
   assert.ok(app.includes('dashboardHtml'),'ホームの対応状況ダッシュボードを表示する');
   assert.ok(app.includes('recordSyncHistory'),'同期履歴を保存する');
+  assert.ok(db.includes('function applyBatch')&&db.includes("db.transaction(names,'readwrite')"),'複数保存先を一つの処理で更新する');
+  assert.ok(db.includes('function replaceAllRaw'),'復旧時に一括置換する');
+  assert.ok(app.includes('savePreSyncSnapshot'),'同期直前の暗号化状態を自動保存する');
+  assert.ok(app.includes('restorePreSyncSnapshot'),'同期前の状態へ戻せる');
+  assert.ok(app.includes('validateSyncPayload'),'同期・復旧データを反映前に検証する');
+  assert.ok(app.includes('restoreBackupFile'),'バックアップ復旧と同期取込を分離する');
   assert.ok(app.includes('runOnce'),'二重操作を防止する');
   assert.ok(app.includes('pinAuth:await createVerifier(pin)'),'初回設定で教師用PINを保存する');
   assert.ok(app.includes('PIN_MAX_FAILURES=5'),'PINの連続失敗回数を制限する');
@@ -108,6 +118,7 @@ function testShellAndNavigation(){
   assert.ok(app.includes('themePreference'),'ライト・ダークモードを保存する');
   assert.ok(app.includes("['data','保存・端末間共有']"),'設定内に保存・端末間共有をまとめる');
   assert.ok(app.includes('renderSettingsGuide'),'設定の説明ページを用意する');
+  assert.ok(app.includes('まず使う')&&app.includes('ときどき使う')&&app.includes('年度始め・端末を替えたとき'),'設定を利用頻度で3群に整理する');
   assert.ok(app.includes('openContextHelp'),'ページ別ヘルプを横から表示する');
   assert.ok(app.includes('help-search'),'ヘルプを検索できる');
   assert.ok(app.includes('teacherFooter'),'日常機能を下部から切り替えられる');
@@ -160,6 +171,8 @@ function testShellAndNavigation(){
   assert.ok(styles.includes('.teacher-footer'),'教師用の下部ナビを表示する');
   assert.ok(styles.includes('.student-overview-tabs'),'設定と児童記録のタブを視覚的に分ける');
   assert.ok(styles.includes('.data-task-grid'),'データ管理の目的別案内を表示する');
+  assert.ok(app.includes('primary-data-tasks'),'データ管理は同期と安全保存を前面にする');
+  assert.ok(app.includes('最近の同期・保存履歴を確認する'),'同期履歴を必要時だけ開く');
   assert.ok(styles.includes(':root[data-explanations="false"]'),'表示設定で説明領域を畳む');
   assert.ok(app.includes('data-save-row'),'児童を一人ずつ保存できる');
   assert.ok(app.includes('teacherHelpContentHtml'),'教員の作業順によるチュートリアルとFAQを表示する');
@@ -174,6 +187,13 @@ function testShellAndNavigation(){
   assert.ok(styles.includes('.sync-steps'),'同期手順を視覚的に表示する');
   assert.ok(!app.includes('data-theme-toggle aria-label'),'ヘッダーにテーマ切替を表示しない');
   assert.ok(styles.includes('.reward-icon-choices'),'達成アイコンを選択しやすく表示する');
+  assert.ok(app.includes("STANDARD_ICONS={daily:'宿',weekly:'週',certificate:'賞'"),'標準アイコンを意味の分かる文字にする');
+  assert.ok(app.includes('要対応')&&app.includes('対応が必要な児童'),'件数バッジの意味を文字で示す');
+  assert.ok(app.includes('回収を終える'),'提出物の完了操作を教員向けの言葉にする');
+  assert.ok(app.includes('学習するまとまりを変更'),'支援級の単元設定を分かりやすく案内する');
+  assert.ok(app.includes('seat-condition-count'),'席替えの配慮設定人数を表示する');
+  assert.ok(app.includes("operationTipHtml('押し方を見る'"),'タップ説明を折りたたみ表示にする');
+  assert.ok(styles.includes('.operation-tip'),'タップ説明のアコーディオンを表示する');
   assert.ok(styles.includes('.display-mode-choices'),'アイコン表示モードを選択できる');
   assert.ok(styles.includes('overflow-wrap:anywhere'),'長い表示内容の重なりを防ぐ');
   assert.ok(styles.includes('grid-template-columns:repeat(3,minmax(0,1fr))'),'狭い画面では下部ナビを3列に折り返す');
@@ -185,21 +205,64 @@ function testShellAndNavigation(){
   assert.ok(shellMatch);
   const assets=[...shellMatch[1].matchAll(/'\.\/([^']+)'/g)].map(match=>match[1].split('?')[0]).filter(Boolean);
   for(const asset of assets)assert.ok(fs.existsSync(path.join(root,asset)),`キャッシュ対象 ${asset} が存在する`);
-  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js','app.js'])assert.ok(index.includes(`<script src="${script}?v=33"></script>`));
-  assert.ok(index.includes('styles.css?v=33'),'CSSに公開版番号を付ける');
-  assert.ok(app.includes("register('./sw.js?v=33'"),'Service Workerの公開版番号を付ける');
+  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=36"></script>`));
+  assert.ok(index.includes('styles.css?v=36'),'CSSに公開版番号を付ける');
+  assert.ok(app.includes("register('./sw.js?v=36'"),'Service Workerの公開版番号を付ける');
   assert.ok(app.includes('dateInEnrollment(item.dueDate,currentEnrollment)'),'転入前・転出後の提出予定を未提出扱いにしない');
   assert.ok(app.includes('previousEnrollmentId'),'再在籍は過去の在籍期間を上書きしない');
   assert.ok(app.includes('data-ended-student'),'転出済み児童の過去記録を開ける');
   assert.ok(app.includes('offerSeatForTransfer'),'転入児童を現在の座席へ配置できる');
   assert.ok(app.includes('showUndoToast'),'記録変更を短時間取り消せる');
   assert.ok(app.includes('data-trash-restore'),'30日間のごみ箱から記録を復元できる');
-  assert.ok(app.includes("APP_VERSION='33'"),'データ管理に公開版を表示する');
+  assert.ok(app.includes("APP_VERSION='36'"),'データ管理に公開版を表示する');
+  assert.ok(app.includes('class-support-shell-v${APP_VERSION}'),'更新確認で現在版のキャッシュを保持する');
+  assert.ok(!app.includes('class-support-shell-v34'),'更新確認で旧版キャッシュ名を固定しない');
   assert.ok(styles.includes('@keyframes status-confirm'),'提出操作に短い確認アニメーションを表示する');
 }
 
+function testApplicationSplit(){
+  const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
+  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=36"></script>`));
+  assert.ok(positions.every(position=>position>=0),'分割した全スクリプトを読み込む');
+  assert.deepEqual(positions,[...positions].sort((a,b)=>a-b),'依存関係どおりの順序で読み込む');
+  for(const file of applicationFiles)execFileSync(process.execPath,['--check',path.join(root,file)]);
+  assert.ok(fs.statSync(path.join(root,'app.js')).size<10000,'app.jsは起動処理だけに限定する');
+  const source=applicationSource();
+  assert.ok(source.includes('renderHome')&&source.includes('renderSettings')&&source.includes('renderSeating')&&source.includes('applySyncPlan'),'分割後も主要機能を保持する');
+}
+
+function testSeparateScriptEvaluation(){
+  const documentStub={getElementById(){return null;},addEventListener(){},querySelector(){return{setAttribute(){}};},querySelectorAll(){return[];},documentElement:{dataset:{},style:{setProperty(){}}}};
+  const sandbox={console,document:documentStub,navigator:{onLine:true},localStorage:global.localStorage,crypto:require('node:crypto').webcrypto,TextEncoder,TextDecoder,Uint8Array,Blob,URL,setTimeout,clearTimeout};
+  sandbox.window=sandbox;sandbox.window.addEventListener=()=>{};sandbox.window.matchMedia=()=>({matches:false});
+  const context=vm.createContext(sandbox);
+  for(const file of applicationFiles){
+    let source=fs.readFileSync(path.join(root,file),'utf8');
+    if(file==='app.js')source=source.replace('loadState().catch(','Promise.resolve().catch(');
+    vm.runInContext(source,context,{filename:file});
+  }
+  assert.equal(vm.runInContext('APP_VERSION',context),'36');
+  assert.equal(vm.runInContext('typeof renderHome',context),'function');
+  assert.equal(vm.runInContext('typeof renderSettings',context),'function');
+  assert.equal(vm.runInContext('typeof renderSeating',context),'function');
+  assert.equal(vm.runInContext('typeof applySyncPlan',context),'function');
+}
+
+async function testImportValidation(){
+  const documentStub={getElementById(){return null;},addEventListener(){},querySelector(){return{setAttribute(){}};},querySelectorAll(){return[];},documentElement:{dataset:{},style:{setProperty(){}}}};
+  const sandbox={console,document:documentStub,navigator:{onLine:true},localStorage:global.localStorage,crypto:require('node:crypto').webcrypto,TextEncoder,TextDecoder,Uint8Array,Blob,URL,setTimeout,clearTimeout};
+  sandbox.window=sandbox;sandbox.window.addEventListener=()=>{};sandbox.window.matchMedia=()=>({matches:false});
+  const context=vm.createContext(sandbox);
+  for(const file of applicationFiles){let source=fs.readFileSync(path.join(root,file),'utf8');if(file==='app.js')source=source.replace('loadState().catch(','Promise.resolve().catch(');vm.runInContext(source,context,{filename:file});}
+  const valid={format:'class-support-sync-payload',schemaVersion:1,yearId:'y1',yearLabel:'2026年度',generatedAt:'2026-09-09T00:00:00.000Z',device:'テスト',data:{years:[{id:'y1'}],classes:[{id:'c1',yearId:'y1'}],students:[{id:'s1',name:'青木'}],enrollments:[{id:'e1',classId:'c1',studentId:'s1'}],records:[{id:'r1',classId:'c1',studentId:'s1',type:'memo'}],trash:[],meta:[]}};
+  assert.equal(sandbox.validateSyncPayload(valid),valid,'正しい同期データを受理する');
+  assert.throws(()=>sandbox.validateSyncPayload({...valid,data:{...valid.data,records:[{id:'r2',classId:'c1',studentId:'unknown'}]}}),/児童が不明/,'名簿外IDの記録を拒否する');
+  assert.throws(()=>sandbox.validateSyncPayload({...valid,data:{...valid.data,enrollments:[{id:'e2',classId:'missing',studentId:'s1'}]}}),/所属クラスが不明/,'存在しないクラスへの在籍を拒否する');
+  await assert.rejects(()=>sandbox.readImportText({size:26*1024*1024,text:async()=>''},'テストファイル'),/25MB以下/,'大きすぎるファイルを拒否する');
+}
+
 function testSeatingAlgorithm(){
-  let source=fs.readFileSync(path.join(root,'app.js'),'utf8');
+  let source=applicationSource();
   source=source.replace("if('serviceWorker'in navigator)","window.__seatingTest={isGenderPairSeat,generateSeating,seatingConditionWarnings,seatGridTemplate,parseSeatCare,defaultSeatAisles};if('serviceWorker'in navigator)");
   source=source.replace('loadState().catch(','Promise.resolve().catch(');
   const documentStub={getElementById(){return null;},addEventListener(){},querySelector(){return{setAttribute(){}};},querySelectorAll(){return[];},documentElement:{dataset:{},style:{setProperty(){}}}};
@@ -224,6 +287,13 @@ function testSeatingAlgorithm(){
   const warnings=engine.seatingConditionWarnings(draft,roster);
   assert.ok(!warnings.some(item=>/窓側|廊下側/.test(item)),`位置条件の警告: ${warnings.join(' / ')}`);
   assert.ok(!warnings.some(item=>/男女ペア配置/.test(item)),`男女ペアの警告: ${warnings.join(' / ')}`);
+  const roster36=Array.from({length:36},(_,index)=>({student:{id:`large${index+1}`,name:`児童${index+1}`},enrollment:{number:index+1,gender:index%2?'female':'male'}}));
+  const largeDraft={cols:8,rows:5,emptySeats:[7,15,31,39],aisleAfterColumns:[2,4,6],genderMode:'none',groupDefs:[],conditions:Object.fromEntries(roster36.map(row=>[row.student.id,{vision:0,groups:[],leader:false,window:false,hall:false,front:false,back:false,care:''}])),layout:[],previousLayout:[]};
+  largeDraft.layout=engine.generateSeating(largeDraft,roster36);
+  assert.equal(largeDraft.layout.length,40,'8列×5行の座席数を保つ');
+  assert.equal(largeDraft.layout.filter(Boolean).length,36,'36人を空席4席へ重複なく配置する');
+  assert.equal(new Set(largeDraft.layout.filter(Boolean)).size,36,'同じ児童を複数座席へ配置しない');
+  for(const index of largeDraft.emptySeats)assert.equal(largeDraft.layout[index],null,'指定した空席を維持する');
 }
 
 (async()=>{
@@ -231,6 +301,9 @@ function testSeatingAlgorithm(){
   await testMigration();
   await testXlsxRoster();
   testShellAndNavigation();
+  testApplicationSplit();
+  testSeparateScriptEvaluation();
+  await testImportValidation();
   testSeatingAlgorithm();
   console.log('All integration checks passed.');
 })().catch(error=>{console.error(error);process.exitCode=1;});
