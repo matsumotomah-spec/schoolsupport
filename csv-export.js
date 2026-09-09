@@ -26,7 +26,7 @@
     return[['クラス','日付','教科','単元','題名','出席番号','氏名','評価','状態'],...rows];
   }
 
-  function cell(value){let text=String(value??'');if(/^[=+@]/.test(text)||/^-\D/.test(text))text=`'${text}`;return`"${text.replace(/"/g,'""')}"`;}
+  function cell(value){let text=String(value??'');const leading=/^[\s\u0000-\u001f]*/.exec(text)?.[0]||'';const visible=text.slice(leading.length);if(/^[=+@]/.test(visible)||/^-\D/.test(visible))text=`'${text}`;return`"${text.replace(/"/g,'""')}"`;}
   function csv(rows){return'\uFEFF'+rows.map(values=>values.map(cell).join(',')).join('\r\n');}
   window.ClassCsvExport={submissionRows,assessmentRows,csv};
 })();

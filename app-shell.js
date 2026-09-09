@@ -97,8 +97,17 @@
     return `<div class="app-shell">${headerHtml(title,actions)}<main class="page">${onboardingBannerHtml()}${body}</main>${key==='student'?'':teacherFooter(key)}</div>`;
   }
 
+  function printSection(printClass){
+    const clear=()=>document.body.classList.remove(printClass);
+    document.body.classList.add(printClass);
+    window.addEventListener('afterprint',clear,{once:true});
+    requestAnimationFrame(()=>{window.print();setTimeout(clear,0);});
+  }
+
   function teacherFooter(active){const classItem=selectedClass(),allowed=!classItem?.isOwn&&!isSupportClass(classItem)?['memo','assessment','occasional']:['daily','weekly','certificate','memo','assessment','occasional'];const labels={daily:'毎日の宿題',weekly:'週宿題',certificate:'ミニ賞状',memo:'児童メモ',assessment:'ノート評価',occasional:'提出物'};return`<nav class="teacher-footer" aria-label="日常機能" style="--footer-count:${allowed.length}">${allowed.map(id=>`<button type="button" data-footer-tool="${id}" aria-current="${active===id?'page':'false'}" title="${labels[id]}へ切り替える"><span>${featureIcon(id)}</span>${labels[id]}</button>`).join('')}</nav>`;}
-  function wireToolHome(){const key=state.activeTool||state.route.replace('teacher-','');wireCommonHeader(key);wireOnboardingStop();document.querySelector('[data-breadcrumb-home]')?.addEventListener('click',()=>navigateSafely(renderHome));document.querySelectorAll('[data-footer-tool]').forEach(button=>button.addEventListener('click',()=>navigateSafely(()=>openTool(button.dataset.footerTool))));}
+  function wireToolHome(){const key=state.activeTool||state.route.replace('teacher-','');wireCommonHeader(key);wireOnboardingStop();document.querySelector('[data-breadcrumb-home]')?.addEventListener('click',()=>navigateSafely(renderHome));document.querySelectorAll('[data-footer-tool]').forEach(button=>button.addEventListener('click',()=>navigateSafely(()=>openTool(button.dataset.footerTool))));document.querySelectorAll('[data-print-teacher-seats]').forEach(button=>button.addEventListener('click',()=>printSection('printing-teacher-seats')));}
+
+  function activeSeatGridTemplate(classItem){const cols=Math.max(1,Number(classItem?.activeSeatCols)||6),aisles=new Set((classItem?.activeSeatAisleAfterColumns||[]).map(Number)),tracks=[];for(let column=1;column<=cols;column++){tracks.push('minmax(0,1fr)');if(column<cols&&aisles.has(column))tracks.push('var(--teacher-aisle-track,minmax(18px,.25fr))');}return tracks.join(' ');}
 
   async function teacherRosterCards(classId,records=[],options={}){
     const orderMode=options.orderMode||'seat';const roster=await rosterForClass(classId,orderMode==='seat',options.atDate||null);
@@ -114,10 +123,11 @@
       return `<article class="teacher-student-card ${esc(statusClass)}${feedbackClass(row.student.id)}"><button type="button" class="student-main" data-tool-student="${row.student.id}"><strong>${esc(row.student.name)}</strong>${status?`<span>${esc(status)}</span>`:''}${extra}</button><div class="student-card-footer"><span>${lastMemo.get(row.student.id)?`メモ ${esc(jpDate(lastMemo.get(row.student.id)))}`:'メモなし'}</span><button type="button" class="detail-button" data-student-detail="${row.student.id}" aria-label="${esc(row.student.name)}の詳細">詳細</button></div></article>`;
     };
     const classItem=state.classes.find(item=>item.id===classId);const useShape=options.preserveSeatShape&&orderMode==='seat'&&classItem?.activeSeatLayout?.length;let body='';let style='';
-    if(useShape){const byId=new Map(roster.map(row=>[row.student.id,row]));body=classItem.activeSeatLayout.map(id=>id&&byId.has(id)?card(byId.get(id)):'<div class="teacher-student-card grid-empty"><span>空席</span></div>').join('');style=` style="--active-seat-cols:${classItem.activeSeatCols||6}"`;}
+    if(useShape){const byId=new Map(roster.map(row=>[row.student.id,row])),cols=Math.max(1,Number(classItem.activeSeatCols)||6),aisles=new Set((classItem.activeSeatAisleAfterColumns||[]).map(Number));body=classItem.activeSeatLayout.map((id,index)=>{const cell=id&&byId.has(id)?card(byId.get(id)):'<div class="teacher-student-card grid-empty"><span>空席</span></div>',column=index%cols+1;return cell+(column<cols&&aisles.has(column)?'<div class="teacher-seat-aisle" aria-hidden="true"></div>':'');}).join('');style=` style="grid-template-columns:${activeSeatGridTemplate(classItem)}"`;}
     else body=roster.map(card).join('');
     const compact=roster.length>=30||Number(classItem?.activeSeatCols)>=7;
-    return `<section class="teacher-student-grid ${useShape?'seat-shaped ':''}${compact?'compact-roster':''}"${style}>${body}</section>`;
+    const grid=`<section class="teacher-student-grid ${useShape?'seat-shaped ':''}${compact?'compact-roster':''}"${style}>${body}</section>`;
+    return useShape?`<section class="teacher-seat-print-target"><div class="teacher-seat-print-actions no-print"><button type="button" class="button" data-print-teacher-seats>現在の座席配置を印刷</button></div><h2 class="teacher-seat-print-title">${esc(options.printTitle||`${classItem.name}　現在の座席配置`)}</h2>${grid}</section>`:grid;
   }
 
   function teacherOrderMode(){return state.toolDraft.teacherOrderMode||'seat';}

@@ -416,16 +416,31 @@ h3{font-size:1rem;margin-bottom:8px}
 :root[data-explanations="false"] .page .panel>p.muted,:root[data-explanations="false"] .page .toolbar-line p.muted,:root[data-explanations="false"] .page .home-hint{display:none}
 
 @media print{
-  .app-header,.seat-controls,.seat-conditions,.seat-history,.no-print{display:none!important}
+  .app-header,.teacher-footer,.seat-controls,.seat-conditions,.seat-run,.seat-history,.no-print{display:none!important}
   :root,body{background:#fff;color:#000}
   .page{max-width:none;padding:0}
   .seat-print{border:0;padding:0}
-  .seat-layout{--aisle-track:minmax(54px,1fr);max-width:none;gap:6px;overflow:visible}
+  .seat-layout{--aisle-track:minmax(26px,.5fr);max-width:none;gap:6px;overflow:visible}
   .seat-aisle{border:0;background:transparent;min-height:94px}
   .seat-cell{min-height:94px;border-color:#555;background:#fff!important;color:#000;break-inside:avoid}
   .seat-cell span,.seat-cell small{color:#333}
   .seat-cell.previous{outline:0}
+  body.printing-seat-plan .app-shell> :not(.page){display:none!important}
+  body.printing-seat-plan .page> :not(.seat-print){display:none!important}
+  body.printing-seat-plan .seat-print{display:block!important;margin:0!important}
+  body.printing-teacher-seats .app-shell> :not(.page){display:none!important}
+  body.printing-teacher-seats .page> :not(.teacher-seat-print-target){display:none!important}
+  body.printing-teacher-seats .teacher-seat-print-target{display:block!important}
+  .teacher-seat-print-title{display:block!important;text-align:center;margin:0 0 12px;font-size:16pt}
+  .teacher-student-grid.seat-shaped{--teacher-aisle-track:minmax(26px,.5fr)!important;gap:6px;overflow:visible}
+  .teacher-seat-aisle{min-height:94px}
+  .teacher-student-grid.seat-shaped .teacher-student-card{min-height:94px;border-color:#555;background:#fff!important;color:#000;break-inside:avoid}
+  .teacher-student-grid.seat-shaped .student-main{min-height:94px;color:#000;padding:7px}
+  .teacher-student-grid.seat-shaped .student-main span{color:#333}
+  .teacher-student-grid.seat-shaped .student-card-footer{display:none!important}
 }
+
+.teacher-seat-print-actions{display:flex;justify-content:flex-end;margin:0 0 9px}.teacher-seat-print-title{display:none}.teacher-seat-aisle{min-width:0}
 
 .setup-steps{display:flex;gap:6px;margin-bottom:18px}
 .step{height:6px;flex:1;border-radius:3px;background:var(--line)}

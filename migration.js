@@ -77,7 +77,9 @@
   async function fromFiles(files){
     const sources=[];
     for(const file of files){
+      if(Number(file.size)>25*1024*1024)throw new Error(`${file.name||'旧データ'}が大きすぎます。25MB以下のファイルを選んでください。`);
       const text=await file.text();
+      if(text.length>25*1024*1024)throw new Error(`${file.name||'旧データ'}の読み込み量が大きすぎます。25MB以下のファイルを選んでください。`);
       if(/\.csv$/i.test(file.name)){sources.push(...parseCsv(text,file.name));continue;}
       let payload;try{payload=JSON.parse(text);}catch{continue;}
       const data=payload?.data&&typeof payload.data==='object'?payload.data:payload;
