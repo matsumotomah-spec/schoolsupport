@@ -121,8 +121,8 @@
           if(value!=='abs')add({id:id('scoreMemo',source.id,date,session.id||session.name,number,value),type:'memo',studentId,date,subject:info.subject,tags:[],text:`${info.title||'評価'}：${value}点`});
           continue;
         }
-        const gradeMap={Bp:'B+',Bm:'B-'};const isAbsent=value==='abs',isMissing=value==='none';
-        add({id:id('notebook',source.id,date,session.id||session.name,number,value),type:'notebookAssessment',studentId,date,subject:info.subject,unit:clean(session.kan),title:info.title||date.slice(5).replace('-','/'),sessionKey,grade:isAbsent||isMissing?null:(gradeMap[value]||value),status:isAbsent?'absent':isMissing?'unsubmitted':'evaluated'});
+        const gradeMap={Bp:'B+',Bm:'B-'};const isAbsent=value==='abs',isMissing=value==='none',grade=isAbsent||isMissing?null:(gradeMap[value]||value);
+        add({id:id('notebook',source.id,date,session.id||session.name,number,value),type:'notebookAssessment',studentId,date,subject:info.subject,unit:clean(session.kan),title:info.title||date.slice(5).replace('-','/'),sessionKey,grade,...(grade?{viewpointGrades:{knowledge:grade,thinking:grade,attitude:grade}}:{}),status:isAbsent?'absent':isMissing?'unsubmitted':'evaluated'});
       }
     };
     if(source.kind==='classChecker'){

@@ -8,7 +8,7 @@
   const PIN_LENGTH=6;
   const PIN_MAX_FAILURES=5;
   const PIN_LOCK_MS=30*1000;
-  const APP_VERSION='38';
+  const APP_VERSION='48';
   const PIN_ATTEMPT_KEY='classSupportPinAttemptsV1';
   const COLORS=['#d85b5b','#ef9fb4','#4e78b8','#9adfe8','#efd66e','#397257','#7651a8'];
   const SUBJECTS=['国語','算数','理科','社会','生活','音楽','図画工作','家庭','体育','外国語','道徳','総合','自立活動'];
@@ -59,7 +59,10 @@
     emojiIcons:{...DEFAULT_EMOJI_ICONS},
     rewardIcon:'✨',
     showMonthlyForgotten:true,
+    pupilOverviewVisibility:{daily:true,weekly:true,occasional:true,monthly:true,reward:true},
     showExplanations:true,
+    informationMode:'standard',
+    rosterDensity:'auto',
     focusMode:false,
     studentReturnTool:null,
     onboardingStep:0
@@ -73,19 +76,19 @@
     weekly:['週宿題','毎週または今週限りの宿題を作り、提出状況を記録します。','児童名を押すたびに、提出→忘れた→未提出の順で切り替わります。',['「毎週」にしても年度末まで一括作成しません。','次の月曜日以降に案内が出たら「今週分を作る」を押します。','案内を閉じた場合も、週宿題画面のボタンから作成できます。']],
     memo:['児童メモ','児童を選び、教科とプラス評価タグを選ぶだけで保存できます。','個別支援級では、今期にメモがない教科を上部に表示します。'],
     certificate:['ミニ賞状','児童名を1回押すと「渡した」と記録します。同じ名前をもう一度押すと理由タグの追加や取消ができます。','まず配付の有無だけを素早く記録し、理由は必要なときだけ追加できます。タグは設定の「メモ・賞状の選択肢」から編集できます。'],
-    assessment:['ノート評価','児童名を1回押すと、最もよく使うB評価で記録します。同じ名前をもう一度押すとA・B＋・B・B－・Cなどへ変更できます。','欠席・未提出も2回目の評価選択画面から記録できます。'],
+    assessment:['ノート評価','児童名を1回押すと、知識・技能、思考・判断・表現、主体的に学習に取り組む態度の3観点をすべてBで記録します。','よくできた観点や気になる観点がある児童だけ、同じ名前をもう一度押して変更します。',['3観点は1つの画面で変更でき、ほかの観点はBのまま残せます。','教科を選ぶと、前期・後期・年間の観点別平均を確認できます。','欠席・未提出は平均に含めず、成績は自動決定しません。']],
     occasional:['提出物','登録済みの提出物を一覧で確認し、児童ごとの提出状況を記録します。','「＋ 新しい提出物を作る」から複数の提出物を追加できます。',['提出物カードを選んでから児童名を押します。','緑は提出済み、灰色・赤は未提出です。','回収が終わったら「回収を終える」を押します。']],
     seating:['席替え','列数・行数・空席・印刷用通路と配慮条件を設定して、教室に合う座席表を作ります。','8列×5行なども設定できます。通路は列の間を選ぶと、印刷時に机約1列分の余白になります。',['空席は座席番号として残り、通路は座席数に含めません。','ドラッグ後も満たせていない配慮条件を再計算します。','確定後に「日常画面へ反映」を押すと宿題画面へ反映します。']],
-    settings:['設定','普段変更する「クラス・名簿」を先頭に表示します。ほかの項目は、必要になったときだけ開けば大丈夫です。','画面の見た目、メモや賞状の選択肢、データの保存・端末間共有もここから変更できます。'],
+    settings:['設定','普段変更する「クラス・児童」を先頭に表示します。ほかの項目は、必要になったときだけ開けば大丈夫です。','表示、メモ・賞状、データ管理もここから変更できます。'],
     appearance:['表示・アイコン','機能ボタンの標準表示と絵文字表示を切り替えます。','絵文字モードを選ぶと、機能ごとに使う絵文字を変更できます。',['宿題の条件達成アイコンは10種類から選べます。','1か月の忘れ回数を児童用画面に出すか選べます。','設定後は「保存」を押し、ホームで表示を確認します。']],
-    data:['保存・端末間共有','目的を選んで、iPadとPCの記録をまとめる、故障に備えて保存する、Excel用の一覧を作る、削除した記録を戻す操作を行います。','普段は「iPadとPCの記録をまとめる」、月に1回は「故障に備えて保存する」を使います。'],
+    data:['データ管理','目的を選んで、iPadとPCの記録をまとめる、故障に備えて保存する、Excel用の一覧を作る、削除した記録を戻す操作を行います。','普段は「iPadとPCの記録をまとめる」、月に1回は「故障に備えて保存する」を使います。'],
     support:['学習記録','教科と現在の学習単元を確認し、児童ごとの学習記録を入力します。','児童名を押して記録します。学ぶ単元が変わったときは「学習するまとまりを変更」を押します。'],
     student:['児童概要','未解決の宿題・提出物を確認して解決し、メモ・評価・賞状・提出物を追加できます。','概要の未解決件数または機能別タブを押し、確認・追加ボタンから操作します。'],
     pupil:['児童用提出画面','一覧で自分の未提出を確認し、毎日の宿題・週宿題・提出物を記録します。','最初に「一覧」で名前を確認し、必要な機能へ移動して自分の名前を押します。',['緑の「提出」、赤の「忘れた」、灰色の「未提出・未確認」を確認します。','名前を押した直後は、色と0.5秒の動きで変更を知らせます。','右上の歯車は先生用です。教師用PINが必要です。']]
   };
 
   function esc(value){return String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));}
-  function friendlyTerms(value){return String(value??'').replaceAll('新年度パスワード','新しいデータ保護パスワード').replaceAll('年度パスワード','データ保護パスワード').replaceAll('教師用PIN','教師画面PIN').replaceAll('復旧コード','緊急復旧コード').replaceAll('クラス・児童','クラス・名簿').replaceAll('入力候補・タグ','メモ・賞状の選択肢').replaceAll('データ管理','保存・端末間共有');}
+  function friendlyTerms(value){return String(value??'').replaceAll('新年度パスワード','新しいデータ保護パスワード').replaceAll('年度パスワード','データ保護パスワード').replaceAll('教師用PIN','教師画面PIN').replaceAll('復旧コード','緊急復旧コード').replaceAll('入力候補・タグ','メモ・賞状の選択肢').replaceAll('机約1列分の余白','氏名欄の約半分幅');}
   function applyFriendlyTerms(root){if(!root)return;const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);nodes.forEach(node=>{const changed=friendlyTerms(node.nodeValue);if(changed!==node.nodeValue)node.nodeValue=changed;});root.querySelectorAll?.('[title],[aria-label],[placeholder]').forEach(element=>['title','aria-label','placeholder'].forEach(name=>{if(element.hasAttribute(name))element.setAttribute(name,friendlyTerms(element.getAttribute(name)));}));}
   function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
   function schoolYear(){const d=new Date();return d.getMonth()>=3?d.getFullYear():d.getFullYear()-1;}
@@ -106,6 +109,11 @@
   function rewardIconHtml(className='homework-medal'){return`<span class="${className}" title="直近1か月の設定条件を達成" aria-label="直近1か月の設定条件を達成">${esc(state.rewardIcon)}</span>`;}
   function isSupportClass(classItem){return classItem?.isSupport??Boolean(classItem?.isOwn&&state.year?.mode==='support');}
   function classSubjects(classItem){return Array.isArray(classItem?.recordSubjects)&&classItem.recordSubjects.length?classItem.recordSubjects:SUBJECTS;}
+  function normalizeStudentName(value){return String(value||'').normalize('NFKC').replace(/[\s　・･.,、。]/g,'').toLowerCase();}
+  function studentSupportSubjects(row,classItem){
+    const configured=row?.enrollment?.supportSubjects;
+    return Array.isArray(configured)&&configured.length?configured.filter(subject=>classSubjects(classItem).includes(subject)):classSubjects(classItem);
+  }
   function contrastColor(hex){const raw=String(hex||'').replace('#',''),value=raw.length===3?raw.split('').map(x=>x+x).join(''):raw,channels=[0,2,4].map(index=>(parseInt(value.slice(index,index+2),16)||0)/255).map(channel=>channel<=.04045?channel/12.92:((channel+.055)/1.055)**2.4),luminance=.2126*channels[0]+.7152*channels[1]+.0722*channels[2],white=1.05/(luminance+.05),dark=(luminance+.05)/.058;return dark>=white?'#17201b':'#ffffff';}
   function validColor(value){return /^#[0-9a-f]{6}$/i.test(String(value||'').trim());}
   function applyClassTheme(classItem){
@@ -141,7 +149,14 @@
     await ClassDB.open();
     await purgeExpiredTrash();
     state.theme=await ClassDB.getMeta('themePreference',window.matchMedia?.('(prefers-color-scheme: dark)').matches?'dark':'light');
-    state.iconMode=await ClassDB.getMeta('featureIconMode','standard');state.emojiIcons={...DEFAULT_EMOJI_ICONS,...await ClassDB.getMeta('featureEmojiIcons',{})};state.rewardIcon=await ClassDB.getMeta('homeworkRewardIcon','✨');state.showMonthlyForgotten=await ClassDB.getMeta('showMonthlyForgotten',true);state.showExplanations=await ClassDB.getMeta('showExplanations',true);state.onboardingStep=Number(await ClassDB.getMeta('onboardingStep',0));
+    state.iconMode=await ClassDB.getMeta('featureIconMode','standard');
+    state.emojiIcons={...DEFAULT_EMOJI_ICONS,...await ClassDB.getMeta('featureEmojiIcons',{})};
+    state.rewardIcon=await ClassDB.getMeta('homeworkRewardIcon','✨');
+    const legacyMonthly=await ClassDB.getMeta('showMonthlyForgotten',true),savedPupilOverview=await ClassDB.getMeta('pupilOverviewVisibility',{});
+    state.pupilOverviewVisibility={daily:true,weekly:true,occasional:true,monthly:legacyMonthly,reward:true,...savedPupilOverview};
+    state.showMonthlyForgotten=state.pupilOverviewVisibility.monthly;
+    const savedInformationMode=await ClassDB.getMeta('informationMode',null),legacyExplanations=await ClassDB.getMeta('showExplanations',true);
+    state.informationMode=['compact','standard','detailed'].includes(savedInformationMode)?savedInformationMode:(legacyExplanations?'standard':'compact');state.showExplanations=state.informationMode!=='compact';state.rosterDensity=await ClassDB.getMeta('rosterDensity','auto');state.onboardingStep=Number(await ClassDB.getMeta('onboardingStep',0));
     applyTheme();
     const activeYearId=await ClassDB.getMeta('activeYearId');
     state.year=activeYearId?await ClassDB.get('years',activeYearId):null;
@@ -173,7 +188,7 @@
             <section class="setup-block"><h2><span>1</span> クラスを登録</h2><div class="form-grid">
             <div class="field"><label for="setup-year">年度</label><input class="input" id="setup-year" type="number" min="2020" max="2100" value="${sy}" required></div>
             <div class="field"><label for="setup-mode">クラスの種類</label><select class="select" id="setup-mode"><option value="general">一般級</option><option value="support">個別支援級</option></select></div>
-            <div class="field" id="setup-general-name"><label>一般級の学年・組</label><div class="inline-class-name"><select class="select" id="setup-grade">${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${n===5?'selected':''}>${n}年</option>`).join('')}</select><input class="input" id="setup-group" value="2" aria-label="組" required><span>組</span></div></div>
+            <div class="field" id="setup-general-name"><label>一般級の学年・組</label><div class="inline-class-name"><select class="select" id="setup-grade" required><option value="">学年</option>${[1,2,3,4,5,6].map(n=>`<option value="${n}">${n}年</option>`).join('')}</select><input class="input" id="setup-group" value="" placeholder="例：2" aria-label="組" required><span>組</span></div></div>
             <div class="field" id="setup-support-name" hidden><label for="setup-class">個別支援級の名前</label><input class="input" id="setup-class" value="" placeholder="例：ひまわり"></div>
             <div class="field full"><span class="field-label">クラスカラー</span><div class="color-choices" id="setup-colors">${colorButtons('#397257')}</div></div>
             </div></section>
@@ -203,7 +218,7 @@
     document.getElementById('setup-form').addEventListener('submit',prepareSetup);
   }
 
-  function applyTheme(){document.documentElement.dataset.theme=state.theme;document.documentElement.dataset.explanations=state.showExplanations?'true':'false';document.querySelectorAll('[data-theme-toggle]').forEach(button=>{button.textContent=state.theme==='dark'?'☀':'☾';button.setAttribute('aria-label',state.theme==='dark'?'ライトモードに切り替え':'ダークモードに切り替え');button.title=button.getAttribute('aria-label');});}
+  function applyTheme(){document.documentElement.dataset.theme=state.theme;document.documentElement.dataset.information=state.informationMode;document.documentElement.dataset.explanations=state.informationMode==='compact'?'false':'true';document.querySelectorAll('[data-theme-toggle]').forEach(button=>{button.textContent=state.theme==='dark'?'☀':'☾';button.setAttribute('aria-label',state.theme==='dark'?'ライトモードに切り替え':'ダークモードに切り替え');button.title=button.getAttribute('aria-label');});}
   async function toggleTheme(){state.theme=state.theme==='dark'?'light':'dark';applyTheme();await ClassDB.setMeta('themePreference',state.theme);showToast(state.theme==='dark'?'ダークモードにしました':'ライトモードにしました');}
 
   function colorButtons(selected){return COLORS.map(color=>`<button type="button" class="color-choice" style="--swatch:${color}" data-color="${color}" aria-label="色を選択" aria-pressed="${color===selected}"></button>`).join('')+`<input class="input color-code" type="text" value="${selected}" aria-label="カラーコード" data-color-code>`;}
@@ -232,7 +247,8 @@
     if(!(start<=term&&term<=end)){error.textContent='年度と学期の日付順を確認してください。';return;}
     error.textContent='';
     const code=recoveryCode();
-    const mode=document.getElementById('setup-mode').value,gradeLevel=mode==='general'?Number(document.getElementById('setup-grade').value):null,className=mode==='support'?document.getElementById('setup-class').value.trim():`${gradeLevel}年${document.getElementById('setup-group').value.trim()}組`;
+    const mode=document.getElementById('setup-mode').value,gradeLevel=mode==='general'?Number(document.getElementById('setup-grade').value):null,group=mode==='general'?document.getElementById('setup-group').value.trim():'',className=mode==='support'?document.getElementById('setup-class').value.trim():`${gradeLevel}年${group}組`;
+    if((mode==='general'&&(!gradeLevel||!group))||(mode==='support'&&!className)){error.textContent=mode==='general'?'学年と組を入力してください。':'クラス名を入力してください。';return;}
     state.setupDraft={
       year:{id:ClassDB.uid('year'),label:`${yearNumber}年度`,yearNumber,startDate:start,firstTermEnd:term,endDate:end,mode:document.getElementById('setup-mode').value,passwordHint:document.getElementById('setup-hint').value.trim(),auth:await createVerifier(password),pinAuth:await createVerifier(pin),recoveryAuth:await createVerifier(code),recoverySecretProtected:await protectText(code,password)},
       classItem:{id:ClassDB.uid('class'),name:className,gradeLevel,color:document.querySelector('[data-color-code]').value.trim(),isOwn:true,isSupport:mode==='support',recordSubjects:[...SUBJECTS],order:0},

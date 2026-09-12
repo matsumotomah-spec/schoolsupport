@@ -24,7 +24,7 @@ function testCsv(){
     {id:'w1',type:'weeklyOccurrence',date:'2026-09-06',dueDate:'2026-09-06',title:'自主学習'},
     {id:'ws1',type:'weeklySubmission',occurrenceId:'w1',studentId:'s2',status:'forgotten'},
     {id:'o1',type:'occasionalItem',date:'2026-09-07',dueDate:'2026-09-07',title:'同意書',archived:false},
-    {id:'a1',type:'notebookAssessment',studentId:'s1',date:'2026-09-06',subject:'国語',unit:'物語',title:'9/6',grade:'B+',status:'evaluated'}
+    {id:'a1',type:'notebookAssessment',studentId:'s1',date:'2026-09-06',subject:'国語',unit:'物語',title:'9/6',grade:'B+',viewpointGrades:{knowledge:'A',thinking:'B+',attitude:'B'},status:'evaluated'}
   ];
   const args={classItem:{name:'5年2組'},roster,records,start:'2026-09-01',end:'2026-09-30'};
   const submissions=ClassCsvExport.submissionRows(args);
@@ -34,7 +34,10 @@ function testCsv(){
   assert.equal(submissions[3][6],'未提出');
   assert.equal(submissions[4][6],'忘れた');
   const assessments=ClassCsvExport.assessmentRows(args);
-  assert.equal(assessments[1][7],'B+');
+  assert.deepEqual(assessments[1].slice(7,11),['A','B+','B','B+']);
+  assert.deepEqual(assessments[0].slice(7,10),['知識・技能','思考・判断・表現','主体的に学習に取り組む態度']);
+  const absentAssessment=ClassCsvExport.assessmentRows({...args,records:[{type:'notebookAssessment',studentId:'s1',date:'2026-09-06',subject:'国語',status:'absent'}]});
+  assert.deepEqual(absentAssessment[1].slice(7,11),['','','',''],'欠席は観点評価欄を空欄にする');
   const csv=ClassCsvExport.csv([['氏名','式'],['青木','=1+1'],['上田',' =1+1']]);
   assert.ok(csv.startsWith('\uFEFF'));
   assert.ok(csv.includes("'=1+1"),'表計算ソフトの数式実行を防ぐ');
@@ -79,9 +82,9 @@ function testShellAndNavigation(){
   assert.ok(app.includes('home-button'),'ホームを共通ヘッダーで強調する');
   assert.ok(app.includes('data-current-class'),'共通ヘッダーから現在のクラスを確認・切替できる');
   assert.ok(app.includes('<small>操作中</small>'),'現在操作中のクラスを明示する');
-  assert.ok(app.includes('mode-chip'),'教師用・児童用モードを常時表示する');
+  assert.ok(app.includes('mode-chip pupil'),'児童用モードを常時表示する');
   assert.ok(!app.includes('data-focus-toggle'),'意味が伝わりにくい集中表示ボタンをヘッダーに残さない');
-  assert.ok(app.includes('appearance-show-explanations'),'説明文の表示・非表示を設定で選べる');
+  assert.ok(app.includes('name="information-mode"')&&app.includes('すっきり')&&app.includes('標準')&&app.includes('詳しく'),'画面の情報量を3段階で選べる');
   assert.ok(!app.includes("['roster','名簿']"),'名簿の独立タブを残さない');
   assert.ok(app.includes("state.classSettingsView='roster'"),'名簿画面へ直接移動できる');
   assert.ok(app.includes("showToast('先に名簿を登録してください')"));
@@ -89,15 +92,31 @@ function testShellAndNavigation(){
   assert.ok(app.includes('＋ 転入児童を追加'),'転入児童を日付付きで追加できる');
   assert.ok(app.includes('data-transfer-row'),'転出操作を入力行の取消と分ける');
   assert.ok(app.includes('data-reactivate-enrollment'),'転出済み児童を在籍へ戻せる');
+  assert.ok(app.includes('data-delete-student-row'),'誤登録児童を転出と分けて削除できる');
+  assert.ok(app.includes('data-restore-deleted-student'),'誤登録として削除した児童を戻せる');
+  assert.ok(app.includes('deletedAt:timestamp')&&app.includes('directRecords.map(trashEntryFor)'),'児童削除を同期可能にし関連記録をごみ箱へ移す');
   assert.ok(app.includes("item.startDate||state.year.startDate)<=atDate"),'過去日は当時の在籍期間で児童を抽出する');
   assert.ok(!app.includes('id="class-type"'),'クラス種別の二重入力を残さない');
   assert.ok(app.includes('verifyRolloverArchive'),'年度保管ファイルを読み直す');
   assert.ok(app.includes('使い方・FAQ'),'ヘルプ画面を表示する');
   assert.ok(app.includes('faq-panel'),'FAQの折りたたみ表示を用意する');
   assert.ok(app.includes('class-tab-dot'),'クラス色を選択ボタンに表示する');
-  assert.ok(app.includes('home-hint'),'件数バッジの凡例を表示する');
+  assert.ok(!app.includes('<p class="home-hint">'),'ホームに件数バッジの凡例を重複表示しない');
   assert.ok(app.includes('dashboardHtml'),'ホームの対応状況ダッシュボードを表示する');
+  assert.ok(app.includes("if(!items.length)return''"),'要対応がないときダッシュボードを隠す');
+  assert.ok(!app.includes('data-roster-density title='),'カードの大きさを各記録画面に重複表示しない');
   assert.ok(app.includes('recordSyncHistory'),'同期履歴を保存する');
+  assert.ok(app.includes('studentSupportSubjects'),'支援級の対象教科を児童ごとに判定する');
+  assert.ok(app.includes('supportSubjects'),'名簿の児童ごとの支援記録教科を保存する');
+  assert.ok(app.includes('unitsAtDate'),'支援級の過去日付で当時の学習単元を表示する');
+  assert.ok(app.includes('moveDate(state.year.firstTermEnd,1)'),'支援級の後期集計開始日を前期終了日の翌日にする');
+  assert.ok(app.includes('normalizeStudentName'),'児童名を正規化して重複候補を検出する');
+  assert.ok(app.includes('openStudentMerge'),'重複児童を統合できる');
+  assert.ok(app.includes('openExternalImport'),'宿題・提出物の外部取込画面を用意する');
+  assert.ok(app.includes('externalImportHistory'),'外部取込の再取込を防止する');
+  assert.ok(app.includes('data-external-candidate'),'名寄せ候補を手動選択できる');
+  assert.ok(app.includes('student-number'),'出席番号順の児童カードに出席番号を表示する');
+  assert.ok(app.includes("orderMode==='number'&&row.enrollment.number"),'出席番号表示を出席番号順に限定する');
   assert.ok(db.includes('function applyBatch')&&db.includes("db.transaction(names,'readwrite')"),'複数保存先を一つの処理で更新する');
   assert.ok(db.includes('function replaceAllRaw'),'復旧時に一括置換する');
   assert.ok(app.includes('savePreSyncSnapshot'),'同期直前の暗号化状態を自動保存する');
@@ -117,9 +136,9 @@ function testShellAndNavigation(){
   assert.ok(app.includes("window.addEventListener('unhandledrejection'"),'非同期エラーを利用者へ通知する');
   assert.ok(app.includes('requireTeacher(renderHome)'),'起動時は教師ホームへの認証から開始する');
   assert.ok(app.includes('themePreference'),'ライト・ダークモードを保存する');
-  assert.ok(app.includes("['data','保存・端末間共有']"),'設定内に保存・端末間共有をまとめる');
+  assert.ok(app.includes("['data','データ管理']"),'設定内に同期・バックアップ・出力をまとめる');
   assert.ok(app.includes('renderSettingsGuide'),'設定の説明ページを用意する');
-  assert.ok(app.includes('まず使う')&&app.includes('ときどき使う')&&app.includes('年度始め・端末を替えたとき'),'設定を利用頻度で3群に整理する');
+  assert.ok(app.includes('最初の準備')&&app.includes('日常の設定')&&app.includes('データ・年度'),'設定を作業目的で3群に整理する');
   assert.ok(app.includes('openContextHelp'),'ページ別ヘルプを横から表示する');
   assert.ok(app.includes('help-search'),'ヘルプを検索できる');
   assert.ok(app.includes('teacherFooter'),'日常機能を下部から切り替えられる');
@@ -150,7 +169,12 @@ function testShellAndNavigation(){
   assert.ok(app.includes('featureIconMode'),'標準記号と絵文字モードを保存する');
   assert.ok(app.includes('featureEmojiIcons'),'機能ごとの絵文字を保存する');
   assert.ok(app.includes('showMonthlyForgotten'),'1か月の忘れ回数表示を切り替える');
-  assert.ok(app.includes('state.showMonthlyForgotten?'),'児童用一覧で設定に応じて忘れ回数を表示する');
+  assert.ok(app.includes('pupilOverviewVisibility'),'児童用一覧の表示項目を保存する');
+  assert.ok(app.includes('state.pupilOverviewVisibility.daily')&&app.includes('state.pupilOverviewVisibility.weekly')&&app.includes('state.pupilOverviewVisibility.occasional'),'宿題・週宿題・提出物の警告を個別に切り替える');
+  assert.ok(app.includes('state.pupilOverviewVisibility.monthly')&&app.includes('state.pupilOverviewVisibility.reward'),'忘れ回数と達成アイコンを個別に切り替える');
+  assert.ok(app.includes('この週の宿題を削除')&&app.includes('削除して繰り返しも終了'),'週宿題の削除範囲を選べる');
+  assert.ok(app.includes("removed.map(trashEntryFor)")&&app.includes('seriesActive:false'),'提出記録を一緒にごみ箱へ移し、繰り返しを終了できる');
+  assert.ok(app.includes('weeklySkippedWeeks'),'この週だけ削除した繰り返し宿題を同じ週に再作成しない');
   assert.ok(!app.includes('宿題名人'),'旧称号を画面に残さない');
   assert.ok(app.includes('openDailyWeekDialog'),'今週の忘れ物を日付別に確認する');
   assert.ok(app.includes("item.date>=currentWeekStart(date)"),'毎日の忘れ物を月曜日で区切る');
@@ -164,7 +188,7 @@ function testShellAndNavigation(){
   assert.ok(app.includes('8列×5行'),'可変座席の例を案内する');
   assert.ok(app.includes('今年度${summary.count}回'),'賞状の今年度回数を表示する');
   assert.ok(app.includes('前回から${since}日'),'賞状の前回からの日数を表示する');
-  assert.ok(app.includes("['classes','クラス・名簿']"),'設定名称をクラス・名簿へ整理する');
+  assert.ok(app.includes("['classes','クラス・児童']"),'設定名称をクラス・児童へ整理する');
   assert.ok(styles.includes('.tool-icon{width:42px'),'機能アイコンをタイル表示する');
   assert.ok(!app.includes('<span></span><span></span>'),'ノート評価の空白スペーサーを残さない');
   assert.ok(styles.includes('grid-template-columns:repeat(6,minmax(0,1fr))'),'ノート評価を6分割で均等配置する');
@@ -201,39 +225,60 @@ function testShellAndNavigation(){
   assert.ok(styles.includes('.help-drawer'),'ページ別ヘルプをスライド表示する');
   assert.ok(styles.includes('.unresolved-row'),'未解決項目を操作可能な一覧で表示する');
   assert.ok(styles.includes('.compact-roster'),'大人数をコンパクト表示する');
+  assert.ok(app.includes('rosterDensity'),'児童一覧の表示密度を保存する');
+  assert.ok(styles.includes('.settings-status-grid'),'設定トップに現在の準備状況を表示する');
+  assert.ok(styles.includes('button:focus-visible'),'キーボード操作時の焦点を明示する');
   assert.ok(styles.includes('.seat-aisle'),'印刷用通路を表示する');
   const shellMatch=sw.match(/const SHELL=\[([^;]+)\];/s);
   assert.ok(shellMatch);
   const assets=[...shellMatch[1].matchAll(/'\.\/([^']+)'/g)].map(match=>match[1].split('?')[0]).filter(Boolean);
   for(const asset of assets)assert.ok(fs.existsSync(path.join(root,asset)),`キャッシュ対象 ${asset} が存在する`);
-  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=38"></script>`));
-  assert.ok(index.includes('styles.css?v=38'),'CSSに公開版番号を付ける');
-  assert.ok(app.includes("register('./sw.js?v=38'"),'Service Workerの公開版番号を付ける');
+  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=48"></script>`));
+  assert.ok(index.includes('styles.css?v=48'),'CSSに公開版番号を付ける');
+  assert.ok(app.includes("register('./sw.js?v=48'"),'Service Workerの公開版番号を付ける');
   assert.ok(app.includes('dateInEnrollment(item.dueDate,currentEnrollment)'),'転入前・転出後の提出予定を未提出扱いにしない');
   assert.ok(app.includes('previousEnrollmentId'),'再在籍は過去の在籍期間を上書きしない');
   assert.ok(app.includes('data-ended-student'),'転出済み児童の過去記録を開ける');
   assert.ok(app.includes('offerSeatForTransfer'),'転入児童を現在の座席へ配置できる');
   assert.ok(app.includes('showUndoToast'),'記録変更を短時間取り消せる');
   assert.ok(app.includes('data-trash-restore'),'30日間のごみ箱から記録を復元できる');
-  assert.ok(app.includes("APP_VERSION='38'"),'データ管理に公開版を表示する');
+  assert.ok(app.includes("APP_VERSION='48'"),'データ管理に公開版を表示する');
+  assert.ok(app.includes("NOTEBOOK_POINTS={'A':5,'B+':4,'B':3,'B-':2,'C':1}"),'ノート評価の平均換算を定義する');
+  assert.ok(app.includes("NOTEBOOK_DEFAULT_GRADES={knowledge:'B',thinking:'B',attitude:'B'}"),'ノート評価の初回入力を3観点すべてBにする');
+  assert.ok(app.includes("label:'知識・技能'")&&app.includes("label:'思考・判断・表現'")&&app.includes("label:'主体的に学習に取り組む態度'"),'ノート評価の3観点を定義する');
+  assert.ok(app.includes('viewpoint-grade-editor')&&app.includes('すべてBに戻す'),'3観点を1画面で変更できる');
+  assert.ok(app.includes("data-notebook-period=\"front\"")&&app.includes("data-notebook-period=\"back\"")&&app.includes("data-notebook-period=\"year\""),'前期・後期・年間の集計切替を表示する');
+  assert.ok(app.includes('欠席・未提出は平均から除外'),'欠席と未提出を平均値に含めないことを明示する');
+  assert.ok(app.includes('前期・後期・年間の観点別平均を確認できます'),'ノート評価の画面別ヘルプから集計欄を案内する');
+  assert.ok(styles.includes('.notebook-summary-row'),'ノート評価集計を端末幅に合わせて表示する');
+  assert.ok(styles.includes('.viewpoint-grade-choices'),'3観点の評価ボタンを横並びで表示する');
   assert.ok(app.includes('class-support-shell-v${APP_VERSION}'),'更新確認で現在版のキャッシュを保持する');
   assert.ok(!app.includes('class-support-shell-v34'),'更新確認で旧版キャッシュ名を固定しない');
   assert.ok(styles.includes('@keyframes status-confirm'),'提出操作に短い確認アニメーションを表示する');
   assert.ok(app.includes('seat-run no-print'),'席替え作成操作を印刷画面から除外する');
   assert.ok(styles.includes('.seat-run,.seat-history,.no-print'),'印刷時に操作パネルを除外する');
   assert.ok(styles.includes('.teacher-footer,.seat-controls'),'印刷時に教師用フッターを除外する');
-  assert.ok(app.includes("printSection('printing-seat-plan')"),'席替え印刷を座席表だけに絞る');
-  assert.ok(styles.includes('body.printing-seat-plan .page> :not(.seat-print)'),'席替え印刷では座席表以外を除外する');
+  assert.ok(app.includes('openPrintPreview'),'座席表だけを持つ印刷専用画面を用意する');
+  assert.ok(app.includes('seatingPrintLayoutHtml'),'印刷では氏名だけの座席セルを組み立てる');
+  const printLayout=app.slice(app.indexOf('function seatingPrintLayoutHtml'),app.indexOf('function teacherViewDraft'));
+  assert.ok(!printLayout.includes('groupNames')&&!printLayout.includes('condition.')&&!printLayout.includes('<small>'),'印刷専用座席に番号・配慮事項を混ぜない');
+  assert.ok(app.includes('chooseSeatingPrintView'),'印刷前に児童側と教師側の向きを選べる');
+  assert.ok(app.includes('teacherViewDraft'),'教師側の座席配置へ変換する');
+  assert.ok(styles.includes('body.print-preview-active .print-preview-toolbar'),'印刷時に専用画面の操作バーを除外する');
+  assert.ok(styles.includes('body.print-preview-active> :not(#app)'),'印刷時に通知とダイアログを除外する');
   assert.ok(styles.includes('--aisle-track:minmax(26px,.5fr)'),'席替え印刷の通路を名前欄の半分幅にする');
-  assert.ok(app.includes('data-print-teacher-seats'),'教師画面の現在座席配置を印刷できる');
+  assert.ok(styles.includes('size:A4 landscape'),'席替えをA4横向きで印刷する');
+  assert.ok(!app.includes('data-print-teacher-seats'),'席替え以外の画面に座席印刷を置かない');
   assert.ok(app.includes('activeSeatAisleAfterColumns'),'教師画面にも通路位置を反映する');
-  assert.ok(styles.includes('body.printing-teacher-seats .page> :not(.teacher-seat-print-target)'),'教師用座席印刷では対象の座席表だけを印刷する');
   assert.ok(app.includes('廊下側から${hallColumn}・${hallColumn+1}列の間'),'通路位置を廊下側から数える');
+  assert.ok(app.includes('id="setup-group" value=""'),'初期クラスの組を空欄にする');
+  assert.ok(app.includes('<option value="">学年</option>'),'初期クラスの学年を未選択にする');
+  assert.ok(app.includes('過去の宿題を整理'),'古い週宿題を一覧から整理できる');
 }
 
 function testApplicationSplit(){
   const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
-  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=38"></script>`));
+  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=48"></script>`));
   assert.ok(positions.every(position=>position>=0),'分割した全スクリプトを読み込む');
   assert.deepEqual(positions,[...positions].sort((a,b)=>a-b),'依存関係どおりの順序で読み込む');
   for(const file of applicationFiles)execFileSync(process.execPath,['--check',path.join(root,file)]);
@@ -252,7 +297,23 @@ function testSeparateScriptEvaluation(){
     if(file==='app.js')source=source.replace('loadState().catch(','Promise.resolve().catch(');
     vm.runInContext(source,context,{filename:file});
   }
-  assert.equal(vm.runInContext('APP_VERSION',context),'38');
+  assert.equal(vm.runInContext('APP_VERSION',context),'48');
+  vm.runInContext("state.informationMode='compact';applyTheme()",context);
+  assert.equal(documentStub.documentElement.dataset.information,'compact');
+  assert.equal(documentStub.documentElement.dataset.explanations,'false');
+  vm.runInContext("state.year={startDate:'2026-04-01',firstTermEnd:'2026-10-10',endDate:'2027-03-31'}",context);
+  assert.equal(vm.runInContext("(()=>{const week=currentWeekStart(),data={classId:'c1',occurrences:[{id:'w1',recurring:true,seriesId:'series1',dueDate:moveDate(week,-7)}],skippedWeeks:[]};return missingRecurringWeeks(data).length})()",context),1,'有効な毎週宿題は今週分の作成対象にする');
+  assert.equal(vm.runInContext("(()=>{const week=currentWeekStart(),data={classId:'c1',occurrences:[{id:'w1',recurring:true,seriesId:'series1',dueDate:moveDate(week,-7)}],skippedWeeks:[`c1|series1|${week}`]};return missingRecurringWeeks(data).length})()",context),0,'この週だけ削除した毎週宿題は再作成案内を出さない');
+  assert.equal(vm.runInContext("notebookSummaryPeriodRange('back').start",context),'2026-10-11');
+  assert.equal(vm.runInContext('notebookAverageLabel(3.49)',context),'B');
+  const notebookSummary=JSON.parse(vm.runInContext("JSON.stringify(notebookStudentSummary([{grade:'A',status:'evaluated'},{grade:'B',status:'evaluated'},{grade:null,status:'absent'},{grade:null,status:'unsubmitted'}]))",context));
+  assert.equal(notebookSummary.average,4,'AとBの平均を正しく算出する');
+  assert.equal(notebookSummary.count,2,'欠席・未提出を評価数から除外する');
+  assert.equal(notebookSummary.absent,1);assert.equal(notebookSummary.unsubmitted,1);
+  const viewpointSummary=JSON.parse(vm.runInContext("JSON.stringify(notebookStudentSummary([{viewpointGrades:{knowledge:'A',thinking:'B',attitude:'C'},status:'evaluated'}]))",context));
+  assert.equal(viewpointSummary.average,3);assert.equal(viewpointSummary.viewpoints.knowledge.average,5);assert.equal(viewpointSummary.viewpoints.attitude.average,1);
+  assert.equal(vm.runInContext("notebookViewpointText({grade:'B+',status:'evaluated'})",context),'知B＋・思B＋・態B＋','旧形式の単一評価を3観点へ引き継ぐ');
+  assert.equal(vm.runInContext("notebookOverallGrade({knowledge:'A',thinking:'B',attitude:'B'})",context),'B+','3観点から総合目安を算出する');
   assert.equal(vm.runInContext('typeof renderHome',context),'function');
   assert.equal(vm.runInContext('typeof renderSettings',context),'function');
   assert.equal(vm.runInContext('typeof renderSeating',context),'function');
@@ -274,7 +335,7 @@ async function testImportValidation(){
 
 function testSeatingAlgorithm(){
   let source=applicationSource();
-  source=source.replace("if('serviceWorker'in navigator)","window.__seatingTest={isGenderPairSeat,generateSeating,seatingConditionWarnings,seatGridTemplate,parseSeatCare,defaultSeatAisles};if('serviceWorker'in navigator)");
+  source=source.replace("if('serviceWorker'in navigator)","window.__seatingTest={isGenderPairSeat,generateSeating,seatingConditionWarnings,seatGridTemplate,parseSeatCare,defaultSeatAisles,teacherViewDraft};if('serviceWorker'in navigator)");
   source=source.replace('loadState().catch(','Promise.resolve().catch(');
   const documentStub={getElementById(){return null;},addEventListener(){},querySelector(){return{setAttribute(){}};},querySelectorAll(){return[];},documentElement:{dataset:{},style:{setProperty(){}}}};
   const sandbox={console,document:documentStub,navigator:{onLine:true},localStorage:global.localStorage,crypto:require('node:crypto').webcrypto,TextEncoder,TextDecoder,Uint8Array,Blob,URL,setTimeout,clearTimeout};
@@ -289,6 +350,10 @@ function testSeatingAlgorithm(){
   assert.equal((engine.seatGridTemplate(wideDraft).match(/--aisle-track/g)||[]).length,2,'指定した2か所に通路を作る');
   assert.deepEqual(Array.from(engine.defaultSeatAisles(8)),[2,4,6],'初期通路を2列ごとに作る');
   assert.deepEqual(Array.from(engine.defaultSeatAisles(5)),[1,3],'奇数列でも廊下側から2列ごとに通路を作る');
+  const teacherDraft=engine.teacherViewDraft({cols:3,rows:2,layout:['a','b','c','d','e','f'],previousLayout:['f','e','d','c','b','a'],emptySeats:[0],aisleAfterColumns:[1]});
+  assert.deepEqual(Array.from(teacherDraft.layout),['f','e','d','c','b','a'],'教師側印刷は座席を180度回転する');
+  assert.deepEqual(Array.from(teacherDraft.emptySeats),[5],'教師側印刷は空席位置も回転する');
+  assert.deepEqual(Array.from(teacherDraft.aisleAfterColumns),[2],'教師側印刷は通路位置を左右反転する');
   const care=engine.parseSeatCare('3番と離す、5番の近く、7番とペア');
   assert.deepEqual(Array.from(care.separate),[3]);assert.deepEqual(Array.from(care.near),[5]);assert.deepEqual(Array.from(care.pair),[7]);
   const roster=Array.from({length:12},(_,index)=>({student:{id:`s${index+1}`,name:`児童${index+1}`},enrollment:{number:index+1,gender:index%2?'female':'male'}}));
