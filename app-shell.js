@@ -227,17 +227,17 @@
 
   async function renderPupilWeekly(){
     const classItem=selectedClass();const roster=await rosterForClass(classItem.id,true);const data=await weeklyData(classItem.id);const occurrences=data.occurrences;const missingRecurring=missingRecurringWeeks(data);const medalData=await homeworkMedalData(classItem.id);
-    if(!occurrences.length){document.getElementById('pupil-content').innerHTML=`${weeklyRenewalNotice(missingRecurring,'pupil')}<section class="panel"><h2>週宿題はありません</h2><p class="muted">先生が登録すると、ここに表示されます。</p></section>`;wireWeeklyRenewal(missingRecurring,'pupil',()=>renderPupil('weekly'));return;}
-    const occurrence=occurrences[0];state.pupilWeeklyId=occurrence.id;const records=data.submissions.filter(item=>item.occurrenceId===occurrence.id);const map=new Map(records.map(item=>[item.studentId,item]));
-    document.getElementById('pupil-content').innerHTML=`${weeklyRenewalNotice(missingRecurring,'pupil')}<div class="pupil-current-date">${esc(shortJpDate(occurrence.dueDate))}<span>${esc(occurrence.title)}</span></div><div class="status-legend"><span class="legend-submitted">✓ 提出</span><span class="legend-forgotten">! 忘れた</span><span class="legend-unsubmitted">— 未提出</span></div><div class="summary-row"><span>名前を押すと状態が変わります。</span></div>${pupilStudentGrid(classItem,roster,map,'weekly',new Set(),medalData.medals)}`;
+    const current=currentWeeklyOccurrences(data);if(!current.length){document.getElementById('pupil-content').innerHTML=`${weeklyRenewalNotice(missingRecurring,'pupil')}<section class="panel"><h2>今週の週宿題はありません</h2><p class="muted">先生が今週分を作ると、ここに表示されます。前週までの修正は教師画面で行います。</p></section>`;wireWeeklyRenewal(missingRecurring,'pupil',()=>renderPupil('weekly'));return;}
+    const occurrence=current.find(item=>item.id===state.pupilWeeklyId)||current[0];state.pupilWeeklyId=occurrence.id;const records=data.submissions.filter(item=>item.occurrenceId===occurrence.id);const map=new Map(records.map(item=>[item.studentId,item])),choices=current.length>1?`<div class="pupil-weekly-choices" role="tablist" aria-label="今週の宿題">${current.map(item=>`<button type="button" class="button ${item.id===occurrence.id?'primary':''}" data-pupil-weekly-choice="${item.id}" aria-selected="${item.id===occurrence.id}">${esc(item.title)}<small>${esc(shortJpDate(item.dueDate))}</small></button>`).join('')}</div>`:'';
+    document.getElementById('pupil-content').innerHTML=`${weeklyRenewalNotice(missingRecurring,'pupil')}${choices}<div class="pupil-current-date">${esc(shortJpDate(occurrence.dueDate))}<span>${esc(occurrence.title)}</span></div><div class="status-legend"><span class="legend-submitted">✓ 提出</span><span class="legend-forgotten">! 忘れた</span><span class="legend-unsubmitted">— 未提出</span></div><div class="summary-row"><span>名前を押すと状態が変わります。</span></div>${pupilStudentGrid(classItem,roster,map,'weekly',new Set(),medalData.medals)}`;
     wireWeeklyRenewal(missingRecurring,'pupil',()=>renderPupil('weekly'));
+    document.querySelectorAll('[data-pupil-weekly-choice]').forEach(button=>button.addEventListener('click',()=>{state.pupilWeeklyId=button.dataset.pupilWeeklyChoice;renderPupil('weekly');}));
     document.querySelectorAll('[data-student-id]').forEach(button=>button.addEventListener('click',()=>handlePupilWeeklyTap(button.dataset.studentId,occurrence)));
   }
 
   async function handlePupilWeeklyTap(studentId,occurrence){
     if(rolloverDue()&&!state.rolloverContinue){requireTeacher(()=>confirmOldYearContinuation(()=>handlePupilWeeklyTap(studentId,occurrence)));return;}
-    const id=`weekly_${occurrence.id}_${studentId}`;const current=await ClassDB.get('records',id);const next=current?.status==='submitted'?'forgotten':current?.status==='forgotten'?'unsubmitted':'submitted';
-    await ClassDB.put('records',{...(current||{}),id,type:'weeklySubmission',classId:selectedClass().id,studentId,date:occurrence.dueDate,dueDate:occurrence.dueDate,title:occurrence.title,occurrenceId:occurrence.id,status:next});markFeedback(studentId,next);showToast(next==='submitted'?'提出にしました':next==='forgotten'?'忘れたにしました':'未提出に戻しました');renderPupil('weekly');
+    return applyWeeklyTap(studentId,occurrence,()=>renderPupil('weekly'));
   }
 
   async function renderPupilOccasional(){

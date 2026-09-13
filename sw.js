@@ -1,5 +1,5 @@
-const CACHE_NAME='class-support-shell-v48';
-const SHELL=['./','./index.html','./styles.css?v=48','./db.js?v=48','./migration.js?v=48','./xlsx-reader.js?v=48','./csv-export.js?v=48','./app-core.js?v=48','./app-shell.js?v=48','./app-settings.js?v=48','./app-records.js?v=48','./app-seating.js?v=48','./app-reports.js?v=48','./app-data.js?v=48','./app.js?v=48','./manifest.webmanifest','./icon.svg'];
+const CACHE_NAME='class-support-shell-v49';
+const SHELL=['./','./index.html','./styles.css?v=49','./db.js?v=49','./migration.js?v=49','./xlsx-reader.js?v=49','./csv-export.js?v=49','./app-core.js?v=49','./app-shell.js?v=49','./app-settings.js?v=49','./app-records.js?v=49','./app-seating.js?v=49','./app-reports.js?v=49','./app-data.js?v=49','./app.js?v=49','./manifest.webmanifest','./icon.svg'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)));

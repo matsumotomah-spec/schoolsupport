@@ -175,6 +175,11 @@ function testShellAndNavigation(){
   assert.ok(app.includes('この週の宿題を削除')&&app.includes('削除して繰り返しも終了'),'週宿題の削除範囲を選べる');
   assert.ok(app.includes("removed.map(trashEntryFor)")&&app.includes('seriesActive:false'),'提出記録を一緒にごみ箱へ移し、繰り返しを終了できる');
   assert.ok(app.includes('weeklySkippedWeeks'),'この週だけ削除した繰り返し宿題を同じ週に再作成しない');
+  assert.ok(app.includes('weeklyCreationQueue'),'今週分の二重作成を直列化する');
+  assert.ok(app.includes('weeklyTapQueues'),'週宿題の素早い連続タップを順番に処理する');
+  assert.ok(app.includes('data-pupil-weekly-choice'),'児童画面で今週の複数宿題を切り替えられる');
+  assert.ok(app.includes('提出予定日は今週の月曜日から日曜日の間'),'週外の日付を誤登録させない');
+  assert.ok(app.includes('restoreTrashRecord'),'削除した週宿題と提出記録・繰り返し設定を復元する');
   assert.ok(!app.includes('宿題名人'),'旧称号を画面に残さない');
   assert.ok(app.includes('openDailyWeekDialog'),'今週の忘れ物を日付別に確認する');
   assert.ok(app.includes("item.date>=currentWeekStart(date)"),'毎日の忘れ物を月曜日で区切る');
@@ -233,16 +238,16 @@ function testShellAndNavigation(){
   assert.ok(shellMatch);
   const assets=[...shellMatch[1].matchAll(/'\.\/([^']+)'/g)].map(match=>match[1].split('?')[0]).filter(Boolean);
   for(const asset of assets)assert.ok(fs.existsSync(path.join(root,asset)),`キャッシュ対象 ${asset} が存在する`);
-  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=48"></script>`));
-  assert.ok(index.includes('styles.css?v=48'),'CSSに公開版番号を付ける');
-  assert.ok(app.includes("register('./sw.js?v=48'"),'Service Workerの公開版番号を付ける');
+  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=49"></script>`));
+  assert.ok(index.includes('styles.css?v=49'),'CSSに公開版番号を付ける');
+  assert.ok(app.includes("register('./sw.js?v=49'"),'Service Workerの公開版番号を付ける');
   assert.ok(app.includes('dateInEnrollment(item.dueDate,currentEnrollment)'),'転入前・転出後の提出予定を未提出扱いにしない');
   assert.ok(app.includes('previousEnrollmentId'),'再在籍は過去の在籍期間を上書きしない');
   assert.ok(app.includes('data-ended-student'),'転出済み児童の過去記録を開ける');
   assert.ok(app.includes('offerSeatForTransfer'),'転入児童を現在の座席へ配置できる');
   assert.ok(app.includes('showUndoToast'),'記録変更を短時間取り消せる');
   assert.ok(app.includes('data-trash-restore'),'30日間のごみ箱から記録を復元できる');
-  assert.ok(app.includes("APP_VERSION='48'"),'データ管理に公開版を表示する');
+  assert.ok(app.includes("APP_VERSION='49'"),'データ管理に公開版を表示する');
   assert.ok(app.includes("NOTEBOOK_POINTS={'A':5,'B+':4,'B':3,'B-':2,'C':1}"),'ノート評価の平均換算を定義する');
   assert.ok(app.includes("NOTEBOOK_DEFAULT_GRADES={knowledge:'B',thinking:'B',attitude:'B'}"),'ノート評価の初回入力を3観点すべてBにする');
   assert.ok(app.includes("label:'知識・技能'")&&app.includes("label:'思考・判断・表現'")&&app.includes("label:'主体的に学習に取り組む態度'"),'ノート評価の3観点を定義する');
@@ -266,7 +271,9 @@ function testShellAndNavigation(){
   assert.ok(app.includes('teacherViewDraft'),'教師側の座席配置へ変換する');
   assert.ok(styles.includes('body.print-preview-active .print-preview-toolbar'),'印刷時に専用画面の操作バーを除外する');
   assert.ok(styles.includes('body.print-preview-active> :not(#app)'),'印刷時に通知とダイアログを除外する');
-  assert.ok(styles.includes('--aisle-track:minmax(26px,.5fr)'),'席替え印刷の通路を名前欄の半分幅にする');
+  assert.ok(styles.includes('--aisle-track:minmax(12px,.45fr)'),'席替え印刷の通路を狭める');
+  assert.ok(styles.includes('aspect-ratio:2.2/1'),'印刷する机を横長にする');
+  assert.ok(styles.includes('column-gap:2px'),'印刷時の通常の列間隔を狭くする');
   assert.ok(styles.includes('size:A4 landscape'),'席替えをA4横向きで印刷する');
   assert.ok(!app.includes('data-print-teacher-seats'),'席替え以外の画面に座席印刷を置かない');
   assert.ok(app.includes('activeSeatAisleAfterColumns'),'教師画面にも通路位置を反映する');
@@ -278,7 +285,7 @@ function testShellAndNavigation(){
 
 function testApplicationSplit(){
   const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
-  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=48"></script>`));
+  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=49"></script>`));
   assert.ok(positions.every(position=>position>=0),'分割した全スクリプトを読み込む');
   assert.deepEqual(positions,[...positions].sort((a,b)=>a-b),'依存関係どおりの順序で読み込む');
   for(const file of applicationFiles)execFileSync(process.execPath,['--check',path.join(root,file)]);
@@ -297,7 +304,7 @@ function testSeparateScriptEvaluation(){
     if(file==='app.js')source=source.replace('loadState().catch(','Promise.resolve().catch(');
     vm.runInContext(source,context,{filename:file});
   }
-  assert.equal(vm.runInContext('APP_VERSION',context),'48');
+  assert.equal(vm.runInContext('APP_VERSION',context),'49');
   vm.runInContext("state.informationMode='compact';applyTheme()",context);
   assert.equal(documentStub.documentElement.dataset.information,'compact');
   assert.equal(documentStub.documentElement.dataset.explanations,'false');
@@ -318,6 +325,22 @@ function testSeparateScriptEvaluation(){
   assert.equal(vm.runInContext('typeof renderSettings',context),'function');
   assert.equal(vm.runInContext('typeof renderSeating',context),'function');
   assert.equal(vm.runInContext('typeof applySyncPlan',context),'function');
+}
+
+async function testWeeklyStateTransitions(){
+  const stores={records:new Map(),trash:new Map(),meta:new Map()},clone=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));let sequence=0;
+  const ClassDB={uid:prefix=>`${prefix}_${++sequence}`,now:()=>new Date().toISOString(),deviceId:()=>'test-device',async get(store,key){return clone(stores[store]?.get(key));},async getAll(store){return [...(stores[store]?.values()||[])].map(clone);},async getAllByIndex(store,index,value){return [...(stores[store]?.values()||[])].filter(item=>item[index]===value).map(clone);},async put(store,item){const saved={...clone(item),createdAt:item.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString(),deviceId:'test-device'};stores[store].set(saved.id||saved.key,saved);return clone(saved);},async remove(store,key){stores[store].delete(key);},async getMeta(key,fallback=null){return clone(stores.meta.get(key)?.value??fallback);},async applyBatch({puts={},deletes={}}={}){for(const [store,items] of Object.entries(puts))for(const item of items||[])stores[store].set(item.id||item.key,clone(item));for(const [store,keys] of Object.entries(deletes))for(const key of keys||[])stores[store].delete(key);}};
+  const element=()=>({open:false,innerHTML:'',classList:{add(){},remove(){}},querySelector(){return null;},querySelectorAll(){return[];},addEventListener(){},setAttribute(){}}),documentStub={getElementById:element,addEventListener(){},querySelector(){return element();},querySelectorAll(){return[];},createTreeWalker(){return{nextNode(){return false;}}},documentElement:{dataset:{},style:{setProperty(){}}}};
+  const sandbox={console,document:documentStub,NodeFilter:{SHOW_TEXT:4},navigator:{onLine:true},localStorage:global.localStorage,crypto:require('node:crypto').webcrypto,TextEncoder,TextDecoder,Uint8Array,Blob,URL,setTimeout,clearTimeout,ClassDB};sandbox.window=sandbox;sandbox.window.addEventListener=()=>{};sandbox.window.matchMedia=()=>({matches:false});const context=vm.createContext(sandbox);
+  for(const file of applicationFiles){let source=fs.readFileSync(path.join(root,file),'utf8');if(file==='app.js')source=source.replace('loadState().catch(','Promise.resolve().catch(');vm.runInContext(source,context,{filename:file});}
+  vm.runInContext("state.year={id:'y1',startDate:'2026-04-01',firstTermEnd:'2026-10-10',endDate:'2027-03-31'};state.classes=[{id:'c1',name:'テスト組'}];state.selectedClassId='c1';showToast=()=>{};markFeedback=()=>{};closeDialog=()=>{};renderWeekly=async()=>{};showUndoToast=(message,undo)=>{window.__weeklyUndo=undo};",context);
+  const source=await vm.runInContext("(async()=>{const week=currentWeekStart(),previous=moveDate(week,-7);return ClassDB.put('records',{id:'weekly-old',type:'weeklyOccurrence',classId:'c1',studentId:null,date:moveDate(previous,2),dueDate:moveDate(previous,2),weekStart:previous,title:'自主学習',seriesId:'series-a',recurring:true,seriesActive:true})})()",context);
+  context.__source=source;await vm.runInContext('Promise.all([createCurrentWeeklyOccurrences([__source]),createCurrentWeeklyOccurrences([__source])])',context);
+  const current=JSON.parse(await vm.runInContext("(async()=>JSON.stringify((await weeklyData('c1')).occurrences.filter(item=>item.seriesId==='series-a'&&mondayOf(item.dueDate)===currentWeekStart())))()",context));assert.equal(current.length,1,'二度押しでも今週分を重複作成しない');
+  const visible=JSON.parse(vm.runInContext("JSON.stringify(currentWeeklyOccurrences({occurrences:[{id:'past',dueDate:moveDate(currentWeekStart(),-1)},{id:'one',dueDate:currentWeekStart()},{id:'two',dueDate:moveDate(currentWeekStart(),4)}]}).map(item=>item.id))",context));assert.deepEqual(visible,['one','two'],'児童画面の対象を今週の複数宿題だけにする');
+  context.__occurrence=current[0];await vm.runInContext("Promise.all([applyWeeklyTap('s1',__occurrence,async()=>{}),applyWeeklyTap('s1',__occurrence,async()=>{})])",context);assert.equal((await ClassDB.get('records',`weekly_${current[0].id}_s1`)).status,'forgotten','素早い2回押しを順番に処理する');await vm.runInContext("applyWeeklyTap('s1',__occurrence,async()=>{})",context);assert.equal((await ClassDB.get('records',`weekly_${current[0].id}_s1`)).status,'unsubmitted','3回目で未提出へ戻す');
+  await vm.runInContext("ClassDB.put('records',{id:`weekly_${__occurrence.id}_s1`,type:'weeklySubmission',classId:'c1',studentId:'s1',date:__occurrence.dueDate,dueDate:__occurrence.dueDate,title:__occurrence.title,occurrenceId:__occurrence.id,status:'submitted'})",context);await vm.runInContext('deleteWeeklyOccurrence(__occurrence,true)',context);assert.equal((await ClassDB.get('records','weekly-old')).seriesActive,false,'繰り返し終了を過去回へ反映する');const restoredCount=await vm.runInContext("restoreTrashRecord(`trash_${__occurrence.id}`)",context);assert.equal(restoredCount,2,'宿題と提出記録をまとめて復元する');assert.equal((await ClassDB.get('records','weekly-old')).seriesActive,true,'復元時に繰り返し設定も戻す');assert.equal((await ClassDB.get('records',`weekly_${current[0].id}_s1`)).status,'submitted');
+  const secondSource=await vm.runInContext("(async()=>{const previous=moveDate(currentWeekStart(),-7);return ClassDB.put('records',{id:'weekly-old-b',type:'weeklyOccurrence',classId:'c1',studentId:null,date:previous,dueDate:previous,weekStart:previous,title:'読書',seriesId:'series-b',recurring:true,seriesActive:true})})()",context);context.__sourceB=secondSource;const second=await vm.runInContext("(async()=>{await createCurrentWeeklyOccurrences([__sourceB]);return (await weeklyData('c1')).occurrences.find(item=>item.seriesId==='series-b'&&mondayOf(item.dueDate)===currentWeekStart())})()",context);context.__occurrenceB=second;await vm.runInContext('deleteWeeklyOccurrence(__occurrenceB,false)',context);assert.equal((await ClassDB.getMeta('weeklySkippedWeeks',[])).length,1,'この週だけ削除した系列を再作成対象から外す');await vm.runInContext("restoreTrashRecord(`trash_${__occurrenceB.id}`)",context);assert.equal((await ClassDB.getMeta('weeklySkippedWeeks',[])).length,0,'ごみ箱から復元した週を再作成除外から戻す');
 }
 
 async function testImportValidation(){
@@ -380,6 +403,7 @@ function testSeatingAlgorithm(){
   testShellAndNavigation();
   testApplicationSplit();
   testSeparateScriptEvaluation();
+  await testWeeklyStateTransitions();
   await testImportValidation();
   testSeatingAlgorithm();
   console.log('All integration checks passed.');
