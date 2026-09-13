@@ -48,15 +48,25 @@ function testCsv(){
 }
 
 function testMigration(){
-  const file={name:'旧データ.json',text:async()=>JSON.stringify({cc_names_v1:{1:'青木',2:'上田'},cc_hw_v3:{'2026-09-06':{1:1,2:3}}})};
-  return LegacyMigration.fromFiles([file]).then(sources=>{
-    assert.equal(sources.length,1);
-    assert.equal(LegacyMigration.roster(sources[0]).length,2);
+  const selfData={cc_names_v1:{1:'青木',2:'上田'},cc_hw_v3:{'2026-09-06':{1:1,2:3}},cc_wh_types_v1:[{id:'home','name':'自主学習ノート'}],cc_wh_v1:{'2026-09-06':{home:{1:1,2:2}}},cc_sb_v1:{'2026-09-06':{sessions:[{id:'notebook-1',name:'国語 ノート',kan:'物語',grades:{1:'B',2:'Bp'}}]}}};
+  const ownFile={name:'クラスチェッカー_バックアップ.json',size:100,text:async()=>JSON.stringify({version:1,data:{...selfData,cc_seat_layout_v1:{cols:2,rows:1,seats:[{num:1},{num:2}]}}})};
+  const combinedFile={name:'クラス記録_統合バックアップ.json',size:100,text:async()=>JSON.stringify({app:'classroom-suite',version:1,data:{...selfData,cc_ckpts_v1:{国語:['発言']},mc_meta_v1:{classIds:['A'],classNames:{A:'担当学級'}},mc_names_A_v1:{1:'伊藤'},mc_sb_A_v1:{'2026-09-06':{sessions:[{id:'other-1',name:'算数 ノート',kan:'小数',grades:{1:'A'}}]}}}})};
+  return LegacyMigration.fromFiles([combinedFile,ownFile]).then(sources=>{
+    assert.equal(sources.length,2,'重複する自クラス分を統合し、他クラス分と分ける');
+    const self=sources.find(source=>source.kind==='classChecker'),other=sources.find(source=>source.kind==='multi');
+    assert.ok(self&&other,'自クラス用と他クラス用を判別する');
+    assert.equal(self.fileNames.length,2,'同じ自クラス記録を含む2ファイルを一つにまとめる');
+    assert.ok(self.raw.cc_ckpts_v1&&self.raw.cc_seat_layout_v1,'両ファイルに分かれた設定を補完する');
+    assert.equal(LegacyMigration.roster(self).length,2);
     const ids={青木:'s1',上田:'s2'};
-    const records=LegacyMigration.records(sources[0],({name,number})=>ids[name]||({1:'s1',2:'s2'}[number]),'c1');
-    assert.equal(records.length,2);
+    const records=LegacyMigration.records(self,({name,number})=>ids[name]||({1:'s1',2:'s2'}[number]),'c1');
     assert.equal(records.find(item=>item.studentId==='s1').status,'submitted');
-    assert.equal(records.find(item=>item.studentId==='s2').status,'forgotten');
+    assert.equal(records.find(item=>item.type==='dailyHomework'&&item.studentId==='s2').status,'forgotten');
+    const oldAbsent=records.find(item=>item.type==='weeklySubmission'&&item.studentId==='s2');
+    assert.equal(oldAbsent.status,'unsubmitted','旧週宿題の欠席を忘れ物として数えない');
+    assert.equal(oldAbsent.legacyStatus,'absent','旧画面で欠席だった情報を保持する');
+    const otherRecords=LegacyMigration.records(other,({number})=>number===1?'s3':null,'c2');
+    assert.equal(otherRecords.filter(item=>item.type==='notebookAssessment').length,1,'他クラスのノート評価を変換する');
   });
 }
 
@@ -81,7 +91,8 @@ function testShellAndNavigation(){
   assert.ok(!app.includes('id="sync-placeholder">同期'),'右上の独立した同期ボタンを残さない');
   assert.ok(app.includes('data-common-settings'),'共通ヘッダーから設定案内へ移動できる');
   assert.ok(app.includes('home-button'),'ホームを共通ヘッダーで強調する');
-  assert.ok(app.includes('data-home-menu')&&app.includes('openHomeMenu'),'教師ホーム左側からやりたいことメニューを開ける');
+  assert.ok(app.includes('data-home-menu')&&app.includes('openHomeMenu'),'教師画面左側からやりたいことメニューを開ける');
+  assert.ok(app.includes("function wireCommonHeader(helpKey='home'){\n    document.querySelector('[data-home-menu]')?.addEventListener('click',openHomeMenu)"),'すべての教師画面でハンバーガーメニューを共通配線する');
   assert.ok(styles.includes('.home-menu-drawer'),'教師用ハンバーガーメニューを左側のドロワーで表示する');
   assert.ok(styles.includes('.home-menu-button{flex:0 0 44px;width:44px'),'ハンバーガーボタンをiPadで押せる大きさにする');
   assert.ok(styles.includes('width:min(390px,92vw)'),'左メニューを狭い画面からはみ出させない');
@@ -251,16 +262,16 @@ function testShellAndNavigation(){
   assert.ok(shellMatch);
   const assets=[...shellMatch[1].matchAll(/'\.\/([^']+)'/g)].map(match=>match[1].split('?')[0]).filter(Boolean);
   for(const asset of assets)assert.ok(fs.existsSync(path.join(root,asset)),`キャッシュ対象 ${asset} が存在する`);
-  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=52"></script>`));
-  assert.ok(index.includes('styles.css?v=52'),'CSSに公開版番号を付ける');
-  assert.ok(app.includes("register('./sw.js?v=52'"),'Service Workerの公開版番号を付ける');
+  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=53"></script>`));
+  assert.ok(index.includes('styles.css?v=53'),'CSSに公開版番号を付ける');
+  assert.ok(app.includes("register('./sw.js?v=53'"),'Service Workerの公開版番号を付ける');
   assert.ok(app.includes('dateInEnrollment(item.dueDate,currentEnrollment)'),'転入前・転出後の提出予定を未提出扱いにしない');
   assert.ok(app.includes('previousEnrollmentId'),'再在籍は過去の在籍期間を上書きしない');
   assert.ok(app.includes('data-ended-student'),'転出済み児童の過去記録を開ける');
   assert.ok(app.includes('offerSeatForTransfer'),'転入児童を現在の座席へ配置できる');
   assert.ok(app.includes('showUndoToast'),'記録変更を短時間取り消せる');
   assert.ok(app.includes('data-trash-restore'),'30日間のごみ箱から記録を復元できる');
-  assert.ok(app.includes("APP_VERSION='52'"),'データ管理に公開版を表示する');
+  assert.ok(app.includes("APP_VERSION='53'"),'データ管理に公開版を表示する');
   assert.ok(app.includes("NOTEBOOK_POINTS={'A':5,'B+':4,'B':3,'B-':2,'C':1}"),'ノート評価の平均換算を定義する');
   assert.ok(app.includes("NOTEBOOK_DEFAULT_GRADES={knowledge:'B',thinking:'B',attitude:'B'}"),'ノート評価の初回入力を3観点すべてBにする');
   assert.ok(app.includes("label:'知識・技能'")&&app.includes("label:'思考・判断・表現'")&&app.includes("label:'主体的に学習に取り組む態度'"),'ノート評価の3観点を定義する');
@@ -298,7 +309,7 @@ function testShellAndNavigation(){
 
 function testApplicationSplit(){
   const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
-  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=52"></script>`));
+  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=53"></script>`));
   assert.ok(positions.every(position=>position>=0),'分割した全スクリプトを読み込む');
   assert.deepEqual(positions,[...positions].sort((a,b)=>a-b),'依存関係どおりの順序で読み込む');
   for(const file of applicationFiles)execFileSync(process.execPath,['--check',path.join(root,file)]);
@@ -317,7 +328,7 @@ function testSeparateScriptEvaluation(){
     if(file==='app.js')source=source.replace('loadState().catch(','Promise.resolve().catch(');
     vm.runInContext(source,context,{filename:file});
   }
-  assert.equal(vm.runInContext('APP_VERSION',context),'52');
+  assert.equal(vm.runInContext('APP_VERSION',context),'53');
   vm.runInContext("state.informationMode='compact';applyTheme()",context);
   assert.equal(documentStub.documentElement.dataset.information,'compact');
   assert.equal(documentStub.documentElement.dataset.explanations,'false');
@@ -338,6 +349,9 @@ function testSeparateScriptEvaluation(){
   assert.equal(vm.runInContext('typeof renderSettings',context),'function');
   assert.equal(vm.runInContext('typeof renderSeating',context),'function');
   assert.equal(vm.runInContext('typeof applySyncPlan',context),'function');
+  vm.runInContext("state.classes=[{id:'c1',name:'テスト組',isOwn:true}];state.selectedClassId='c1';state.year={label:'2026年度',startDate:'2026-04-01',firstTermEnd:'2026-10-10',endDate:'2027-03-31'}",context);
+  assert.ok(vm.runInContext("headerHtml('ノート評価').includes('data-home-menu')",context),'教師用の各機能画面にもハンバーガーメニューを表示する');
+  assert.ok(!vm.runInContext("headerHtml('提出','',false,false).includes('data-home-menu')",context),'児童用画面には教師メニューを表示しない');
   assert.equal(vm.runInContext("state.pupilKanaMode=true;pupilClassName({name:'5年3組'})",context),'5ねん3くみ','児童用ひらがなモードで一般級名を読みやすく表示する');
   assert.equal(vm.runInContext("pupilStatusLabel('submitted')",context),'✓ だした','児童用ひらがなモードで提出状態を読みやすく表示する');
   assert.equal(vm.runInContext("state.pupilKanaMode=false;pupilStatusLabel('submitted')",context),'✓ 提出','通常表示へ戻せる');

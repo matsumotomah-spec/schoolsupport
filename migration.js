@@ -9,6 +9,18 @@
   function id(kind,...parts){return`legacy_${kind}_${hash(parts.map(value=>JSON.stringify(value)).join('|'))}`;}
   function sourceId(label,kind,suffix=''){return`source_${hash(`${label}|${kind}|${suffix}`)}`;}
   function countObject(value){return value&&typeof value==='object'?Object.keys(value).length:0;}
+  function dataSize(value){try{return JSON.stringify(value??null).length;}catch{return 0;}}
+  function stableSourceId(kind,value){return`source_${hash(`${kind}|${JSON.stringify(value)}`)}`;}
+  function countClassCheckerRecords(data){
+    let count=0;
+    for(const [date,day] of Object.entries(data.cc_hw_v3||{}))if(validDate(date))count+=Object.values(day||{}).filter(Boolean).length;
+    for(const [date,day] of Object.entries(data.cc_wh_v1||{}))if(validDate(date))for(const states of Object.values(day||{})){count++;count+=Object.values(states||{}).filter(Boolean).length;}
+    for(const [date,day] of Object.entries(data.cc_sh_v1||{}))if(validDate(date))count+=(day?.given||[]).length;
+    for(const [date,day] of Object.entries(data.cc_mm_v1||{}))if(validDate(date))count+=Object.values(day||{}).filter(value=>clean(value)).length;
+    for(const [date,day] of Object.entries(data.cc_sb_v1||{}))if(validDate(date))for(const session of day?.sessions||[])count+=Object.values(session.type==='score'?session.scores||{}:session.grades||{}).filter(value=>value!==''&&value!==null&&value!==undefined&&(session.type!=='score'||value!=='abs')).length;
+    return count;
+  }
+  function countMultiRecords(records){let count=0;for(const [date,day] of Object.entries(records||{}))if(validDate(date))for(const session of day?.sessions||[])count+=Object.values(session.type==='score'?session.scores||{}:session.grades||{}).filter(value=>value!==''&&value!==null&&value!==undefined&&(session.type!=='score'||value!=='abs')).length;return count;}
 
   function storageSnapshot(){
     const data={},keys=[];
@@ -23,7 +35,8 @@
   function classCheckerSource(data,label,cleanupKeys=[]){
     if(!CC_KEYS.some(key=>data[key]!==undefined))return null;
     const names=data.cc_names_v1||{};
-    return{id:sourceId(label,'classChecker'),kind:'classChecker',label:`${label}・クラスチェッカー`,raw:data,cleanupKeys:cleanupKeys.filter(key=>CC_KEYS.includes(key)),studentCount:countObject(names),recordCount:[data.cc_hw_v3,data.cc_wh_v1,data.cc_sh_v1,data.cc_mm_v1,data.cc_sb_v1].reduce((sum,value)=>sum+countObject(value),0)};
+    const identity=CC_KEYS.filter(key=>!['cc_ckpts_v1','cc_seat_layout_v1'].includes(key)).map(key=>data[key]??null);
+    return{id:stableSourceId('classChecker',identity),kind:'classChecker',label:`${label}・自クラスの記録`,raw:data,cleanupKeys:cleanupKeys.filter(key=>CC_KEYS.includes(key)),studentCount:countObject(names),recordCount:countClassCheckerRecords(data),features:['毎日の宿題','週宿題','ミニ賞状','児童メモ','ノート評価','座席']};
   }
 
   function multiSources(data,label,cleanupKeys=[]){
@@ -32,8 +45,20 @@
     const ids=[...new Set([...(meta.classIds||[]),...inferred])];
     return ids.filter(classId=>data[`mc_names_${classId}_v1`]!==undefined||data[`mc_sb_${classId}_v1`]!==undefined).map(classId=>{
       const names=data[`mc_names_${classId}_v1`]||{},records=data[`mc_sb_${classId}_v1`]||{};
-      return{id:sourceId(label,'multi',classId),kind:'multi',legacyClassId:classId,label:`${label}・${meta.classNames?.[classId]||`${classId}クラス`}`,raw:{names,records,viewpoints:data.mc_ckpts_v1||{}},cleanupKeys:cleanupKeys.filter(key=>key===`mc_names_${classId}_v1`||key===`mc_sb_${classId}_v1`||key==='mc_meta_v1'||key==='mc_ckpts_v1'),studentCount:countObject(names),recordCount:countObject(records)};
+      return{id:stableSourceId('multi',[classId,names,records]),kind:'multi',legacyClassId:classId,label:`${label}・他クラス（${meta.classNames?.[classId]||`${classId}クラス`}）`,raw:{names,records,viewpoints:data.mc_ckpts_v1||{}},cleanupKeys:cleanupKeys.filter(key=>key===`mc_names_${classId}_v1`||key===`mc_sb_${classId}_v1`||key==='mc_meta_v1'||key==='mc_ckpts_v1'),studentCount:countObject(names),recordCount:countMultiRecords(records),features:['ノート評価']};
     });
+  }
+
+  function coalesceSources(sources){
+    const grouped=new Map();
+    for(const source of sources){
+      const current=grouped.get(source.id);
+      if(!current){grouped.set(source.id,{...source,fileNames:[...(source.fileNames||[]) ]});continue;}
+      const raw={...current.raw};for(const [key,value] of Object.entries(source.raw||{}))if(dataSize(value)>dataSize(raw[key]))raw[key]=value;
+      const fileNames=[...new Set([...(current.fileNames||[]),...(source.fileNames||[])])];
+      grouped.set(source.id,{...current,raw,fileNames,cleanupKeys:[...new Set([...(current.cleanupKeys||[]),...(source.cleanupKeys||[])])],studentCount:Math.max(current.studentCount||0,source.studentCount||0),recordCount:Math.max(current.recordCount||0,source.recordCount||0),label:fileNames.length>1?`${fileNames.length}個の旧バックアップ・${source.kind==='classChecker'?'自クラスの記録':'同じデータを統合'}`:current.label});
+    }
+    return[...grouped.values()];
   }
 
   function seatingSource(raw,label,cleanupKeys=[]){
@@ -83,10 +108,10 @@
       if(/\.csv$/i.test(file.name)){sources.push(...parseCsv(text,file.name));continue;}
       let payload;try{payload=JSON.parse(text);}catch{continue;}
       const data=payload?.data&&typeof payload.data==='object'?payload.data:payload;
-      const discovered=discover(data,file.name,[]);sources.push(...discovered);
-      if(!discovered.length){const seat=seatingSource(payload,file.name,[]);if(seat)sources.push(seat);const behavior=behaviorSource(payload.students,payload.records,file.name,[]);if(behavior)sources.push(behavior);}
+      const discovered=discover(data,file.name,[]).map(source=>({...source,fileNames:[file.name]}));sources.push(...discovered);
+      if(!discovered.length){const seat=seatingSource(payload,file.name,[]);if(seat)sources.push({...seat,fileNames:[file.name]});const behavior=behaviorSource(payload.students,payload.records,file.name,[]);if(behavior)sources.push({...behavior,fileNames:[file.name]});}
     }
-    return sources;
+    return coalesceSources(sources);
   }
 
   function fromStorage(){const snapshot=storageSnapshot();return discover(snapshot.data,'この端末',snapshot.keys);}
@@ -129,7 +154,7 @@
       const raw=source.raw,names=raw.cc_names_v1||{},nameFor=number=>names[number]||names[String(number)]||'';
       for(const [date,day] of Object.entries(raw.cc_hw_v3||{}))if(validDate(date))for(const [number,value] of Object.entries(day||{})){const studentId=student(number,nameFor(number));if(!studentId||!value)continue;const follow=raw.cc_hw_flw_v1?.[number];add({id:id('daily',source.id,date,number),type:'dailyHomework',studentId,date,status:value===1?'submitted':value===2?'absent':'forgotten',resolvedAt:follow?.resolved?follow.date||date:null});}
       const types=new Map((raw.cc_wh_types_v1||[]).map(item=>[String(item.id),item.name]));
-      for(const [date,day] of Object.entries(raw.cc_wh_v1||{}))if(validDate(date))for(const [typeId,states] of Object.entries(day||{})){const title=types.get(String(typeId))||'週宿題',occurrenceId=id('weeklyOccurrence',source.id,date,typeId);add({id:occurrenceId,type:'weeklyOccurrence',studentId:null,date,dueDate:date,title});for(const [number,value] of Object.entries(states||{})){const studentId=student(number,nameFor(number));if(!studentId||!value)continue;add({id:id('weekly',source.id,date,typeId,number),type:'weeklySubmission',studentId,date,dueDate:date,title,occurrenceId,status:value===1?'submitted':value===2?'forgotten':'unsubmitted'});}}
+      for(const [date,day] of Object.entries(raw.cc_wh_v1||{}))if(validDate(date))for(const [typeId,states] of Object.entries(day||{})){const title=types.get(String(typeId))||'週宿題',occurrenceId=id('weeklyOccurrence',source.id,date,typeId);add({id:occurrenceId,type:'weeklyOccurrence',studentId:null,date,dueDate:date,title});for(const [number,value] of Object.entries(states||{})){const studentId=student(number,nameFor(number));if(!studentId||!value)continue;add({id:id('weekly',source.id,date,typeId,number),type:'weeklySubmission',studentId,date,dueDate:date,title,occurrenceId,status:value===1?'submitted':'unsubmitted',legacyStatus:value===2?'absent':undefined});}}
       for(const [date,day] of Object.entries(raw.cc_sh_v1||{}))if(validDate(date))for(const number of day?.given||[]){const studentId=student(number,nameFor(number));if(studentId)add({id:id('certificate',source.id,date,number),type:'certificate',studentId,date,tags:[],text:''});}
       for(const [date,day] of Object.entries(raw.cc_mm_v1||{}))if(validDate(date))for(const [number,text] of Object.entries(day||{})){const studentId=student(number,nameFor(number));if(studentId&&clean(text))add({id:id('memo',source.id,date,number,text),type:'memo',studentId,date,subject:'',tags:[],text:clean(text)});}
       for(const [date,day] of Object.entries(raw.cc_sb_v1||{}))if(validDate(date))for(const session of day?.sessions||[])addNotebook(date,session,session.type==='score'?session.scores:session.grades);
@@ -156,5 +181,5 @@
     return null;
   }
 
-  window.LegacyMigration={fromStorage,fromFiles,roster,records,classPatch};
+  window.LegacyMigration={fromStorage,fromFiles,roster,records,classPatch,coalesceSources};
 })();
