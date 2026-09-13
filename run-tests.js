@@ -24,7 +24,7 @@ function testCsv(){
     {id:'w1',type:'weeklyOccurrence',date:'2026-09-06',dueDate:'2026-09-06',title:'自主学習'},
     {id:'ws1',type:'weeklySubmission',occurrenceId:'w1',studentId:'s2',status:'forgotten'},
     {id:'o1',type:'occasionalItem',date:'2026-09-07',dueDate:'2026-09-07',title:'同意書',archived:false},
-    {id:'a1',type:'notebookAssessment',studentId:'s1',date:'2026-09-06',subject:'国語',unit:'物語',title:'9/6',grade:'B+',viewpointGrades:{knowledge:'A',thinking:'B+',attitude:'B'},status:'evaluated'}
+    {id:'a1',type:'notebookAssessment',studentId:'s1',date:'2026-09-06',subject:'国語',unit:'物語',title:'9/6',grade:'B+',viewpointGrades:{knowledge:'A',thinking:'B+',attitude:'B'},status:'evaluated',note:'場面に合う言葉を選べた'}
   ];
   const args={classItem:{name:'5年2組'},roster,records,start:'2026-09-01',end:'2026-09-30'};
   const submissions=ClassCsvExport.submissionRows(args);
@@ -36,6 +36,7 @@ function testCsv(){
   const assessments=ClassCsvExport.assessmentRows(args);
   assert.deepEqual(assessments[1].slice(7,11),['A','B+','B','B+']);
   assert.deepEqual(assessments[0].slice(7,10),['知識・技能','思考・判断・表現','主体的に学習に取り組む態度']);
+  assert.equal(assessments[1].at(-1),'場面に合う言葉を選べた','ノート評価メモをCSVへ出力する');
   const absentAssessment=ClassCsvExport.assessmentRows({...args,records:[{type:'notebookAssessment',studentId:'s1',date:'2026-09-06',subject:'国語',status:'absent'}]});
   assert.deepEqual(absentAssessment[1].slice(7,11),['','','',''],'欠席は観点評価欄を空欄にする');
   const csv=ClassCsvExport.csv([['氏名','式'],['青木','=1+1'],['上田',' =1+1']]);
@@ -197,16 +198,22 @@ function testShellAndNavigation(){
   assert.ok(app.includes('pupilOverviewVisibility'),'児童用一覧の表示項目を保存する');
   assert.ok(app.includes('state.pupilOverviewVisibility.daily')&&app.includes('state.pupilOverviewVisibility.weekly')&&app.includes('state.pupilOverviewVisibility.occasional'),'宿題・週宿題・提出物の警告を個別に切り替える');
   assert.ok(app.includes('state.pupilOverviewVisibility.monthly')&&app.includes('state.pupilOverviewVisibility.reward'),'忘れ回数と達成アイコンを個別に切り替える');
-  assert.ok(app.includes('この週の宿題を削除')&&app.includes('削除して繰り返しも終了'),'週宿題の削除範囲を選べる');
-  assert.ok(app.includes("removed.map(trashEntryFor)")&&app.includes('seriesActive:false'),'提出記録を一緒にごみ箱へ移し、繰り返しを終了できる');
-  assert.ok(app.includes('weeklySkippedWeeks'),'この週だけ削除した繰り返し宿題を同じ週に再作成しない');
+  assert.ok(app.includes('週宿題の表示・終了を管理')&&app.includes('今後の繰り返しを終了しました'),'週宿題を削除せず終了できる');
+  assert.ok(app.includes('setWeeklyVisibility')&&app.includes('選んだ宿題を表示しない'),'週宿題をまとめて非表示にできる');
+  assert.ok(app.includes('allOccurrences')&&app.includes('item.hidden'),'非表示の週宿題を通常表示から外す');
   assert.ok(app.includes('weeklyCreationQueue'),'今週分の二重作成を直列化する');
   assert.ok(app.includes('weeklyTapQueues'),'週宿題の素早い連続タップを順番に処理する');
   assert.ok(app.includes('data-pupil-weekly-choice'),'児童画面で今週の複数宿題を切り替えられる');
   assert.ok(app.includes('提出予定日は今週の月曜日から日曜日の間'),'週外の日付を誤登録させない');
-  assert.ok(app.includes('restoreTrashRecord'),'削除した週宿題と提出記録・繰り返し設定を復元する');
+  assert.ok(app.includes('restoreTrashRecord'),'ごみ箱から削除済み記録を復元できる');
   assert.ok(!app.includes('宿題名人'),'旧称号を画面に残さない');
   assert.ok(app.includes('openDailyWeekDialog'),'今週の忘れ物を日付別に確認する');
+  assert.ok(app.includes('openDailyAbsenceDialog')&&app.includes('欠席を設定'),'毎日の宿題で欠席をまとめて設定できる');
+  assert.ok(app.includes("status==='absent'&&item.status!=='absent'")||app.includes("item.status!=='absent'"),'欠席を忘れ回数から除外する');
+  assert.ok(app.includes('supportUnitForStudent')&&app.includes('学習中の単元'),'支援級の児童メモへ現在の学習単元を反映する');
+  assert.ok(app.includes('id="grade-note"')&&app.includes('note:note===undefined'),'ノート評価の詳細入力でメモを保存する');
+  assert.ok(app.includes('pupil-overview-toggle')&&app.includes('pupilOverviewShowAll'),'児童用提出一覧をアラート対象に絞り全員表示へ切り替えられる');
+  assert.ok(app.includes('row.enrollment?.number'),'児童用提出画面に出席番号を表示する');
   assert.ok(app.includes("item.date>=currentWeekStart(date)"),'毎日の忘れ物を月曜日で区切る');
   assert.ok(!app.includes('NFPYM-8AEXB-QQS28'),'バックアップ画面の復旧コード例を表示しない');
   assert.ok(app.includes('data-shortage-subject'),'不足教科を指定して児童メモを開く');
@@ -267,16 +274,16 @@ function testShellAndNavigation(){
   assert.ok(shellMatch);
   const assets=[...shellMatch[1].matchAll(/'\.\/([^']+)'/g)].map(match=>match[1].split('?')[0]).filter(Boolean);
   for(const asset of assets)assert.ok(fs.existsSync(path.join(root,asset)),`キャッシュ対象 ${asset} が存在する`);
-  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=54"></script>`));
-  assert.ok(index.includes('styles.css?v=54'),'CSSに公開版番号を付ける');
-  assert.ok(app.includes("register('./sw.js?v=54'"),'Service Workerの公開版番号を付ける');
+  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=56"></script>`));
+  assert.ok(index.includes('styles.css?v=56'),'CSSに公開版番号を付ける');
+  assert.ok(app.includes("register('./sw.js?v=56'"),'Service Workerの公開版番号を付ける');
   assert.ok(app.includes('dateInEnrollment(item.dueDate,currentEnrollment)'),'転入前・転出後の提出予定を未提出扱いにしない');
   assert.ok(app.includes('previousEnrollmentId'),'再在籍は過去の在籍期間を上書きしない');
   assert.ok(app.includes('data-ended-student'),'転出済み児童の過去記録を開ける');
   assert.ok(app.includes('offerSeatForTransfer'),'転入児童を現在の座席へ配置できる');
   assert.ok(app.includes('showUndoToast'),'記録変更を短時間取り消せる');
   assert.ok(app.includes('data-trash-restore'),'30日間のごみ箱から記録を復元できる');
-  assert.ok(app.includes("APP_VERSION='54'"),'データ管理に公開版を表示する');
+  assert.ok(app.includes("APP_VERSION='56'"),'データ管理に公開版を表示する');
   assert.ok(app.includes("NOTEBOOK_POINTS={'A':5,'B+':4,'B':3,'B-':2,'C':1}"),'ノート評価の平均換算を定義する');
   assert.ok(app.includes("NOTEBOOK_DEFAULT_GRADES={knowledge:'B',thinking:'B',attitude:'B'}"),'ノート評価の初回入力を3観点すべてBにする');
   assert.ok(app.includes("label:'知識・技能'")&&app.includes("label:'思考・判断・表現'")&&app.includes("label:'主体的に学習に取り組む態度'"),'ノート評価の3観点を定義する');
@@ -309,12 +316,12 @@ function testShellAndNavigation(){
   assert.ok(app.includes('廊下側から${hallColumn}・${hallColumn+1}列の間'),'通路位置を廊下側から数える');
   assert.ok(app.includes('id="setup-group" value=""'),'初期クラスの組を空欄にする');
   assert.ok(app.includes('<option value="">学年</option>'),'初期クラスの学年を未選択にする');
-  assert.ok(app.includes('過去の宿題を整理'),'古い週宿題を一覧から整理できる');
+  assert.ok(app.includes('週宿題の表示・終了を管理'),'古い週宿題を一覧から整理できる');
 }
 
 function testApplicationSplit(){
   const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
-  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=54"></script>`));
+  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=56"></script>`));
   assert.ok(positions.every(position=>position>=0),'分割した全スクリプトを読み込む');
   assert.deepEqual(positions,[...positions].sort((a,b)=>a-b),'依存関係どおりの順序で読み込む');
   for(const file of applicationFiles)execFileSync(process.execPath,['--check',path.join(root,file)]);
@@ -333,7 +340,7 @@ function testSeparateScriptEvaluation(){
     if(file==='app.js')source=source.replace('loadState().catch(','Promise.resolve().catch(');
     vm.runInContext(source,context,{filename:file});
   }
-  assert.equal(vm.runInContext('APP_VERSION',context),'54');
+  assert.equal(vm.runInContext('APP_VERSION',context),'56');
   vm.runInContext("state.informationMode='compact';applyTheme()",context);
   assert.equal(documentStub.documentElement.dataset.information,'compact');
   assert.equal(documentStub.documentElement.dataset.explanations,'false');
@@ -378,8 +385,7 @@ async function testWeeklyStateTransitions(){
   const current=JSON.parse(await vm.runInContext("(async()=>JSON.stringify((await weeklyData('c1')).occurrences.filter(item=>item.seriesId==='series-a'&&mondayOf(item.dueDate)===currentWeekStart())))()",context));assert.equal(current.length,1,'二度押しでも今週分を重複作成しない');
   const visible=JSON.parse(vm.runInContext("JSON.stringify(currentWeeklyOccurrences({occurrences:[{id:'past',dueDate:moveDate(currentWeekStart(),-1)},{id:'one',dueDate:currentWeekStart()},{id:'two',dueDate:moveDate(currentWeekStart(),4)}]}).map(item=>item.id))",context));assert.deepEqual(visible,['one','two'],'児童画面の対象を今週の複数宿題だけにする');
   context.__occurrence=current[0];await vm.runInContext("Promise.all([applyWeeklyTap('s1',__occurrence,async()=>{}),applyWeeklyTap('s1',__occurrence,async()=>{})])",context);assert.equal((await ClassDB.get('records',`weekly_${current[0].id}_s1`)).status,'forgotten','素早い2回押しを順番に処理する');await vm.runInContext("applyWeeklyTap('s1',__occurrence,async()=>{})",context);assert.equal((await ClassDB.get('records',`weekly_${current[0].id}_s1`)).status,'unsubmitted','3回目で未提出へ戻す');
-  await vm.runInContext("ClassDB.put('records',{id:`weekly_${__occurrence.id}_s1`,type:'weeklySubmission',classId:'c1',studentId:'s1',date:__occurrence.dueDate,dueDate:__occurrence.dueDate,title:__occurrence.title,occurrenceId:__occurrence.id,status:'submitted'})",context);await vm.runInContext('deleteWeeklyOccurrence(__occurrence,true)',context);assert.equal((await ClassDB.get('records','weekly-old')).seriesActive,false,'繰り返し終了を過去回へ反映する');const restoredCount=await vm.runInContext("restoreTrashRecord(`trash_${__occurrence.id}`)",context);assert.equal(restoredCount,2,'宿題と提出記録をまとめて復元する');assert.equal((await ClassDB.get('records','weekly-old')).seriesActive,true,'復元時に繰り返し設定も戻す');assert.equal((await ClassDB.get('records',`weekly_${current[0].id}_s1`)).status,'submitted');
-  const secondSource=await vm.runInContext("(async()=>{const previous=moveDate(currentWeekStart(),-7);return ClassDB.put('records',{id:'weekly-old-b',type:'weeklyOccurrence',classId:'c1',studentId:null,date:previous,dueDate:previous,weekStart:previous,title:'読書',seriesId:'series-b',recurring:true,seriesActive:true})})()",context);context.__sourceB=secondSource;const second=await vm.runInContext("(async()=>{await createCurrentWeeklyOccurrences([__sourceB]);return (await weeklyData('c1')).occurrences.find(item=>item.seriesId==='series-b'&&mondayOf(item.dueDate)===currentWeekStart())})()",context);context.__occurrenceB=second;await vm.runInContext('deleteWeeklyOccurrence(__occurrenceB,false)',context);assert.equal((await ClassDB.getMeta('weeklySkippedWeeks',[])).length,1,'この週だけ削除した系列を再作成対象から外す');await vm.runInContext("restoreTrashRecord(`trash_${__occurrenceB.id}`)",context);assert.equal((await ClassDB.getMeta('weeklySkippedWeeks',[])).length,0,'ごみ箱から復元した週を再作成除外から戻す');
+  await vm.runInContext("ClassDB.put('records',{id:`weekly_${__occurrence.id}_s1`,type:'weeklySubmission',classId:'c1',studentId:'s1',date:__occurrence.dueDate,dueDate:__occurrence.dueDate,title:__occurrence.title,occurrenceId:__occurrence.id,status:'submitted'})",context);await vm.runInContext('endWeeklySeries(__occurrence)',context);assert.equal((await ClassDB.get('records','weekly-old')).seriesActive,false,'繰り返し終了を過去回へ反映する');assert.equal((await ClassDB.get('records',`weekly_${current[0].id}_s1`)).status,'submitted','終了しても提出記録を残す');await vm.runInContext('resumeWeeklySeries(__occurrence)',context);assert.equal((await ClassDB.get('records','weekly-old')).seriesActive,true,'終了した繰り返しを再開できる');await vm.runInContext('setWeeklyVisibility([__occurrence.id],true)',context);const hidden=JSON.parse(await vm.runInContext("(async()=>JSON.stringify(await weeklyData('c1')))()",context));assert.ok(!hidden.occurrences.some(item=>item.id===context.__occurrence.id),'非表示の宿題を通常一覧から外す');assert.ok(hidden.allOccurrences.some(item=>item.id===context.__occurrence.id),'非表示の宿題も管理一覧には残す');await vm.runInContext('setWeeklyVisibility([__occurrence.id],false)',context);assert.ok((await ClassDB.get('records',context.__occurrence.id)).hidden===false,'非表示の宿題を再表示できる');
 }
 
 async function testImportValidation(){

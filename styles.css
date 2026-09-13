@@ -204,11 +204,13 @@ h3{font-size:1rem;margin-bottom:8px}
 .student-card .state{display:block;color:var(--muted);margin-top:5px;font-size:.85rem}
 .student-card.submitted{background:light-dark(#d8eee0,#254534);border-color:light-dark(#6ca47e,#6ca47e)}
 .student-card.forgotten{background:light-dark(#f6d8d8,#512c2c);border-color:var(--danger)}
+.student-card.absent{background:light-dark(#e7edf1,#303c47);border-color:#7b8c9c}
 .student-card.unsubmitted{background:light-dark(#ecefed,#252a28);border-color:light-dark(#8c9891,#66716b)}
 .student-card.unconfirmed{border-style:dashed}
 .student-card .state{min-width:82px;border-radius:999px;padding:4px 9px;font-weight:700}
 .student-card .state.submitted{color:light-dark(#1e5735,#b8e8c8);background:light-dark(#c4e4d0,#1d3929)}
 .student-card .state.forgotten{color:light-dark(#922323,#ffd0d0);background:light-dark(#f2c2c2,#642b2b)}
+.student-card .state.absent{color:light-dark(#34424f,#e7edf1);background:light-dark(#d8e1e8,#455563)}
 .student-card .state.unsubmitted{color:var(--text);background:var(--surface-2)}
 .student-card .state.unconfirmed{color:var(--muted);background:var(--surface-2)}
 .student-card.has-prior-forgotten{box-shadow:inset 0 0 0 3px var(--danger)}
@@ -229,6 +231,7 @@ h3{font-size:1rem;margin-bottom:8px}
 .status-legend span{border-radius:999px;padding:5px 10px;font-size:.82rem;font-weight:700;border:1px solid var(--line)}
 .legend-submitted{background:light-dark(#d8eee0,#254534);color:light-dark(#1e5735,#b8e8c8)}
 .legend-forgotten{background:light-dark(#f6d8d8,#512c2c);color:light-dark(#922323,#ffd0d0)}
+.legend-absent{background:light-dark(#d8e1e8,#455563);color:light-dark(#34424f,#e7edf1)}
 .legend-unsubmitted,.legend-unconfirmed{background:var(--surface-2);color:var(--muted)}
 .pupil-overview-head{text-align:center;margin:4px 0 16px}.pupil-overview-head p{color:var(--muted);margin-bottom:0}
 .pupil-alert-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:10px}
@@ -274,6 +277,7 @@ h3{font-size:1rem;margin-bottom:8px}
 .teacher-student-card.good{background:light-dark(#dcefe3,#254534)}
 .teacher-student-card.warn{background:light-dark(#fff0c5,#493b1d)}
 .teacher-student-card.alert{background:light-dark(#f6dede,#512c2c)}
+.teacher-student-card.absent{background:light-dark(#e7edf1,#303c47);border-color:#7b8c9c}
 .teacher-student-card.grade-a{border-color:#dc764a;background:light-dark(#fee5d8,#5a3020)}
 .teacher-student-card.grade-bplus{border-color:#dfaa49;background:light-dark(#fff0cb,#51401f)}
 .teacher-student-card.grade-b{border-color:#80a85e;background:light-dark(#e8f2dc,#30462a)}

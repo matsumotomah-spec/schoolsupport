@@ -8,7 +8,7 @@
   const PIN_LENGTH=6;
   const PIN_MAX_FAILURES=5;
   const PIN_LOCK_MS=30*1000;
-  const APP_VERSION='54';
+  const APP_VERSION='56';
   const PIN_ATTEMPT_KEY='classSupportPinAttemptsV1';
   const COLORS=['#d85b5b','#ef9fb4','#4e78b8','#9adfe8','#efd66e','#397257','#7651a8'];
   const SUBJECTS=['国語','算数','理科','社会','生活','音楽','図画工作','家庭','体育','外国語','道徳','総合','自立活動'];
@@ -109,7 +109,7 @@
   function pupilClassName(classItem=selectedClass()){const name=String(classItem?.name||'');if(!state.pupilKanaMode)return name;return name.replace(/([1-6])年([0-9]+)組/g,(_,grade,group)=>`${grade}ねん${group}くみ`);}
   function pupilDateText(value){if(!state.pupilKanaMode)return shortJpDate(value);const date=new Date(`${value}T00:00:00`),days=['にち','げつ','か','すい','もく','きん','ど'];return `${date.getMonth()+1}がつ${date.getDate()}にち（${days[date.getDay()]}）`;}
   function pupilHomeworkDateLabel(value,base=today()){if(!state.pupilKanaMode)return relativeHomeworkLabel(value,base);const age=daysBetween(base,value);if(age===0)return'きょうの ぶん';if(age===1)return'きのうの ぶん';if(age===2)return'おとといの ぶん';const days=['にち','げつ','か','すい','もく','きん','ど'];return `${days[new Date(`${value}T00:00:00`).getDay()]}ようびの ぶん`;}
-  function pupilStatusLabel(status){const labels={unconfirmed:['— 未確認','— まだ'],submitted:['✓ 提出','✓ だした'],forgotten:['! 忘れた','! わすれた'],unsubmitted:['— 未提出','— まだ']};const pair=labels[status]||[status,status];return pupilText(pair[0],pair[1]);}
+  function pupilStatusLabel(status){const labels={unconfirmed:['— 未確認','— まだ'],submitted:['✓ 提出','✓ だした'],forgotten:['! 忘れた','! わすれた'],unsubmitted:['— 未提出','— まだ'],absent:['— 欠席','— おやすみ']};const pair=labels[status]||[status,status];return pupilText(pair[0],pair[1]);}
   function selectedClass(){return state.classes.find(item=>item.id===state.selectedClassId)||state.classes[0]||null;}
   function featureIcon(id){return state.iconMode==='emoji'?(state.emojiIcons[id]||DEFAULT_EMOJI_ICONS[id]||'●'):(STANDARD_ICONS[id]||'●');}
   function rewardIconHtml(className='homework-medal'){return`<span class="${className}" title="直近1か月の設定条件を達成" aria-label="直近1か月の設定条件を達成">${esc(state.rewardIcon)}</span>`;}
