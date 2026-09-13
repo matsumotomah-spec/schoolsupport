@@ -73,6 +73,7 @@ async function testXlsxRoster(){
 
 function testShellAndNavigation(){
   const app=applicationSource();
+  const settings=fs.readFileSync(path.join(root,'app-settings.js'),'utf8');
   const styles=fs.readFileSync(path.join(root,'styles.css'),'utf8');
   const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
@@ -80,9 +81,17 @@ function testShellAndNavigation(){
   assert.ok(!app.includes('id="sync-placeholder">同期'),'右上の独立した同期ボタンを残さない');
   assert.ok(app.includes('data-common-settings'),'共通ヘッダーから設定案内へ移動できる');
   assert.ok(app.includes('home-button'),'ホームを共通ヘッダーで強調する');
+  assert.ok(app.includes('data-home-menu')&&app.includes('openHomeMenu'),'教師ホーム左側からやりたいことメニューを開ける');
+  assert.ok(styles.includes('.home-menu-drawer'),'教師用ハンバーガーメニューを左側のドロワーで表示する');
+  assert.ok(styles.includes('.home-menu-button{flex:0 0 44px;width:44px'),'ハンバーガーボタンをiPadで押せる大きさにする');
+  assert.ok(styles.includes('width:min(390px,92vw)'),'左メニューを狭い画面からはみ出させない');
   assert.ok(app.includes('data-current-class'),'共通ヘッダーから現在のクラスを確認・切替できる');
   assert.ok(app.includes('<small>操作中</small>'),'現在操作中のクラスを明示する');
-  assert.ok(app.includes('mode-chip pupil'),'児童用モードを常時表示する');
+  assert.ok(app.includes('pupil-header-title'),'児童用ヘッダーをクラス名と提出だけへ整理する');
+  assert.ok(!app.includes('mode-chip pupil'),'児童用ヘッダーに重複するモード表示を残さない');
+  assert.ok(settings.includes('name="pupil-kana-mode"')&&settings.includes("ClassDB.setMeta('pupilKanaMode'"),'ひらがな表示は教師用設定から変更できる');
+  assert.ok(!app.includes('pupil-kana-toggle'),'児童用画面にひらがな切替を出さない');
+  assert.ok(app.includes("ClassDB.setMeta('pupilKanaMode'"),'ひらがな表示の選択を端末に保存する');
   assert.ok(!app.includes('data-focus-toggle'),'意味が伝わりにくい集中表示ボタンをヘッダーに残さない');
   assert.ok(app.includes('name="information-mode"')&&app.includes('すっきり')&&app.includes('標準')&&app.includes('詳しく'),'画面の情報量を3段階で選べる');
   assert.ok(!app.includes("['roster','名簿']"),'名簿の独立タブを残さない');
@@ -205,6 +214,7 @@ function testShellAndNavigation(){
   assert.ok(app.includes('最近の同期・保存履歴を確認する'),'同期履歴を必要時だけ開く');
   assert.ok(styles.includes(':root[data-explanations="false"]'),'表示設定で説明領域を畳む');
   assert.ok(app.includes('data-save-row'),'児童を一人ずつ保存できる');
+  assert.ok(settings.includes('class-subject-all')&&settings.includes('class-subject-none'),'クラス編集で担当教科を一括選択・一括解除できる');
   assert.ok(app.includes('teacherHelpContentHtml'),'教員の作業順によるチュートリアルとFAQを表示する');
   assert.ok(app.includes('defaultSeatAisles'),'印刷通路の初期値を2列ごとにする');
   assert.ok(app.includes('onboardingStep'),'初回設定後の操作案内を段階保存する');
@@ -216,7 +226,7 @@ function testShellAndNavigation(){
   assert.ok(app.includes('Teamsの自分用領域などへ置く'),'同期の手順を3段階で案内する');
   assert.ok(styles.includes('.sync-steps'),'同期手順を視覚的に表示する');
   assert.ok(!app.includes('data-theme-toggle aria-label'),'ヘッダーにテーマ切替を表示しない');
-  assert.ok(styles.includes('.reward-icon-choices'),'達成アイコンを選択しやすく表示する');
+  assert.ok(styles.includes('.emoji-choice-grid'),'達成アイコンと機能アイコンを同じ形式で選択できる');
   assert.ok(app.includes("STANDARD_ICONS={daily:'宿',weekly:'週',certificate:'賞'"),'標準アイコンを意味の分かる文字にする');
   assert.ok(app.includes('要対応')&&app.includes('対応が必要な児童'),'件数バッジの意味を文字で示す');
   assert.ok(app.includes('回収を終える'),'提出物の完了操作を教員向けの言葉にする');
@@ -232,22 +242,25 @@ function testShellAndNavigation(){
   assert.ok(styles.includes('.compact-roster'),'大人数をコンパクト表示する');
   assert.ok(app.includes('rosterDensity'),'児童一覧の表示密度を保存する');
   assert.ok(styles.includes('.settings-status-grid'),'設定トップに現在の準備状況を表示する');
+  assert.ok(app.includes("['appearance','日常の表示・入力']")&&settings.includes('settings-subnav'),'表示・タグ・所見設定を日常の設定へまとめる');
+  assert.ok(styles.includes('.settings-subnav{grid-template-columns:1fr}'),'狭い画面で日常設定の項目を縦に並べる');
+  assert.ok(app.includes('smart-import-files')&&app.includes('inferExternalImportType'),'外部・旧ツールのファイルを判別して取り込める');
   assert.ok(styles.includes('button:focus-visible'),'キーボード操作時の焦点を明示する');
   assert.ok(styles.includes('.seat-aisle'),'印刷用通路を表示する');
   const shellMatch=sw.match(/const SHELL=\[([^;]+)\];/s);
   assert.ok(shellMatch);
   const assets=[...shellMatch[1].matchAll(/'\.\/([^']+)'/g)].map(match=>match[1].split('?')[0]).filter(Boolean);
   for(const asset of assets)assert.ok(fs.existsSync(path.join(root,asset)),`キャッシュ対象 ${asset} が存在する`);
-  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=49"></script>`));
-  assert.ok(index.includes('styles.css?v=49'),'CSSに公開版番号を付ける');
-  assert.ok(app.includes("register('./sw.js?v=49'"),'Service Workerの公開版番号を付ける');
+  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=52"></script>`));
+  assert.ok(index.includes('styles.css?v=52'),'CSSに公開版番号を付ける');
+  assert.ok(app.includes("register('./sw.js?v=52'"),'Service Workerの公開版番号を付ける');
   assert.ok(app.includes('dateInEnrollment(item.dueDate,currentEnrollment)'),'転入前・転出後の提出予定を未提出扱いにしない');
   assert.ok(app.includes('previousEnrollmentId'),'再在籍は過去の在籍期間を上書きしない');
   assert.ok(app.includes('data-ended-student'),'転出済み児童の過去記録を開ける');
   assert.ok(app.includes('offerSeatForTransfer'),'転入児童を現在の座席へ配置できる');
   assert.ok(app.includes('showUndoToast'),'記録変更を短時間取り消せる');
   assert.ok(app.includes('data-trash-restore'),'30日間のごみ箱から記録を復元できる');
-  assert.ok(app.includes("APP_VERSION='49'"),'データ管理に公開版を表示する');
+  assert.ok(app.includes("APP_VERSION='52'"),'データ管理に公開版を表示する');
   assert.ok(app.includes("NOTEBOOK_POINTS={'A':5,'B+':4,'B':3,'B-':2,'C':1}"),'ノート評価の平均換算を定義する');
   assert.ok(app.includes("NOTEBOOK_DEFAULT_GRADES={knowledge:'B',thinking:'B',attitude:'B'}"),'ノート評価の初回入力を3観点すべてBにする');
   assert.ok(app.includes("label:'知識・技能'")&&app.includes("label:'思考・判断・表現'")&&app.includes("label:'主体的に学習に取り組む態度'"),'ノート評価の3観点を定義する');
@@ -285,7 +298,7 @@ function testShellAndNavigation(){
 
 function testApplicationSplit(){
   const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
-  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=49"></script>`));
+  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=52"></script>`));
   assert.ok(positions.every(position=>position>=0),'分割した全スクリプトを読み込む');
   assert.deepEqual(positions,[...positions].sort((a,b)=>a-b),'依存関係どおりの順序で読み込む');
   for(const file of applicationFiles)execFileSync(process.execPath,['--check',path.join(root,file)]);
@@ -304,7 +317,7 @@ function testSeparateScriptEvaluation(){
     if(file==='app.js')source=source.replace('loadState().catch(','Promise.resolve().catch(');
     vm.runInContext(source,context,{filename:file});
   }
-  assert.equal(vm.runInContext('APP_VERSION',context),'49');
+  assert.equal(vm.runInContext('APP_VERSION',context),'52');
   vm.runInContext("state.informationMode='compact';applyTheme()",context);
   assert.equal(documentStub.documentElement.dataset.information,'compact');
   assert.equal(documentStub.documentElement.dataset.explanations,'false');
@@ -325,6 +338,13 @@ function testSeparateScriptEvaluation(){
   assert.equal(vm.runInContext('typeof renderSettings',context),'function');
   assert.equal(vm.runInContext('typeof renderSeating',context),'function');
   assert.equal(vm.runInContext('typeof applySyncPlan',context),'function');
+  assert.equal(vm.runInContext("state.pupilKanaMode=true;pupilClassName({name:'5年3組'})",context),'5ねん3くみ','児童用ひらがなモードで一般級名を読みやすく表示する');
+  assert.equal(vm.runInContext("pupilStatusLabel('submitted')",context),'✓ だした','児童用ひらがなモードで提出状態を読みやすく表示する');
+  assert.equal(vm.runInContext("state.pupilKanaMode=false;pupilStatusLabel('submitted')",context),'✓ 提出','通常表示へ戻せる');
+  assert.equal(vm.runInContext("inferExternalImportType([{title:'自主学習ノート'}],'提出.csv').type",context),'weekly','自主学習の表を週宿題と推測する');
+  assert.equal(vm.runInContext("inferExternalImportType([{title:'運動会参加同意書'}],'提出.csv').type",context),'occasional','同意書の表を提出物と推測する');
+  assert.equal(vm.runInContext("inferExternalImportType([{title:'毎日の音読'}],'提出.csv').type",context),'daily','毎日の音読を毎日の宿題と推測する');
+  assert.equal(vm.runInContext("externalImportRows([['日付','出席番号','氏名','宿題名','状態'],['2026-09-13','1','青木','自主学習','提出']]).length",context),1,'見出しの列順にかかわらずデータ行だけを取り込む');
 }
 
 async function testWeeklyStateTransitions(){

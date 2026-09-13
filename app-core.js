@@ -8,7 +8,7 @@
   const PIN_LENGTH=6;
   const PIN_MAX_FAILURES=5;
   const PIN_LOCK_MS=30*1000;
-  const APP_VERSION='49';
+  const APP_VERSION='52';
   const PIN_ATTEMPT_KEY='classSupportPinAttemptsV1';
   const COLORS=['#d85b5b','#ef9fb4','#4e78b8','#9adfe8','#efd66e','#397257','#7651a8'];
   const SUBJECTS=['国語','算数','理科','社会','生活','音楽','図画工作','家庭','体育','外国語','道徳','総合','自立活動'];
@@ -60,6 +60,7 @@
     rewardIcon:'✨',
     showMonthlyForgotten:true,
     pupilOverviewVisibility:{daily:true,weekly:true,occasional:true,monthly:true,reward:true},
+    pupilKanaMode:false,
     showExplanations:true,
     informationMode:'standard',
     rosterDensity:'auto',
@@ -79,8 +80,8 @@
     assessment:['ノート評価','児童名を1回押すと、知識・技能、思考・判断・表現、主体的に学習に取り組む態度の3観点をすべてBで記録します。','よくできた観点や気になる観点がある児童だけ、同じ名前をもう一度押して変更します。',['3観点は1つの画面で変更でき、ほかの観点はBのまま残せます。','教科を選ぶと、前期・後期・年間の観点別平均を確認できます。','欠席・未提出は平均に含めず、成績は自動決定しません。']],
     occasional:['提出物','登録済みの提出物を一覧で確認し、児童ごとの提出状況を記録します。','「＋ 新しい提出物を作る」から複数の提出物を追加できます。',['提出物カードを選んでから児童名を押します。','緑は提出済み、灰色・赤は未提出です。','回収が終わったら「回収を終える」を押します。']],
     seating:['席替え','列数・行数・空席・印刷用通路と配慮条件を設定して、教室に合う座席表を作ります。','8列×5行なども設定できます。通路は列の間を選ぶと、印刷時に机約1列分の余白になります。',['空席は座席番号として残り、通路は座席数に含めません。','ドラッグ後も満たせていない配慮条件を再計算します。','確定後に「日常画面へ反映」を押すと宿題画面へ反映します。']],
-    settings:['設定','普段変更する「クラス・児童」を先頭に表示します。ほかの項目は、必要になったときだけ開けば大丈夫です。','表示、メモ・賞状、データ管理もここから変更できます。'],
-    appearance:['表示・アイコン','機能ボタンの標準表示と絵文字表示を切り替えます。','絵文字モードを選ぶと、機能ごとに使う絵文字を変更できます。',['宿題の条件達成アイコンは10種類から選べます。','1か月の忘れ回数を児童用画面に出すか選べます。','設定後は「保存」を押し、ホームで表示を確認します。']],
+    settings:['設定','普段変更する項目を6つに整理しています。最初は「クラス・児童」を確認してください。','画面の見え方やタグは「日常の表示・入力」、同期や保存は「データ管理」から変更できます。'],
+    appearance:['日常の表示・入力','画面表示、児童用表示、アイコン、メモ・賞状の選択肢、所見の文章設定をまとめています。','上部の3項目から、変更したい内容を選びます。',['宿題の条件達成アイコンは10種類から選べます。','1か月の忘れ回数を児童用画面に出すか選べます。','設定後は「保存」を押し、ホームで表示を確認します。']],
     data:['データ管理','目的を選んで、iPadとPCの記録をまとめる、故障に備えて保存する、Excel用の一覧を作る、削除した記録を戻す操作を行います。','普段は「iPadとPCの記録をまとめる」、月に1回は「故障に備えて保存する」を使います。'],
     support:['学習記録','教科と現在の学習単元を確認し、児童ごとの学習記録を入力します。','児童名を押して記録します。学ぶ単元が変わったときは「学習するまとまりを変更」を押します。'],
     student:['児童概要','未解決の宿題・提出物を確認して解決し、メモ・評価・賞状・提出物を追加できます。','概要の未解決件数または機能別タブを押し、確認・追加ボタンから操作します。'],
@@ -104,6 +105,11 @@
   function weekdayLabel(value){const days=['日','月','火','水','木','金','土'];return `${days[new Date(`${value}T00:00:00`).getDay()]}曜日提出分`;}
   function relativeHomeworkLabel(value,base=today()){const age=daysBetween(base,value);if(age===0)return'今日の分';if(age===1)return'きのうの分';if(age===2)return'おとといの分';return weekdayLabel(value);}
   function slashDate(value){const [,month,day]=value.split('-').map(Number);return `${month}/${day}`;}
+  function pupilText(standard,kana){return state.pupilKanaMode?kana:standard;}
+  function pupilClassName(classItem=selectedClass()){const name=String(classItem?.name||'');if(!state.pupilKanaMode)return name;return name.replace(/([1-6])年([0-9]+)組/g,(_,grade,group)=>`${grade}ねん${group}くみ`);}
+  function pupilDateText(value){if(!state.pupilKanaMode)return shortJpDate(value);const date=new Date(`${value}T00:00:00`),days=['にち','げつ','か','すい','もく','きん','ど'];return `${date.getMonth()+1}がつ${date.getDate()}にち（${days[date.getDay()]}）`;}
+  function pupilHomeworkDateLabel(value,base=today()){if(!state.pupilKanaMode)return relativeHomeworkLabel(value,base);const age=daysBetween(base,value);if(age===0)return'きょうの ぶん';if(age===1)return'きのうの ぶん';if(age===2)return'おとといの ぶん';const days=['にち','げつ','か','すい','もく','きん','ど'];return `${days[new Date(`${value}T00:00:00`).getDay()]}ようびの ぶん`;}
+  function pupilStatusLabel(status){const labels={unconfirmed:['— 未確認','— まだ'],submitted:['✓ 提出','✓ だした'],forgotten:['! 忘れた','! わすれた'],unsubmitted:['— 未提出','— まだ']};const pair=labels[status]||[status,status];return pupilText(pair[0],pair[1]);}
   function selectedClass(){return state.classes.find(item=>item.id===state.selectedClassId)||state.classes[0]||null;}
   function featureIcon(id){return state.iconMode==='emoji'?(state.emojiIcons[id]||DEFAULT_EMOJI_ICONS[id]||'●'):(STANDARD_ICONS[id]||'●');}
   function rewardIconHtml(className='homework-medal'){return`<span class="${className}" title="直近1か月の設定条件を達成" aria-label="直近1か月の設定条件を達成">${esc(state.rewardIcon)}</span>`;}
@@ -155,6 +161,7 @@
     const legacyMonthly=await ClassDB.getMeta('showMonthlyForgotten',true),savedPupilOverview=await ClassDB.getMeta('pupilOverviewVisibility',{});
     state.pupilOverviewVisibility={daily:true,weekly:true,occasional:true,monthly:legacyMonthly,reward:true,...savedPupilOverview};
     state.showMonthlyForgotten=state.pupilOverviewVisibility.monthly;
+    state.pupilKanaMode=Boolean(await ClassDB.getMeta('pupilKanaMode',false));
     const savedInformationMode=await ClassDB.getMeta('informationMode',null),legacyExplanations=await ClassDB.getMeta('showExplanations',true);
     state.informationMode=['compact','standard','detailed'].includes(savedInformationMode)?savedInformationMode:(legacyExplanations?'standard':'compact');state.showExplanations=state.informationMode!=='compact';state.rosterDensity=await ClassDB.getMeta('rosterDensity','auto');state.onboardingStep=Number(await ClassDB.getMeta('onboardingStep',0));
     applyTheme();
