@@ -84,6 +84,7 @@ async function testXlsxRoster(){
 function testShellAndNavigation(){
   const app=applicationSource();
   const settings=fs.readFileSync(path.join(root,'app-settings.js'),'utf8');
+  const data=fs.readFileSync(path.join(root,'app-data.js'),'utf8');
   const styles=fs.readFileSync(path.join(root,'styles.css'),'utf8');
   const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
@@ -157,6 +158,10 @@ function testShellAndNavigation(){
   assert.ok(app.includes('requireTeacher(renderHome)'),'起動時は教師ホームへの認証から開始する');
   assert.ok(app.includes('themePreference'),'ライト・ダークモードを保存する');
   assert.ok(app.includes("['data','データ管理']"),'設定内に同期・バックアップ・出力をまとめる');
+  assert.ok(data.includes('smart-import-status')&&data.includes('ファイルを選んで内容を確認'),'旧データ選択後の読込状況と次の操作を表示する');
+  assert.ok(data.includes("await renderDataExchange(true);document.getElementById('settings-content').innerHTML=body"),'設定内の旧データ確認画面を、元の設定画面に上書きされない順番で表示する');
+  assert.ok(!data.includes("await renderSettings();document.getElementById('settings-content').innerHTML=body"),'旧データ確認画面を消してしまう非同期描画順を残さない');
+  assert.ok(data.includes('migration-no-target-classes'),'移行先クラスがない場合はクラス作成へ案内する');
   assert.ok(app.includes('renderSettingsGuide'),'設定の説明ページを用意する');
   assert.ok(app.includes('最初の準備')&&app.includes('日常の設定')&&app.includes('データ・年度'),'設定を作業目的で3群に整理する');
   assert.ok(app.includes('openContextHelp'),'ページ別ヘルプを横から表示する');
@@ -262,16 +267,16 @@ function testShellAndNavigation(){
   assert.ok(shellMatch);
   const assets=[...shellMatch[1].matchAll(/'\.\/([^']+)'/g)].map(match=>match[1].split('?')[0]).filter(Boolean);
   for(const asset of assets)assert.ok(fs.existsSync(path.join(root,asset)),`キャッシュ対象 ${asset} が存在する`);
-  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=53"></script>`));
-  assert.ok(index.includes('styles.css?v=53'),'CSSに公開版番号を付ける');
-  assert.ok(app.includes("register('./sw.js?v=53'"),'Service Workerの公開版番号を付ける');
+  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=54"></script>`));
+  assert.ok(index.includes('styles.css?v=54'),'CSSに公開版番号を付ける');
+  assert.ok(app.includes("register('./sw.js?v=54'"),'Service Workerの公開版番号を付ける');
   assert.ok(app.includes('dateInEnrollment(item.dueDate,currentEnrollment)'),'転入前・転出後の提出予定を未提出扱いにしない');
   assert.ok(app.includes('previousEnrollmentId'),'再在籍は過去の在籍期間を上書きしない');
   assert.ok(app.includes('data-ended-student'),'転出済み児童の過去記録を開ける');
   assert.ok(app.includes('offerSeatForTransfer'),'転入児童を現在の座席へ配置できる');
   assert.ok(app.includes('showUndoToast'),'記録変更を短時間取り消せる');
   assert.ok(app.includes('data-trash-restore'),'30日間のごみ箱から記録を復元できる');
-  assert.ok(app.includes("APP_VERSION='53'"),'データ管理に公開版を表示する');
+  assert.ok(app.includes("APP_VERSION='54'"),'データ管理に公開版を表示する');
   assert.ok(app.includes("NOTEBOOK_POINTS={'A':5,'B+':4,'B':3,'B-':2,'C':1}"),'ノート評価の平均換算を定義する');
   assert.ok(app.includes("NOTEBOOK_DEFAULT_GRADES={knowledge:'B',thinking:'B',attitude:'B'}"),'ノート評価の初回入力を3観点すべてBにする');
   assert.ok(app.includes("label:'知識・技能'")&&app.includes("label:'思考・判断・表現'")&&app.includes("label:'主体的に学習に取り組む態度'"),'ノート評価の3観点を定義する');
@@ -309,7 +314,7 @@ function testShellAndNavigation(){
 
 function testApplicationSplit(){
   const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
-  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=53"></script>`));
+  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=54"></script>`));
   assert.ok(positions.every(position=>position>=0),'分割した全スクリプトを読み込む');
   assert.deepEqual(positions,[...positions].sort((a,b)=>a-b),'依存関係どおりの順序で読み込む');
   for(const file of applicationFiles)execFileSync(process.execPath,['--check',path.join(root,file)]);
@@ -328,7 +333,7 @@ function testSeparateScriptEvaluation(){
     if(file==='app.js')source=source.replace('loadState().catch(','Promise.resolve().catch(');
     vm.runInContext(source,context,{filename:file});
   }
-  assert.equal(vm.runInContext('APP_VERSION',context),'53');
+  assert.equal(vm.runInContext('APP_VERSION',context),'54');
   vm.runInContext("state.informationMode='compact';applyTheme()",context);
   assert.equal(documentStub.documentElement.dataset.information,'compact');
   assert.equal(documentStub.documentElement.dataset.explanations,'false');
