@@ -204,7 +204,7 @@ function testShellAndNavigation(){
   assert.ok(app.includes('weeklyCreationQueue'),'今週分の二重作成を直列化する');
   assert.ok(app.includes('weeklyTapQueues'),'週宿題の素早い連続タップを順番に処理する');
   assert.ok(app.includes('data-pupil-weekly-choice'),'児童画面で今週の複数宿題を切り替えられる');
-  assert.ok(app.includes('提出予定日は今週の月曜日から日曜日の間'),'週外の日付を誤登録させない');
+  assert.ok(app.includes('今週以外の日付も選べます'),'週宿題を先行作成できる');
   assert.ok(app.includes('restoreTrashRecord'),'ごみ箱から削除済み記録を復元できる');
   assert.ok(!app.includes('宿題名人'),'旧称号を画面に残さない');
   assert.ok(app.includes('openDailyWeekDialog'),'今週の忘れ物を日付別に確認する');
@@ -214,6 +214,12 @@ function testShellAndNavigation(){
   assert.ok(app.includes('id="grade-note"')&&app.includes('note:note===undefined'),'ノート評価の詳細入力でメモを保存する');
   assert.ok(app.includes('pupil-overview-toggle')&&app.includes('pupilOverviewShowAll'),'児童用提出一覧をアラート対象に絞り全員表示へ切り替えられる');
   assert.ok(app.includes('row.enrollment?.number'),'児童用提出画面に出席番号を表示する');
+  assert.ok(app.includes('daily-absence-grid')&&app.includes('activeSeatLayout'),'欠席者を席順から選択できる');
+  assert.ok(app.includes('normalizeStudentName(row.name)')&&app.includes('normalizeStudentName(name)'),'名寄せで全角半角を含む空白を無視する');
+  assert.ok(app.includes("style.setProperty('--action',color)")&&app.includes("style.setProperty('--action-text',text)"),'主要な操作色をクラスカラーに合わせる');
+  assert.ok(app.includes('APP_UPDATED_AT')&&app.includes('アップデート日時'),'公開版とアップデート日時を表示する');
+  assert.ok(app.includes('移す元の端末でファイルを作る')&&app.includes('移動先の端末で取り込む'),'同期の端末の役割を分かりやすく表示する');
+  assert.ok(app.includes('今週以外の日付も選べます')&&!app.includes('dueDate<week||dueDate>week'),'週宿題を先の日付で作成できる');
   assert.ok(app.includes("item.date>=currentWeekStart(date)"),'毎日の忘れ物を月曜日で区切る');
   assert.ok(!app.includes('NFPYM-8AEXB-QQS28'),'バックアップ画面の復旧コード例を表示しない');
   assert.ok(app.includes('data-shortage-subject'),'不足教科を指定して児童メモを開く');
@@ -274,16 +280,16 @@ function testShellAndNavigation(){
   assert.ok(shellMatch);
   const assets=[...shellMatch[1].matchAll(/'\.\/([^']+)'/g)].map(match=>match[1].split('?')[0]).filter(Boolean);
   for(const asset of assets)assert.ok(fs.existsSync(path.join(root,asset)),`キャッシュ対象 ${asset} が存在する`);
-  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=56"></script>`));
-  assert.ok(index.includes('styles.css?v=56'),'CSSに公開版番号を付ける');
-  assert.ok(app.includes("register('./sw.js?v=56'"),'Service Workerの公開版番号を付ける');
+  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=57"></script>`));
+  assert.ok(index.includes('styles.css?v=57'),'CSSに公開版番号を付ける');
+  assert.ok(app.includes("register('./sw.js?v=57'"),'Service Workerの公開版番号を付ける');
   assert.ok(app.includes('dateInEnrollment(item.dueDate,currentEnrollment)'),'転入前・転出後の提出予定を未提出扱いにしない');
   assert.ok(app.includes('previousEnrollmentId'),'再在籍は過去の在籍期間を上書きしない');
   assert.ok(app.includes('data-ended-student'),'転出済み児童の過去記録を開ける');
   assert.ok(app.includes('offerSeatForTransfer'),'転入児童を現在の座席へ配置できる');
   assert.ok(app.includes('showUndoToast'),'記録変更を短時間取り消せる');
   assert.ok(app.includes('data-trash-restore'),'30日間のごみ箱から記録を復元できる');
-  assert.ok(app.includes("APP_VERSION='56'"),'データ管理に公開版を表示する');
+  assert.ok(app.includes("APP_VERSION='57'")&&app.includes('APP_UPDATED_AT'),'データ管理に公開版と更新日時を表示する');
   assert.ok(app.includes("NOTEBOOK_POINTS={'A':5,'B+':4,'B':3,'B-':2,'C':1}"),'ノート評価の平均換算を定義する');
   assert.ok(app.includes("NOTEBOOK_DEFAULT_GRADES={knowledge:'B',thinking:'B',attitude:'B'}"),'ノート評価の初回入力を3観点すべてBにする');
   assert.ok(app.includes("label:'知識・技能'")&&app.includes("label:'思考・判断・表現'")&&app.includes("label:'主体的に学習に取り組む態度'"),'ノート評価の3観点を定義する');
@@ -321,7 +327,7 @@ function testShellAndNavigation(){
 
 function testApplicationSplit(){
   const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
-  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=56"></script>`));
+  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=57"></script>`));
   assert.ok(positions.every(position=>position>=0),'分割した全スクリプトを読み込む');
   assert.deepEqual(positions,[...positions].sort((a,b)=>a-b),'依存関係どおりの順序で読み込む');
   for(const file of applicationFiles)execFileSync(process.execPath,['--check',path.join(root,file)]);
@@ -340,7 +346,7 @@ function testSeparateScriptEvaluation(){
     if(file==='app.js')source=source.replace('loadState().catch(','Promise.resolve().catch(');
     vm.runInContext(source,context,{filename:file});
   }
-  assert.equal(vm.runInContext('APP_VERSION',context),'56');
+  assert.equal(vm.runInContext('APP_VERSION',context),'57');
   vm.runInContext("state.informationMode='compact';applyTheme()",context);
   assert.equal(documentStub.documentElement.dataset.information,'compact');
   assert.equal(documentStub.documentElement.dataset.explanations,'false');
