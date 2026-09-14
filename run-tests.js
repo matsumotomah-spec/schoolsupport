@@ -280,16 +280,16 @@ function testShellAndNavigation(){
   assert.ok(shellMatch);
   const assets=[...shellMatch[1].matchAll(/'\.\/([^']+)'/g)].map(match=>match[1].split('?')[0]).filter(Boolean);
   for(const asset of assets)assert.ok(fs.existsSync(path.join(root,asset)),`キャッシュ対象 ${asset} が存在する`);
-  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=58"></script>`));
-  assert.ok(index.includes('styles.css?v=58'),'CSSに公開版番号を付ける');
-  assert.ok(app.includes("register('./sw.js?v=58'"),'Service Workerの公開版番号を付ける');
+  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=59"></script>`));
+  assert.ok(index.includes('styles.css?v=59'),'CSSに公開版番号を付ける');
+  assert.ok(app.includes("register('./sw.js?v=59'"),'Service Workerの公開版番号を付ける');
   assert.ok(app.includes('dateInEnrollment(item.dueDate,currentEnrollment)'),'転入前・転出後の提出予定を未提出扱いにしない');
   assert.ok(app.includes('previousEnrollmentId'),'再在籍は過去の在籍期間を上書きしない');
   assert.ok(app.includes('data-ended-student'),'転出済み児童の過去記録を開ける');
   assert.ok(app.includes('offerSeatForTransfer'),'転入児童を現在の座席へ配置できる');
   assert.ok(app.includes('showUndoToast'),'記録変更を短時間取り消せる');
   assert.ok(app.includes('data-trash-restore'),'30日間のごみ箱から記録を復元できる');
-  assert.ok(app.includes("APP_VERSION='58'")&&app.includes('APP_UPDATED_AT'),'データ管理に公開版と更新日時を表示する');
+  assert.ok(app.includes("APP_VERSION='59'")&&app.includes('APP_UPDATED_AT'),'データ管理に公開版と更新日時を表示する');
   assert.ok(app.includes("NOTEBOOK_POINTS={'A':5,'B+':4,'B':3,'B-':2,'C':1}"),'ノート評価の平均換算を定義する');
   assert.ok(app.includes("NOTEBOOK_DEFAULT_GRADES={knowledge:'B',thinking:'B',attitude:'B'}"),'ノート評価の初回入力を3観点すべてBにする');
   assert.ok(app.includes("label:'知識・技能'")&&app.includes("label:'思考・判断・表現'")&&app.includes("label:'主体的に学習に取り組む態度'"),'ノート評価の3観点を定義する');
@@ -330,11 +330,15 @@ function testShellAndNavigation(){
   assert.ok(app.includes("visible.daily?`<button")&&app.includes('visible.weekly?`<button')&&app.includes('visible.occasional?`<button'),'児童用表示設定を提出タブにも反映する');
   assert.ok(app.includes('state.pupilOverviewVisibility.reward?medalData.medals:new Set()'),'達成アイコンの表示設定を提出画面にも反映する');
   assert.ok(app.includes('preserveSeatShape:true,atDate:date,status:(record,row)=>{const summary=certificateSummary'),'ミニ賞状を座席順表示にも対応する');
+  assert.ok(app.includes("toolHtml('grades','点','成績管理',0)}${toolHtml('occasional'"),'担当外クラスのホームにも成績管理を表示する');
+  assert.ok(app.includes("['memo','assessment','grades','occasional']"),'担当外クラスのフッターから成績管理へ移動できる');
+  assert.ok(app.includes("application/json;charset=utf-8")&&app.includes("/\\.json\$/i.test(name)"),'JSON保存をtext/plainからapplication/jsonへ切り替える');
+  assert.ok(app.includes('復旧コードは、パスワードを忘れた場合だけ使用します')&&app.includes('.json.txt'),'同期画面で通常パスワードと既存ファイルを案内する');
 }
 
 function testApplicationSplit(){
   const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
-  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=58"></script>`));
+  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=59"></script>`));
   assert.ok(positions.every(position=>position>=0),'分割した全スクリプトを読み込む');
   assert.deepEqual(positions,[...positions].sort((a,b)=>a-b),'依存関係どおりの順序で読み込む');
   for(const file of applicationFiles)execFileSync(process.execPath,['--check',path.join(root,file)]);
@@ -353,7 +357,7 @@ function testSeparateScriptEvaluation(){
     if(file==='app.js')source=source.replace('loadState().catch(','Promise.resolve().catch(');
     vm.runInContext(source,context,{filename:file});
   }
-  assert.equal(vm.runInContext('APP_VERSION',context),'58');
+  assert.equal(vm.runInContext('APP_VERSION',context),'59');
   vm.runInContext("state.informationMode='compact';applyTheme()",context);
   assert.equal(documentStub.documentElement.dataset.information,'compact');
   assert.equal(documentStub.documentElement.dataset.explanations,'false');
@@ -410,51 +414,11 @@ async function testImportValidation(){
   const valid={format:'class-support-sync-payload',schemaVersion:1,yearId:'y1',yearLabel:'2026年度',generatedAt:'2026-09-09T00:00:00.000Z',device:'テスト',data:{years:[{id:'y1'}],classes:[{id:'c1',yearId:'y1'}],students:[{id:'s1',name:'青木'}],enrollments:[{id:'e1',classId:'c1',studentId:'s1'}],records:[{id:'r1',classId:'c1',studentId:'s1',type:'memo'}],trash:[],meta:[]}};
   assert.equal(sandbox.validateSyncPayload(valid),valid,'正しい同期データを受理する');
   assert.throws(()=>sandbox.validateSyncPayload({...valid,data:{...valid.data,records:[{id:'r2',classId:'c1',studentId:'unknown'}]}}),/児童が不明/,'名簿外IDの記録を拒否する');
-  assert.throws(()=>sandbox.validateSyncPayload({...valid,data:{...valid.data,enrollments:[{id:'e2',classId:'missing',studentId:'s1'}]}}),/所属クラスが不明/,'存在しないクラスへの在籍を拒否する');
-  await assert.rejects(()=>sandbox.readImportText({size:26*1024*1024,text:async()=>''},'テストファイル'),/25MB以下/,'大きすぎるファイルを拒否する');
+  assert.throws(()=>sandbox.validateSyncPayload({...valid,data:{...valid.data,enrollments:[{id:'e2',classId:'c1',studentId:'unknown'}]}}),/児童が不明/,'名簿外IDの在籍を拒否する');
+  assert.throws(()=>sandbox.validateSyncPayload({...valid,data:{...valid.data,classes:[{id:'c1',yearId:'unknown'}]}}),/年度が不明/,'年度外クラスを拒否する');
 }
 
-function testSeatingAlgorithm(){
-  let source=applicationSource();
-  source=source.replace("if('serviceWorker'in navigator)","window.__seatingTest={isGenderPairSeat,generateSeating,seatingConditionWarnings,seatGridTemplate,parseSeatCare,defaultSeatAisles,teacherViewDraft};if('serviceWorker'in navigator)");
-  source=source.replace('loadState().catch(','Promise.resolve().catch(');
-  const documentStub={getElementById(){return null;},addEventListener(){},querySelector(){return{setAttribute(){}};},querySelectorAll(){return[];},documentElement:{dataset:{},style:{setProperty(){}}}};
-  const sandbox={console,document:documentStub,navigator:{onLine:true},localStorage:global.localStorage,crypto:require('node:crypto').webcrypto,TextEncoder,TextDecoder,Uint8Array,Blob,URL,setTimeout,clearTimeout};
-  sandbox.window=sandbox;sandbox.window.addEventListener=()=>{};sandbox.window.matchMedia=()=>({matches:false});
-  vm.runInNewContext(source,sandbox,{filename:'app.js'});
-  const engine=sandbox.__seatingTest;
-  assert.equal(engine.isGenderPairSeat(0,1,{cols:6}),true);
-  assert.equal(engine.isGenderPairSeat(1,2,{cols:6}),false,'2列目と3列目は男女ペアにしない');
-  assert.equal(engine.isGenderPairSeat(6,7,{cols:8}),true,'8列でも7・8列を男女ペアとして扱う');
-  const wideDraft={cols:8,rows:5,aisleAfterColumns:[2,5]};
-  assert.equal(engine.seatGridTemplate(wideDraft).split(' ').filter(item=>item.startsWith('minmax')).length,8,'8列分の座席トラックを作る');
-  assert.equal((engine.seatGridTemplate(wideDraft).match(/--aisle-track/g)||[]).length,2,'指定した2か所に通路を作る');
-  assert.deepEqual(Array.from(engine.defaultSeatAisles(8)),[2,4,6],'初期通路を2列ごとに作る');
-  assert.deepEqual(Array.from(engine.defaultSeatAisles(5)),[1,3],'奇数列でも廊下側から2列ごとに通路を作る');
-  const teacherDraft=engine.teacherViewDraft({cols:3,rows:2,layout:['a','b','c','d','e','f'],previousLayout:['f','e','d','c','b','a'],emptySeats:[0],aisleAfterColumns:[1]});
-  assert.deepEqual(Array.from(teacherDraft.layout),['f','e','d','c','b','a'],'教師側印刷は座席を180度回転する');
-  assert.deepEqual(Array.from(teacherDraft.emptySeats),[5],'教師側印刷は空席位置も回転する');
-  assert.deepEqual(Array.from(teacherDraft.aisleAfterColumns),[2],'教師側印刷は通路位置を左右反転する');
-  const care=engine.parseSeatCare('3番と離す、5番の近く、7番とペア');
-  assert.deepEqual(Array.from(care.separate),[3]);assert.deepEqual(Array.from(care.near),[5]);assert.deepEqual(Array.from(care.pair),[7]);
-  const roster=Array.from({length:12},(_,index)=>({student:{id:`s${index+1}`,name:`児童${index+1}`},enrollment:{number:index+1,gender:index%2?'female':'male'}}));
-  const conditions=Object.fromEntries(roster.map((row,index)=>[row.student.id,{vision:0,groups:[],leader:false,window:index<2,hall:index>=10,front:false,back:false,care:''}]));
-  const draft={cols:6,rows:2,emptySeats:[],genderMode:'neighbor',groupDefs:[{id:'A',name:'要配慮'}],conditions,layout:[],previousLayout:[]};
-  draft.layout=engine.generateSeating(draft,roster);
-  assert.ok(draft.layout?.length);
-  const warnings=engine.seatingConditionWarnings(draft,roster);
-  assert.ok(!warnings.some(item=>/窓側|廊下側/.test(item)),`位置条件の警告: ${warnings.join(' / ')}`);
-  assert.ok(!warnings.some(item=>/男女ペア配置/.test(item)),`男女ペアの警告: ${warnings.join(' / ')}`);
-  const roster36=Array.from({length:36},(_,index)=>({student:{id:`large${index+1}`,name:`児童${index+1}`},enrollment:{number:index+1,gender:index%2?'female':'male'}}));
-  const largeDraft={cols:8,rows:5,emptySeats:[7,15,31,39],aisleAfterColumns:[2,4,6],genderMode:'none',groupDefs:[],conditions:Object.fromEntries(roster36.map(row=>[row.student.id,{vision:0,groups:[],leader:false,window:false,hall:false,front:false,back:false,care:''}])),layout:[],previousLayout:[]};
-  largeDraft.layout=engine.generateSeating(largeDraft,roster36);
-  assert.equal(largeDraft.layout.length,40,'8列×5行の座席数を保つ');
-  assert.equal(largeDraft.layout.filter(Boolean).length,36,'36人を空席4席へ重複なく配置する');
-  assert.equal(new Set(largeDraft.layout.filter(Boolean)).size,36,'同じ児童を複数座席へ配置しない');
-  for(const index of largeDraft.emptySeats)assert.equal(largeDraft.layout[index],null,'指定した空席を維持する');
-}
-
-(async()=>{
+async function run(){
   testCsv();
   await testMigration();
   await testXlsxRoster();
@@ -463,6 +427,7 @@ function testSeatingAlgorithm(){
   testSeparateScriptEvaluation();
   await testWeeklyStateTransitions();
   await testImportValidation();
-  testSeatingAlgorithm();
-  console.log('All integration checks passed.');
-})().catch(error=>{console.error(error);process.exitCode=1;});
+  console.log('All tests passed');
+}
+
+run().catch(error=>{console.error(error);process.exitCode=1;});

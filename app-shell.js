@@ -22,7 +22,7 @@
         ${dashboard}
         ${rosterPrompt}
         <section class="tools-main ${!own&&!support?'limited':''}">
-          ${!own&&!support?`${toolHtml('memo','✎','児童メモ',counts.memo,true)}${toolHtml('assessment','A','ノート評価',0)}${toolHtml('occasional','▤','提出物',counts.occasional)}`:`
+          ${!own&&!support?`${toolHtml('memo','✎','児童メモ',counts.memo,true)}${toolHtml('assessment','A','ノート評価',0)}${toolHtml('grades','点','成績管理',0)}${toolHtml('occasional','▤','提出物',counts.occasional)}`:`
           ${support?toolHtml('memo','✎','児童メモ',counts.memo,true):toolHtml('daily','✓','毎日の宿題',counts.daily,true)}
           ${support?toolHtml('daily','✓','毎日の宿題',counts.daily):toolHtml('weekly','▣','週宿題',counts.weekly)}
           ${support?toolHtml('weekly','▣','週宿題',counts.weekly):toolHtml('certificate','☆','ミニ賞状',0)}
@@ -118,7 +118,7 @@
     document.getElementById('print-preview-print').addEventListener('click',()=>window.print());
   }
 
-  function teacherFooter(active){const classItem=selectedClass(),allowed=!classItem?.isOwn&&!isSupportClass(classItem)?['memo','assessment','occasional']:['daily','weekly','certificate','memo','assessment','occasional'];const labels={daily:'毎日の宿題',weekly:'週宿題',certificate:'ミニ賞状',memo:'児童メモ',assessment:'ノート評価',occasional:'提出物'};return`<nav class="teacher-footer" aria-label="日常機能" style="--footer-count:${allowed.length}">${allowed.map(id=>`<button type="button" data-footer-tool="${id}" aria-current="${active===id?'page':'false'}" title="${labels[id]}へ切り替える"><span>${featureIcon(id)}</span>${labels[id]}</button>`).join('')}</nav>`;}
+  function teacherFooter(active){const classItem=selectedClass(),allowed=!classItem?.isOwn&&!isSupportClass(classItem)?['memo','assessment','grades','occasional']:['daily','weekly','certificate','memo','assessment','grades','occasional'];const labels={daily:'毎日の宿題',weekly:'週宿題',certificate:'ミニ賞状',memo:'児童メモ',assessment:'ノート評価',grades:'成績管理',occasional:'提出物'};return`<nav class="teacher-footer" aria-label="日常機能" style="--footer-count:${allowed.length}">${allowed.map(id=>`<button type="button" data-footer-tool="${id}" aria-current="${active===id?'page':'false'}" title="${labels[id]}へ切り替える"><span>${featureIcon(id)}</span>${labels[id]}</button>`).join('')}</nav>`;}
   function wireToolHome(){const key=state.activeTool||state.route.replace('teacher-','');wireCommonHeader(key);wireOnboardingStop();document.querySelector('[data-breadcrumb-home]')?.addEventListener('click',()=>navigateSafely(renderHome));document.querySelectorAll('[data-footer-tool]').forEach(button=>button.addEventListener('click',()=>navigateSafely(()=>openTool(button.dataset.footerTool))));}
 
   function activeSeatGridTemplate(classItem){const cols=Math.max(1,Number(classItem?.activeSeatCols)||6),aisles=new Set((classItem?.activeSeatAisleAfterColumns||[]).map(Number)),tracks=[];for(let column=1;column<=cols;column++){tracks.push('minmax(0,1fr)');if(column<cols&&aisles.has(column))tracks.push('var(--teacher-aisle-track,minmax(18px,.25fr))');}return tracks.join(' ');}
