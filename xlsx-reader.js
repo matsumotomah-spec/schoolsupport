@@ -35,12 +35,11 @@
 
   function entryText(entries,path){const value=entries.get(path);if(!value)throw new Error(`Excel内の「${path}」を読み取れませんでした。`);return decoder.decode(value);}
   function sharedStrings(entries){const bytes=entries.get('xl/sharedStrings.xml');if(!bytes)return[];const xml=decoder.decode(bytes);return[...xml.matchAll(/<si(?:\s[^>]*)?>([\s\S]*?)<\/si>/g)].map(match=>textNodes(match[1]));}
-  function firstSheetPath(entries){
-    const workbook=entryText(entries,'xl/workbook.xml'),sheetTag=workbook.match(/<sheet\b[^>]*>/)?.[0];if(!sheetTag)throw new Error('Excelにシートがありません。');
-    const relationId=attribute(sheetTag,'r:id'),relations=entryText(entries,'xl/_rels/workbook.xml.rels');let target='';
-    for(const match of relations.matchAll(/<Relationship\b[^>]*\/?\s*>/g))if(attribute(match[0],'Id')===relationId){target=attribute(match[0],'Target');break;}
-    if(!target)throw new Error('Excelの先頭シートを特定できませんでした。');
-    if(target.startsWith('/'))return target.slice(1);return`xl/${target.replace(/^\.\//,'')}`.replace(/\/[^/]+\/\.\.\//g,'/');
+  function sheetList(entries){
+    const workbook=entryText(entries,'xl/workbook.xml'),relations=entryText(entries,'xl/_rels/workbook.xml.rels'),targets=new Map();
+    for(const match of relations.matchAll(/<Relationship\b[^>]*\/?\s*>/g)){const tag=match[0],id=attribute(tag,'Id'),target=attribute(tag,'Target');if(id&&target)targets.set(id,target);}
+    const sheets=[...workbook.matchAll(/<sheet\b[^>]*\/?\s*>/g)].map(match=>{const tag=match[0],name=attribute(tag,'name'),relationId=attribute(tag,'r:id'),target=targets.get(relationId)||'';if(!target)throw new Error(`Excelのシート「${name||'名称なし'}」を特定できませんでした。`);const path=(target.startsWith('/')?target.slice(1):`xl/${target.replace(/^\.\//,'')}`).replace(/\/[^/]+\/\.\.\//g,'/');return{name:name||'シート',path};});
+    if(!sheets.length)throw new Error('Excelにシートがありません。');return sheets;
   }
 
   function worksheetRows(xml,strings){
@@ -60,10 +59,18 @@
   async function read(file){
     if(!/\.xlsx$/i.test(file.name||''))throw new Error('Excelファイルは .xlsx 形式で保存してください。');
     if(Number(file.size)>MAX_XLSX_BYTES)throw new Error('Excelファイルが大きすぎます。25MB以下のファイルを選んでください。');
-    const entries=await unzip(await file.arrayBuffer()),path=firstSheetPath(entries),rows=worksheetRows(entryText(entries,path),sharedStrings(entries));
+    const entries=await unzip(await file.arrayBuffer()),path=sheetList(entries)[0].path,rows=worksheetRows(entryText(entries,path),sharedStrings(entries));
     if(!rows.length)throw new Error('Excelの先頭シートに名簿データがありません。');
     return rows;
   }
 
-  window.XlsxRosterReader={read};
+  async function readWorkbook(file){
+    if(!/\.xlsx$/i.test(file.name||''))throw new Error('Excelファイルは .xlsx 形式で保存してください。');
+    if(Number(file.size)>MAX_XLSX_BYTES)throw new Error('Excelファイルが大きすぎます。25MB以下のファイルを選んでください。');
+    const entries=await unzip(await file.arrayBuffer()),strings=sharedStrings(entries),sheets=sheetList(entries).map(sheet=>({...sheet,rows:worksheetRows(entryText(entries,sheet.path),strings)}));
+    if(!sheets.some(sheet=>sheet.rows.length))throw new Error('Excelに読み取れる表がありません。');
+    return sheets;
+  }
+
+  window.XlsxRosterReader={read,readWorkbook};
 })();

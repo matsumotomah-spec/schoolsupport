@@ -8,7 +8,7 @@ const vm=require('node:vm');
 const {execFileSync}=require('node:child_process');
 
 const root=path.resolve(__dirname,'..');
-const applicationFiles=['app-core.js','app-shell.js','app-settings.js','app-records.js','app-seating.js','app-reports.js','app-data.js','app.js'];
+const applicationFiles=['app-core.js','app-shell.js','app-settings.js','app-records.js','app-grades.js','app-seating.js','app-reports.js','app-data.js','app.js'];
 const applicationSource=()=>applicationFiles.map(file=>fs.readFileSync(path.join(root,file),'utf8')).join('\n');
 global.window=global;
 global.localStorage={length:0,key(){return null;},getItem(){return null;},removeItem(){}};
@@ -86,7 +86,7 @@ function testShellAndNavigation(){
   const app=applicationSource();
   const settings=fs.readFileSync(path.join(root,'app-settings.js'),'utf8');
   const data=fs.readFileSync(path.join(root,'app-data.js'),'utf8');
-  const styles=fs.readFileSync(path.join(root,'styles.css'),'utf8');
+  const styles=fs.readFileSync(path.join(root,'styles.css'),'utf8'),xlsx=fs.readFileSync(path.join(root,'xlsx-reader.js'),'utf8');
   const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
   const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
   const db=fs.readFileSync(path.join(root,'db.js'),'utf8');
@@ -280,16 +280,16 @@ function testShellAndNavigation(){
   assert.ok(shellMatch);
   const assets=[...shellMatch[1].matchAll(/'\.\/([^']+)'/g)].map(match=>match[1].split('?')[0]).filter(Boolean);
   for(const asset of assets)assert.ok(fs.existsSync(path.join(root,asset)),`キャッシュ対象 ${asset} が存在する`);
-  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=57"></script>`));
-  assert.ok(index.includes('styles.css?v=57'),'CSSに公開版番号を付ける');
-  assert.ok(app.includes("register('./sw.js?v=57'"),'Service Workerの公開版番号を付ける');
+  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=58"></script>`));
+  assert.ok(index.includes('styles.css?v=58'),'CSSに公開版番号を付ける');
+  assert.ok(app.includes("register('./sw.js?v=58'"),'Service Workerの公開版番号を付ける');
   assert.ok(app.includes('dateInEnrollment(item.dueDate,currentEnrollment)'),'転入前・転出後の提出予定を未提出扱いにしない');
   assert.ok(app.includes('previousEnrollmentId'),'再在籍は過去の在籍期間を上書きしない');
   assert.ok(app.includes('data-ended-student'),'転出済み児童の過去記録を開ける');
   assert.ok(app.includes('offerSeatForTransfer'),'転入児童を現在の座席へ配置できる');
   assert.ok(app.includes('showUndoToast'),'記録変更を短時間取り消せる');
   assert.ok(app.includes('data-trash-restore'),'30日間のごみ箱から記録を復元できる');
-  assert.ok(app.includes("APP_VERSION='57'")&&app.includes('APP_UPDATED_AT'),'データ管理に公開版と更新日時を表示する');
+  assert.ok(app.includes("APP_VERSION='58'")&&app.includes('APP_UPDATED_AT'),'データ管理に公開版と更新日時を表示する');
   assert.ok(app.includes("NOTEBOOK_POINTS={'A':5,'B+':4,'B':3,'B-':2,'C':1}"),'ノート評価の平均換算を定義する');
   assert.ok(app.includes("NOTEBOOK_DEFAULT_GRADES={knowledge:'B',thinking:'B',attitude:'B'}"),'ノート評価の初回入力を3観点すべてBにする');
   assert.ok(app.includes("label:'知識・技能'")&&app.includes("label:'思考・判断・表現'")&&app.includes("label:'主体的に学習に取り組む態度'"),'ノート評価の3観点を定義する');
@@ -323,11 +323,18 @@ function testShellAndNavigation(){
   assert.ok(app.includes('id="setup-group" value=""'),'初期クラスの組を空欄にする');
   assert.ok(app.includes('<option value="">学年</option>'),'初期クラスの学年を未選択にする');
   assert.ok(app.includes('週宿題の表示・終了を管理'),'古い週宿題を一覧から整理できる');
+  assert.ok(app.includes('renderGradebook')&&app.includes('Excelのテスト採点表を取り込む'),'成績管理画面とExcel取込の入口を用意する');
+  assert.ok(app.includes('type:\'testScore\'')&&app.includes('testStudentSummary'),'テスト得点を児童別に集計する');
+  assert.ok(app.includes('notebookStudentSummary(notesByStudent'),'テストとノート評価を同じ一覧に並べる');
+  assert.ok(xlsx.includes('readWorkbook')&&xlsx.includes('sheetList'),'Excelの複数教科シートを読み込める');
+  assert.ok(app.includes("visible.daily?`<button")&&app.includes('visible.weekly?`<button')&&app.includes('visible.occasional?`<button'),'児童用表示設定を提出タブにも反映する');
+  assert.ok(app.includes('state.pupilOverviewVisibility.reward?medalData.medals:new Set()'),'達成アイコンの表示設定を提出画面にも反映する');
+  assert.ok(app.includes('preserveSeatShape:true,atDate:date,status:(record,row)=>{const summary=certificateSummary'),'ミニ賞状を座席順表示にも対応する');
 }
 
 function testApplicationSplit(){
   const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
-  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=57"></script>`));
+  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=58"></script>`));
   assert.ok(positions.every(position=>position>=0),'分割した全スクリプトを読み込む');
   assert.deepEqual(positions,[...positions].sort((a,b)=>a-b),'依存関係どおりの順序で読み込む');
   for(const file of applicationFiles)execFileSync(process.execPath,['--check',path.join(root,file)]);
@@ -346,7 +353,7 @@ function testSeparateScriptEvaluation(){
     if(file==='app.js')source=source.replace('loadState().catch(','Promise.resolve().catch(');
     vm.runInContext(source,context,{filename:file});
   }
-  assert.equal(vm.runInContext('APP_VERSION',context),'57');
+  assert.equal(vm.runInContext('APP_VERSION',context),'58');
   vm.runInContext("state.informationMode='compact';applyTheme()",context);
   assert.equal(documentStub.documentElement.dataset.information,'compact');
   assert.equal(documentStub.documentElement.dataset.explanations,'false');
