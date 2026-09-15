@@ -8,8 +8,8 @@
   const PIN_LENGTH=6;
   const PIN_MAX_FAILURES=5;
   const PIN_LOCK_MS=30*1000;
-  const APP_VERSION='62';
-  const APP_UPDATED_AT='2026-09-15 23:30';
+  const APP_VERSION='63';
+  const APP_UPDATED_AT='2026-09-15 23:55';
   const PIN_ATTEMPT_KEY='classSupportPinAttemptsV1';
   const COLORS=['#d85b5b','#ef9fb4','#4e78b8','#9adfe8','#efd66e','#397257','#7651a8'];
   const SUBJECTS=['国語','算数','理科','社会','生活','音楽','図画工作','家庭','体育','外国語','道徳','総合','自立活動'];
@@ -21,8 +21,8 @@
     '作品（文・絵）':['丁寧に仕上げた','工夫が見られた','自分らしく表現した']
   };
   const MEMO_TAGS=['集中していた','意欲的だった','自力でできた','工夫していた','最後まで取り組んだ','発表した','考えを伝えた','友達と協力した'];
-  const STANDARD_ICONS={daily:'宿',weekly:'週',certificate:'賞',memo:'メ',assessment:'B',grades:'点',occasional:'提',seating:'席',reports:'所',support:'学'};
-  const EMOJI_ICON_CHOICES={daily:['✅','📚','✏️','📝'],weekly:['📅','📘','📒','🗓️'],certificate:['🏅','🎖️','🌟','👏'],memo:['📝','✍️','💡','📌'],assessment:['💯','📊','🅰️','📖'],grades:['📈','🧮','📋','🎯'],occasional:['📨','📄','📥','📋'],seating:['🪑','🧩','🏫','↔️'],reports:['✍️','📜','💬','🗒️'],support:['🧭','📚','🧩','🎯']};
+  const STANDARD_ICONS={daily:'宿',weekly:'週',certificate:'賞',memo:'メ',assessment:'B',tests:'テ',grades:'点',occasional:'提',seating:'席',reports:'所',support:'学'};
+  const EMOJI_ICON_CHOICES={daily:['✅','📚','✏️','📝'],weekly:['📅','📘','📒','🗓️'],certificate:['🏅','🎖️','🌟','👏'],memo:['📝','✍️','💡','📌'],assessment:['💯','📊','🅰️','📖'],tests:['✏️','🔢','🧮','📋'],grades:['📈','🧮','📋','🎯'],occasional:['📨','📄','📥','📋'],seating:['🪑','🧩','🏫','↔️'],reports:['✍️','📜','💬','🗒️'],support:['🧭','📚','🧩','🎯']};
   const REWARD_ICONS=['✨','💯','👍','🌟','🏅','👏','✅','📚','🌈','🚀'];
   const DEFAULT_EMOJI_ICONS=Object.fromEntries(Object.entries(EMOJI_ICON_CHOICES).map(([id,icons])=>[id,icons[0]]));
   const state={
@@ -59,6 +59,7 @@
     iconMode:'standard',
     emojiIcons:{...DEFAULT_EMOJI_ICONS},
     rewardIcon:'✨',
+    testGradeThresholds:null,
     showMonthlyForgotten:true,
     pupilOverviewVisibility:{daily:true,weekly:true,occasional:true,monthly:true,reward:true},
     pupilKanaMode:false,
@@ -79,6 +80,7 @@
     memo:['児童メモ','児童を選び、教科とプラス評価タグを選ぶだけで保存できます。','個別支援級では、今期にメモがない教科を上部に表示します。'],
     certificate:['ミニ賞状','児童名を1回押すと「渡した」と記録します。同じ名前をもう一度押すと理由タグの追加や取消ができます。','まず配付の有無だけを素早く記録し、理由は必要なときだけ追加できます。タグは設定の「メモ・賞状の選択肢」から編集できます。'],
     assessment:['ノート評価','児童名を1回押すと、知識・技能、思考・判断・表現、主体的に学習に取り組む態度の3観点をすべてBで記録します。','よくできた観点や気になる観点がある児童だけ、同じ名前をもう一度押して変更します。',['3観点は1つの画面で変更でき、ほかの観点はBのまま残せます。','教科を選ぶと、前期・後期・年間の観点別平均を確認できます。','欠席・未提出は平均に含めず、成績は自動決定しません。']],
+    tests:['テスト入力','漢字テスト・計算テストの点数を、日付を選んで直接入力します。','「漢字・計算テストを入力」を押し、種類・実施日・満点を決めてから点数を入れます。',['過去の日付のテストも入力できます。','点数だけ先に保存でき、評価基準はテストごとに後から決められます。','評価基準を保存したテストだけが、知識・技能の成績目安に反映されます。']],
     grades:['成績管理','Excelの採点表からテスト得点を取り込み、ノート評価と同じ一覧で確認できます。','「Excelのテスト採点表を取り込む」を押し、内容を確認してから登録します。',['テストは得点率、ノートは3観点平均として並びます。','氏名は出席番号を優先し、空白を無視して名簿と結び付けます。','通知表の評定は自動決定しません。教師が判断するための材料です。']],
     occasional:['提出物','登録済みの提出物を一覧で確認し、児童ごとの提出状況を記録します。','「＋ 新しい提出物を作る」から複数の提出物を追加できます。',['提出物カードを選んでから児童名を押します。','緑は提出済み、灰色・赤は未提出です。','回収が終わったら「回収を終える」を押します。']],
     seating:['席替え','列数・行数・空席・印刷用通路と配慮条件を設定して、教室に合う座席表を作ります。','8列×5行なども設定できます。通路は列の間を選ぶと、印刷時に机約1列分の余白になります。',['空席は座席番号として残り、通路は座席数に含めません。','ドラッグ後も満たせていない配慮条件を再計算します。','確定後に「日常画面へ反映」を押すと宿題画面へ反映します。']],
@@ -162,6 +164,7 @@
     state.iconMode=await ClassDB.getMeta('featureIconMode','standard');
     state.emojiIcons={...DEFAULT_EMOJI_ICONS,...await ClassDB.getMeta('featureEmojiIcons',{})};
     state.rewardIcon=await ClassDB.getMeta('homeworkRewardIcon','✨');
+    const savedTestThresholds=await ClassDB.getMeta('testGradeThresholds',null);state.testGradeThresholds=savedTestThresholds&&['A','B+','B','B-'].every(key=>savedTestThresholds[key]&&typeof savedTestThresholds[key]==='object')?savedTestThresholds:null;
     const legacyMonthly=await ClassDB.getMeta('showMonthlyForgotten',true),savedPupilOverview=await ClassDB.getMeta('pupilOverviewVisibility',{});
     state.pupilOverviewVisibility={daily:true,weekly:true,occasional:true,monthly:legacyMonthly,reward:true,...savedPupilOverview};
     state.showMonthlyForgotten=state.pupilOverviewVisibility.monthly;
