@@ -280,16 +280,16 @@ function testShellAndNavigation(){
   assert.ok(shellMatch);
   const assets=[...shellMatch[1].matchAll(/'\.\/([^']+)'/g)].map(match=>match[1].split('?')[0]).filter(Boolean);
   for(const asset of assets)assert.ok(fs.existsSync(path.join(root,asset)),`キャッシュ対象 ${asset} が存在する`);
-  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=63"></script>`));
-  assert.ok(index.includes('styles.css?v=63'),'CSSに公開版番号を付ける');
-  assert.ok(app.includes("register('./sw.js?v=63'"),'Service Workerの公開版番号を付ける');
+  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=64"></script>`));
+  assert.ok(index.includes('styles.css?v=64'),'CSSに公開版番号を付ける');
+  assert.ok(app.includes("register('./sw.js?v=64'"),'Service Workerの公開版番号を付ける');
   assert.ok(app.includes('dateInEnrollment(item.dueDate,currentEnrollment)'),'転入前・転出後の提出予定を未提出扱いにしない');
   assert.ok(app.includes('previousEnrollmentId'),'再在籍は過去の在籍期間を上書きしない');
   assert.ok(app.includes('data-ended-student'),'転出済み児童の過去記録を開ける');
   assert.ok(app.includes('offerSeatForTransfer'),'転入児童を現在の座席へ配置できる');
   assert.ok(app.includes('showUndoToast'),'記録変更を短時間取り消せる');
   assert.ok(app.includes('data-trash-restore'),'30日間のごみ箱から記録を復元できる');
-  assert.ok(app.includes("APP_VERSION='63'")&&app.includes('APP_UPDATED_AT'),'データ管理に公開版と更新日時を表示する');
+  assert.ok(app.includes("APP_VERSION='64'")&&app.includes('APP_UPDATED_AT'),'データ管理に公開版と更新日時を表示する');
   assert.ok(app.includes("NOTEBOOK_POINTS={'A':5,'B+':4,'B':3,'B-':2,'C':1}"),'ノート評価の平均換算を定義する');
   assert.ok(app.includes("NOTEBOOK_DEFAULT_GRADES={knowledge:'B',thinking:'B',attitude:'B'}"),'ノート評価の初回入力を3観点すべてBにする');
   assert.ok(app.includes("label:'知識・技能'")&&app.includes("label:'思考・判断・表現'")&&app.includes("label:'主体的に学習に取り組む態度'"),'ノート評価の3観点を定義する');
@@ -333,15 +333,23 @@ function testShellAndNavigation(){
   assert.ok(app.includes("toolHtml('grades','点','成績管理',0)}${toolHtml('occasional'"),'担当外クラスのホームにも成績管理を表示する');
   assert.ok(app.includes("['memo','assessment','tests','grades','occasional']"),'担当外クラスのフッターからテスト入力・成績管理へ移動できる');
   assert.ok(app.includes('submissionExempt')&&app.includes('subjectExempt'),'交流学級の提出・教科対象外を児童ごとに判定する');
+  assert.ok(app.includes('seatOnly:row=>submissionExempt(row)'),'交流児童を教師用の提出座席でも名前だけにする');
+  assert.ok(styles.includes('.student-card.exchange-seat-only')&&styles.includes('.teacher-student-card.exchange-seat-only'),'交流児童の名前だけの座席表示を用意する');
   assert.ok(settings.includes('交流学級での配慮')&&settings.includes('data-exchange-support'),'名簿から交流学級の配慮を設定できる');
   assert.ok(app.includes('notebook-history-select')&&app.includes('openNotebookRecordEditor'),'過去のノート評価をプルダウンから編集できる');
   assert.ok(app.includes("application/json;charset=utf-8")&&app.includes("/\\.json\$/i.test(name)"),'JSON保存をtext/plainからapplication/jsonへ切り替える');
   assert.ok(app.includes('復旧コードは、パスワードを忘れた場合だけ使用します')&&app.includes('.json.txt'),'同期画面で通常パスワードと既存ファイルを案内する');
+  assert.ok(app.includes("sourceKind:'quiz'")&&app.includes("record.sourceKind='paper'"),'小テストと紙テストをデータ上で区別する');
+  assert.ok(app.includes('data-quiz-order="seat"')&&app.includes('data-quiz-order="number"'),'小テストを座席順・出席番号順で切り替える');
+  assert.ok(app.includes('data-quiz-mode="buttons"')&&app.includes('data-quiz-mode="direct"'),'小テストをボタン入力・直接入力で切り替える');
+  assert.ok(app.includes('quizScoreChoices')&&app.includes('もう一度押すと5点刻み'),'小テストの2回目操作で5点刻みを選べる');
+  assert.ok(app.includes("testGroupsForClass(classItem.id,'paper',draft.subject)"),'紙テスト履歴を選択教科だけに絞る');
+  assert.ok(app.includes('何点以上')&&app.includes('何％以上')&&app.includes('共通評価基準'),'成績決定時に共通の点数・割合基準を設定する');
 }
 
 function testApplicationSplit(){
   const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
-  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=63"></script>`));
+  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=64"></script>`));
   assert.ok(positions.every(position=>position>=0),'分割した全スクリプトを読み込む');
   assert.deepEqual(positions,[...positions].sort((a,b)=>a-b),'依存関係どおりの順序で読み込む');
   for(const file of applicationFiles)execFileSync(process.execPath,['--check',path.join(root,file)]);
@@ -360,7 +368,7 @@ function testSeparateScriptEvaluation(){
     if(file==='app.js')source=source.replace('loadState().catch(','Promise.resolve().catch(');
     vm.runInContext(source,context,{filename:file});
   }
-  assert.equal(vm.runInContext('APP_VERSION',context),'63');
+  assert.equal(vm.runInContext('APP_VERSION',context),'64');
   vm.runInContext("state.informationMode='compact';applyTheme()",context);
   assert.equal(documentStub.documentElement.dataset.information,'compact');
   assert.equal(documentStub.documentElement.dataset.explanations,'false');
@@ -391,6 +399,15 @@ function testSeparateScriptEvaluation(){
   assert.equal(vm.runInContext("testViewpoint('思考・判断・表現')",context),'thinking','Excelの思考・判断・表現列を判定する');
   assert.equal(vm.runInContext("testViewpoint('漢字小テスト')",context),'knowledge','旧データの漢字小テストを知識・技能へ分類する');
   assert.equal(vm.runInContext("testViewpoint('読むこと')",context),'thinking','国語の読むことを思考・判断・表現へ分類する');
+  assert.equal(vm.runInContext("manualQuizDefinition('kanji').subject",context),'国語','漢字テストを国語へ分類する');
+  assert.equal(vm.runInContext("manualQuizDefinition('calculation').subject",context),'算数','計算テストを算数へ分類する');
+  assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(quizScoreChoices(12))',context)),[12,10,5,0],'満点を残しつつ5点刻みの候補を作る');
+  assert.equal(vm.runInContext("numberValue('')",context),null,'未入力の評価基準を0点として扱わない');
+  assert.equal(vm.runInContext("isSmallTestRecord({sourceFile:'手入力'})",context),true,'旧形式の手入力小テストも判定する');
+  vm.runInContext("state.testGradeThresholds={A:{points:90,percent:90},'B+':{points:80,percent:80},B:{points:70,percent:70},'B-':{points:60,percent:60}}",context);
+  assert.equal(vm.runInContext("testRecordGradePoint({}, {point:8,max:10})",context),4,'共通割合基準で小テストを評価換算する');
+  assert.equal(vm.runInContext("thresholdSequenceValid(state.testGradeThresholds,'percent')",context),true,'共通基準の降順を検証する');
+  vm.runInContext('state.testGradeThresholds=null',context);
   assert.equal(vm.runInContext("combinedCriterionSummary(testStudentSummary([{total:16,maxTotal:20,scores:[{label:'漢字',point:8,max:10},{label:'読むこと',point:8,max:10}]}]),notebookStudentSummary([{viewpointGrades:{knowledge:'B',thinking:'B+',attitude:'B'},status:'evaluated'}])).knowledge.label",context),'B','共通基準が未設定のテストは成績目安へ反映しない');
   assert.equal(vm.runInContext("state.pupilOverviewVisibility.reward=false;visibleRewardMedals({medals:new Set(['s1'])}).size",context),0,'達成アイコンを非表示にすると児童用画面の印も隠す');
   vm.runInContext("state.classes=[{id:'c1',name:'テスト組',isOwn:true}];state.selectedClassId='c1';state.year={label:'2026年度',startDate:'2026-04-01',firstTermEnd:'2026-10-10',endDate:'2027-03-31'}",context);

@@ -207,6 +207,19 @@ h3{font-size:1rem;margin-bottom:8px}
 .student-card.absent{background:light-dark(#ece3f4,#403050);border-color:light-dark(#7b4b9c,#c9a9df)}
 .student-card.unsubmitted{background:light-dark(#ecefed,#252a28);border-color:light-dark(#8c9891,#66716b)}
 .student-card.unconfirmed{border-style:dashed}
+.student-card.exchange-seat-only{background:var(--surface);border-color:var(--line);border-style:solid;cursor:default;opacity:1}
+.teacher-student-card.exchange-seat-only{background:var(--surface);border-color:var(--line);box-shadow:none}
+.teacher-student-card.exchange-seat-only .student-main{min-height:100%;align-items:center;justify-content:center;cursor:default}
+.manual-quiz-toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+.manual-quiz-toolbar fieldset{border:0;padding:0;margin:0;min-width:240px}
+.manual-quiz-toolbar legend{font-size:.82rem;font-weight:700;margin-bottom:5px;color:var(--muted)}
+.manual-quiz-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:8px;margin-top:14px}
+.manual-quiz-card{min-height:68px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);padding:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:inherit;cursor:pointer}
+.manual-quiz-card span{font-weight:700}.manual-quiz-card strong{font-size:.9rem;color:var(--muted)}
+.manual-quiz-card.scored{border-color:var(--class-color);background:color-mix(in srgb,var(--class-color) 14%,var(--surface))}
+.manual-quiz-card.scored strong{color:var(--text)}
+.quiz-score-picker{position:sticky;bottom:8px;z-index:3;margin:12px 0 0;padding:12px;border:2px solid var(--class-color);border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
+.quiz-score-picker p{margin:0 0 8px}.quiz-score-picker>div{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}.quiz-score-picker .button{min-width:52px}
 .student-card .state{min-width:82px;border-radius:999px;padding:4px 9px;font-weight:700}
 .student-card .state.submitted{color:light-dark(#073b5c,#d9f1ff);background:light-dark(#c7e3f5,#12405e)}
 .student-card .state.forgotten{color:light-dark(#7b3000,#fff0e6);background:light-dark(#f8cba9,#6d300f)}
