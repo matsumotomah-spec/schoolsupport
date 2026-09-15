@@ -280,16 +280,16 @@ function testShellAndNavigation(){
   assert.ok(shellMatch);
   const assets=[...shellMatch[1].matchAll(/'\.\/([^']+)'/g)].map(match=>match[1].split('?')[0]).filter(Boolean);
   for(const asset of assets)assert.ok(fs.existsSync(path.join(root,asset)),`キャッシュ対象 ${asset} が存在する`);
-  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=59"></script>`));
-  assert.ok(index.includes('styles.css?v=59'),'CSSに公開版番号を付ける');
-  assert.ok(app.includes("register('./sw.js?v=59'"),'Service Workerの公開版番号を付ける');
+  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=61"></script>`));
+  assert.ok(index.includes('styles.css?v=61'),'CSSに公開版番号を付ける');
+  assert.ok(app.includes("register('./sw.js?v=61'"),'Service Workerの公開版番号を付ける');
   assert.ok(app.includes('dateInEnrollment(item.dueDate,currentEnrollment)'),'転入前・転出後の提出予定を未提出扱いにしない');
   assert.ok(app.includes('previousEnrollmentId'),'再在籍は過去の在籍期間を上書きしない');
   assert.ok(app.includes('data-ended-student'),'転出済み児童の過去記録を開ける');
   assert.ok(app.includes('offerSeatForTransfer'),'転入児童を現在の座席へ配置できる');
   assert.ok(app.includes('showUndoToast'),'記録変更を短時間取り消せる');
   assert.ok(app.includes('data-trash-restore'),'30日間のごみ箱から記録を復元できる');
-  assert.ok(app.includes("APP_VERSION='59'")&&app.includes('APP_UPDATED_AT'),'データ管理に公開版と更新日時を表示する');
+  assert.ok(app.includes("APP_VERSION='61'")&&app.includes('APP_UPDATED_AT'),'データ管理に公開版と更新日時を表示する');
   assert.ok(app.includes("NOTEBOOK_POINTS={'A':5,'B+':4,'B':3,'B-':2,'C':1}"),'ノート評価の平均換算を定義する');
   assert.ok(app.includes("NOTEBOOK_DEFAULT_GRADES={knowledge:'B',thinking:'B',attitude:'B'}"),'ノート評価の初回入力を3観点すべてBにする');
   assert.ok(app.includes("label:'知識・技能'")&&app.includes("label:'思考・判断・表現'")&&app.includes("label:'主体的に学習に取り組む態度'"),'ノート評価の3観点を定義する');
@@ -332,13 +332,16 @@ function testShellAndNavigation(){
   assert.ok(app.includes('preserveSeatShape:true,atDate:date,status:(record,row)=>{const summary=certificateSummary'),'ミニ賞状を座席順表示にも対応する');
   assert.ok(app.includes("toolHtml('grades','点','成績管理',0)}${toolHtml('occasional'"),'担当外クラスのホームにも成績管理を表示する');
   assert.ok(app.includes("['memo','assessment','grades','occasional']"),'担当外クラスのフッターから成績管理へ移動できる');
+  assert.ok(app.includes('submissionExempt')&&app.includes('subjectExempt'),'交流学級の提出・教科対象外を児童ごとに判定する');
+  assert.ok(settings.includes('交流学級での配慮')&&settings.includes('data-exchange-support'),'名簿から交流学級の配慮を設定できる');
+  assert.ok(app.includes('これまで入力したノート評価一覧')&&app.includes('openNotebookRecordEditor'),'過去のノート評価を一覧から編集できる');
   assert.ok(app.includes("application/json;charset=utf-8")&&app.includes("/\\.json\$/i.test(name)"),'JSON保存をtext/plainからapplication/jsonへ切り替える');
   assert.ok(app.includes('復旧コードは、パスワードを忘れた場合だけ使用します')&&app.includes('.json.txt'),'同期画面で通常パスワードと既存ファイルを案内する');
 }
 
 function testApplicationSplit(){
   const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
-  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=59"></script>`));
+  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=61"></script>`));
   assert.ok(positions.every(position=>position>=0),'分割した全スクリプトを読み込む');
   assert.deepEqual(positions,[...positions].sort((a,b)=>a-b),'依存関係どおりの順序で読み込む');
   for(const file of applicationFiles)execFileSync(process.execPath,['--check',path.join(root,file)]);
@@ -357,7 +360,7 @@ function testSeparateScriptEvaluation(){
     if(file==='app.js')source=source.replace('loadState().catch(','Promise.resolve().catch(');
     vm.runInContext(source,context,{filename:file});
   }
-  assert.equal(vm.runInContext('APP_VERSION',context),'59');
+  assert.equal(vm.runInContext('APP_VERSION',context),'61');
   vm.runInContext("state.informationMode='compact';applyTheme()",context);
   assert.equal(documentStub.documentElement.dataset.information,'compact');
   assert.equal(documentStub.documentElement.dataset.explanations,'false');
@@ -374,10 +377,18 @@ function testSeparateScriptEvaluation(){
   assert.equal(viewpointSummary.average,3);assert.equal(viewpointSummary.viewpoints.knowledge.average,5);assert.equal(viewpointSummary.viewpoints.attitude.average,1);
   assert.equal(vm.runInContext("notebookViewpointText({grade:'B+',status:'evaluated'})",context),'知B＋・思B＋・態B＋','旧形式の単一評価を3観点へ引き継ぐ');
   assert.equal(vm.runInContext("notebookOverallGrade({knowledge:'A',thinking:'B',attitude:'B'})",context),'B+','3観点から総合目安を算出する');
+  const testViewpoints=JSON.parse(vm.runInContext("JSON.stringify(testStudentSummary([{total:16,maxTotal:20,scores:[{viewpoint:'knowledge',point:8,max:10},{viewpoint:'thinking',point:8,max:10}]}]).viewpoints)",context));
+  assert.equal(testViewpoints.knowledge.percentage,80,'テストの知識・技能を別集計する');assert.equal(testViewpoints.thinking.percentage,80,'テストの思考・判断・表現を別集計する');
   assert.equal(vm.runInContext('typeof renderHome',context),'function');
   assert.equal(vm.runInContext('typeof renderSettings',context),'function');
   assert.equal(vm.runInContext('typeof renderSeating',context),'function');
   assert.equal(vm.runInContext('typeof applySyncPlan',context),'function');
+  assert.equal(vm.runInContext("submissionExempt({enrollment:{submissionExempt:true}})",context),true,'提出管理の対象外を児童ごとに判定する');
+  assert.equal(vm.runInContext("subjectExempt({enrollment:{excludedSubjects:['算数']}},'算数')",context),true,'参加しない教科を児童ごとに判定する');
+  assert.equal(vm.runInContext('typeof openNotebookRecordEditor',context),'function','ノート評価履歴の編集画面を用意する');
+  assert.equal(vm.runInContext('typeof openTestScoreList',context),'function','過去に取り込んだテストの点数一覧を開ける');
+  assert.equal(vm.runInContext("testViewpoint('知識・技能')",context),'knowledge','Excelの知識・技能列を判定する');
+  assert.equal(vm.runInContext("testViewpoint('思考・判断・表現')",context),'thinking','Excelの思考・判断・表現列を判定する');
   vm.runInContext("state.classes=[{id:'c1',name:'テスト組',isOwn:true}];state.selectedClassId='c1';state.year={label:'2026年度',startDate:'2026-04-01',firstTermEnd:'2026-10-10',endDate:'2027-03-31'}",context);
   assert.ok(vm.runInContext("headerHtml('ノート評価').includes('data-home-menu')",context),'教師用の各機能画面にもハンバーガーメニューを表示する');
   assert.ok(!vm.runInContext("headerHtml('提出','',false,false).includes('data-home-menu')",context),'児童用画面には教師メニューを表示しない');
