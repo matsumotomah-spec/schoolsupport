@@ -8,8 +8,8 @@
   const PIN_LENGTH=6;
   const PIN_MAX_FAILURES=5;
   const PIN_LOCK_MS=30*1000;
-  const APP_VERSION='64';
-  const APP_UPDATED_AT='2026-09-16 00:30';
+  const APP_VERSION='68';
+  const APP_UPDATED_AT='2026-09-16 17:30';
   const PIN_ATTEMPT_KEY='classSupportPinAttemptsV1';
   const COLORS=['#d85b5b','#ef9fb4','#4e78b8','#9adfe8','#efd66e','#397257','#7651a8'];
   const SUBJECTS=['国語','算数','理科','社会','生活','音楽','図画工作','家庭','体育','外国語','道徳','総合','自立活動'];
@@ -75,7 +75,7 @@
 
   const HELP_TOPICS={
     home:['教師用ホーム','操作するクラスを選び、今日使う機能を開きます。「要対応○人」は確認が必要な児童数です。','児童に渡すときは、画面下の「児童用の提出画面」を押してください。',['最初に上部の「操作中」で現在のクラスを確認します。','大きい機能ボタン、または画面下部の機能名を押します。','週の初めに案内が出たら、今週分の週宿題を作るか選びます。']],
-    daily:['毎日の宿題','その日の提出状況と、今週の未解決の忘れ物を確認します。','児童名を押すたびに、提出→忘れた→未確認の順で切り替わります。',['今週の忘れ物がある児童では日付別の確認画面が開きます。','月曜日より前の忘れ物は日常画面へ持ち越しません。','「達成アイコンの条件」で、直近1か月の忘れ回数の上限を設定できます。']],
+    daily:['毎日の宿題','その日の提出状況と、今週の未解決の忘れ物を確認します。','教師用では、児童名を押すたびに提出→忘れた→欠席→未確認の順で切り替わります。',['児童用では、提出→忘れた→一部忘れた→未確認の順です。','一部忘れたは月間0.5回として集計し、達成アイコンの対象外になります。','児童詳細の「宿題・提出物」から、児童用画面で個別に状態を隠せます。']],
     weekly:['週宿題','毎週または今週限りの宿題を作り、提出状況を記録します。','児童名を押すたびに、提出→忘れた→未提出の順で切り替わります。',['「毎週」にしても年度末まで一括作成しません。','次の月曜日以降に案内が出たら「今週分を作る」を押します。','案内を閉じた場合も、週宿題画面のボタンから作成できます。']],
     memo:['児童メモ','児童を選び、教科とプラス評価タグを選ぶだけで保存できます。','個別支援級では、今期にメモがない教科を上部に表示します。'],
     certificate:['ミニ賞状','児童名を1回押すと「渡した」と記録します。同じ名前をもう一度押すと理由タグの追加や取消ができます。','まず配付の有無だけを素早く記録し、理由は必要なときだけ追加できます。タグは設定の「メモ・賞状の選択肢」から編集できます。'],
@@ -113,7 +113,7 @@
   function pupilClassName(classItem=selectedClass()){const name=String(classItem?.name||'');if(!state.pupilKanaMode)return name;return name.replace(/([1-6])年([0-9]+)組/g,(_,grade,group)=>`${grade}ねん${group}くみ`);}
   function pupilDateText(value){if(!state.pupilKanaMode)return shortJpDate(value);const date=new Date(`${value}T00:00:00`),days=['にち','げつ','か','すい','もく','きん','ど'];return `${date.getMonth()+1}がつ${date.getDate()}にち（${days[date.getDay()]}）`;}
   function pupilHomeworkDateLabel(value,base=today()){if(!state.pupilKanaMode)return relativeHomeworkLabel(value,base);const age=daysBetween(base,value);if(age===0)return'きょうの ぶん';if(age===1)return'きのうの ぶん';if(age===2)return'おとといの ぶん';const days=['にち','げつ','か','すい','もく','きん','ど'];return `${days[new Date(`${value}T00:00:00`).getDay()]}ようびの ぶん`;}
-  function pupilStatusLabel(status){const labels={unconfirmed:['— 未確認','— まだ'],submitted:['✓ 提出','✓ だした'],forgotten:['! 忘れた','! わすれた'],unsubmitted:['— 未提出','— まだ'],absent:['— 欠席','— おやすみ']};const pair=labels[status]||[status,status];return pupilText(pair[0],pair[1]);}
+  function pupilStatusLabel(status){const labels={unconfirmed:['— 未確認','— まだ'],submitted:['✓ 提出','✓ だした'],forgotten:['! 忘れた','! わすれた'],partialForgotten:['△ 一部忘れた','△ すこし わすれた'],unsubmitted:['— 未提出','— まだ'],absent:['— 欠席','— おやすみ']};const pair=labels[status]||[status,status];return pupilText(pair[0],pair[1]);}
   function selectedClass(){return state.classes.find(item=>item.id===state.selectedClassId)||state.classes[0]||null;}
   function featureIcon(id){return state.iconMode==='emoji'?(state.emojiIcons[id]||DEFAULT_EMOJI_ICONS[id]||'●'):(STANDARD_ICONS[id]||'●');}
   function rewardIconHtml(className='homework-medal'){return`<span class="${className}" title="直近1か月の設定条件を達成" aria-label="直近1か月の設定条件を達成">${esc(state.rewardIcon)}</span>`;}

@@ -33,6 +33,9 @@ function testCsv(){
   assert.equal(submissions[2][6],'未確認');
   assert.equal(submissions[3][6],'未提出');
   assert.equal(submissions[4][6],'忘れた');
+  const partialRows=ClassCsvExport.submissionRows({...args,records:[{id:'d2',type:'dailyHomework',studentId:'s1',date:'2026-09-08',status:'partialForgotten',partialForgottenAt:'2026-09-08T00:00:00Z',hadPartialForgotten:true}]});
+  assert.equal(partialRows[1][6],'一部忘れた','一部忘れたをCSVで識別できる');
+  assert.equal(partialRows[1][7],0.5,'一部忘れたをCSVで0.5回換算する');
   const assessments=ClassCsvExport.assessmentRows(args);
   assert.deepEqual(assessments[1].slice(7,11),['A','B+','B','B+']);
   assert.deepEqual(assessments[0].slice(7,10),['知識・技能','思考・判断・表現','主体的に学習に取り組む態度']);
@@ -280,16 +283,16 @@ function testShellAndNavigation(){
   assert.ok(shellMatch);
   const assets=[...shellMatch[1].matchAll(/'\.\/([^']+)'/g)].map(match=>match[1].split('?')[0]).filter(Boolean);
   for(const asset of assets)assert.ok(fs.existsSync(path.join(root,asset)),`キャッシュ対象 ${asset} が存在する`);
-  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=64"></script>`));
-  assert.ok(index.includes('styles.css?v=64'),'CSSに公開版番号を付ける');
-  assert.ok(app.includes("register('./sw.js?v=64'"),'Service Workerの公開版番号を付ける');
+  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=68"></script>`));
+  assert.ok(index.includes('styles.css?v=68'),'CSSに公開版番号を付ける');
+  assert.ok(app.includes("register('./sw.js?v=68'"),'Service Workerの公開版番号を付ける');
   assert.ok(app.includes('dateInEnrollment(item.dueDate,currentEnrollment)'),'転入前・転出後の提出予定を未提出扱いにしない');
   assert.ok(app.includes('previousEnrollmentId'),'再在籍は過去の在籍期間を上書きしない');
   assert.ok(app.includes('data-ended-student'),'転出済み児童の過去記録を開ける');
   assert.ok(app.includes('offerSeatForTransfer'),'転入児童を現在の座席へ配置できる');
   assert.ok(app.includes('showUndoToast'),'記録変更を短時間取り消せる');
   assert.ok(app.includes('data-trash-restore'),'30日間のごみ箱から記録を復元できる');
-  assert.ok(app.includes("APP_VERSION='64'")&&app.includes('APP_UPDATED_AT'),'データ管理に公開版と更新日時を表示する');
+  assert.ok(app.includes("APP_VERSION='68'")&&app.includes('APP_UPDATED_AT'),'データ管理に公開版と更新日時を表示する');
   assert.ok(app.includes("NOTEBOOK_POINTS={'A':5,'B+':4,'B':3,'B-':2,'C':1}"),'ノート評価の平均換算を定義する');
   assert.ok(app.includes("NOTEBOOK_DEFAULT_GRADES={knowledge:'B',thinking:'B',attitude:'B'}"),'ノート評価の初回入力を3観点すべてBにする');
   assert.ok(app.includes("label:'知識・技能'")&&app.includes("label:'思考・判断・表現'")&&app.includes("label:'主体的に学習に取り組む態度'"),'ノート評価の3観点を定義する');
@@ -342,17 +345,34 @@ function testShellAndNavigation(){
   assert.ok(app.includes("sourceKind:'quiz'")&&app.includes("record.sourceKind='paper'"),'小テストと紙テストをデータ上で区別する');
   assert.ok(app.includes('data-quiz-order="seat"')&&app.includes('data-quiz-order="number"'),'小テストを座席順・出席番号順で切り替える');
   assert.ok(app.includes('data-quiz-mode="buttons"')&&app.includes('data-quiz-mode="direct"'),'小テストをボタン入力・直接入力で切り替える');
-  assert.ok(app.includes('quizScoreChoices')&&app.includes('もう一度押すと5点刻み'),'小テストの2回目操作で5点刻みを選べる');
+  assert.ok(app.includes('quizBaseScoreChoices')&&app.includes('data-quiz-score-plus-five')&&app.includes('data-quiz-score-confirm'),'小テストを10点刻み・＋5点・決定で入力できる');
+  assert.ok(app.includes("QUIZ_MAX_SCORE=100")&&!app.includes('id="manual-quiz-max"'),'小テストを100点満点に固定する');
+  assert.ok(app.includes("classItem.activeSeatLayout.map")&&app.includes('--manual-quiz-cols'),'小テストの座席順に児童用と同じ座席形状と空席を反映する');
+  assert.ok(app.includes("scores.clear();pickerStudentId=null;pickerScore=null;renderRoster()"),'小テスト種別を変えたとき別教科の入力点を持ち越さない');
+  assert.ok(app.includes("subjectExempt(row,selected.subject)")&&app.includes("eligibleIds.has(studentId)"),'教科対象外の児童へ小テストを登録しない');
+  assert.ok(app.includes("data-pupil-occasional-choice")&&app.includes("state.pupilOccasionalId=button.dataset.pupilOccasionalChoice"),'児童用画面で複数の提出物を切り替えられる');
+  assert.ok(app.includes("daily-absence-seat exchange-seat-only")&&app.includes('座席のみ'),'提出対象外児童を欠席入力の操作対象にしない');
+  assert.ok(app.includes("rosterForRange(classItem.id,date,date)"),'転出後も実施日時点のテスト点数を表示する');
+  assert.ok(app.includes("studentSupportSubjects(row,classItem).includes(draft.subject)"),'学習記録の次送りを選択教科の対象児童に限定する');
   assert.ok(app.includes("testGroupsForClass(classItem.id,'paper',draft.subject)"),'紙テスト履歴を選択教科だけに絞る');
   assert.ok(app.includes('何点以上')&&app.includes('何％以上')&&app.includes('共通評価基準'),'成績決定時に共通の点数・割合基準を設定する');
 }
 
 function testApplicationSplit(){
   const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
-  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=64"></script>`));
+  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=68"></script>`));
   assert.ok(positions.every(position=>position>=0),'分割した全スクリプトを読み込む');
   assert.deepEqual(positions,[...positions].sort((a,b)=>a-b),'依存関係どおりの順序で読み込む');
   for(const file of applicationFiles)execFileSync(process.execPath,['--check',path.join(root,file)]);
+  const declarations=new Map();
+  for(const file of applicationFiles){
+    const source=fs.readFileSync(path.join(root,file),'utf8');
+    for(const match of source.matchAll(/(?:^|\n)\s*(?:async\s+)?function\s+([\w$]+)\s*\(/g)){
+      const locations=declarations.get(match[1])||[];locations.push(file);declarations.set(match[1],locations);
+    }
+  }
+  const duplicates=[...declarations].filter(([,files])=>files.length>1).map(([name,files])=>`${name} (${files.join(', ')})`);
+  assert.deepEqual(duplicates,[],'同名関数を重複定義しない');
   assert.ok(fs.statSync(path.join(root,'app.js')).size<10000,'app.jsは起動処理だけに限定する');
   const source=applicationSource();
   assert.ok(source.includes('renderHome')&&source.includes('renderSettings')&&source.includes('renderSeating')&&source.includes('applySyncPlan'),'分割後も主要機能を保持する');
@@ -368,7 +388,7 @@ function testSeparateScriptEvaluation(){
     if(file==='app.js')source=source.replace('loadState().catch(','Promise.resolve().catch(');
     vm.runInContext(source,context,{filename:file});
   }
-  assert.equal(vm.runInContext('APP_VERSION',context),'64');
+  assert.equal(vm.runInContext('APP_VERSION',context),'68');
   vm.runInContext("state.informationMode='compact';applyTheme()",context);
   assert.equal(documentStub.documentElement.dataset.information,'compact');
   assert.equal(documentStub.documentElement.dataset.explanations,'false');
@@ -392,7 +412,17 @@ function testSeparateScriptEvaluation(){
   assert.equal(vm.runInContext('typeof renderSeating',context),'function');
   assert.equal(vm.runInContext('typeof applySyncPlan',context),'function');
   assert.equal(vm.runInContext("submissionExempt({enrollment:{submissionExempt:true}})",context),true,'提出管理の対象外を児童ごとに判定する');
+  assert.deepEqual(JSON.parse(vm.runInContext("JSON.stringify(['', 'submitted','forgotten','absent'].map(status=>dailyNextStatus(status,'teacher')))",context)),['submitted','forgotten','absent','unconfirmed'],'教師用は提出→忘れた→欠席→未確認で循環する');
+  assert.deepEqual(JSON.parse(vm.runInContext("JSON.stringify(['', 'submitted','forgotten','partialForgotten'].map(status=>dailyNextStatus(status,'pupil')))",context)),['submitted','forgotten','partialForgotten','unconfirmed'],'児童用は提出→忘れた→一部忘れた→未確認で循環する');
+  assert.equal(vm.runInContext("dailyForgottenWeight({status:'partialForgotten',hadPartialForgotten:true})",context),0.5,'一部忘れたを月間0.5回として数える');
+  assert.equal(vm.runInContext("dailyForgottenWeight({status:'submitted',partialForgottenAt:'2026-09-01'})",context),0.5,'解決後も一部忘れた履歴を月間集計に残す');
+  assert.equal(vm.runInContext("homeworkMedalEligible('s1',new Map([['s1',.5]]),new Set(['s1']),5)",context),false,'一部忘れた児童を上限内でも達成アイコン対象外にする');
   assert.equal(vm.runInContext("subjectExempt({enrollment:{excludedSubjects:['算数']}},'算数')",context),true,'参加しない教科を児童ごとに判定する');
+  const exchangePupilCard=vm.runInContext("studentCard({student:{id:'s1',name:'交流児童'},enrollment:{number:30,submissionExempt:true}},{status:'forgotten'},'daily',true,new Set(['s1']))",context);
+  assert.ok(exchangePupilCard.includes('交流児童')&&exchangePupilCard.includes('exchange-seat-only')&&exchangePupilCard.includes('disabled'),'交流児童は児童用の座席に氏名だけ残す');
+  assert.ok(!exchangePupilCard.includes('忘れた')&&!exchangePupilCard.includes('今週の忘れ')&&!exchangePupilCard.includes('medal-inline'),'交流児童の状態・警告・達成アイコンを表示しない');
+  const hiddenPupilCard=vm.runInContext("studentCard({student:{id:'s2',name:'配慮児童'},enrollment:{number:2,hidePupilHomeworkStatus:true}},{status:'forgotten'},'daily',true,new Set(['s2']))",context);
+  assert.ok(hiddenPupilCard.includes('配慮児童')&&hiddenPupilCard.includes('pupil-status-hidden')&&!hiddenPupilCard.includes('忘れた')&&!hiddenPupilCard.includes('medal-inline'),'表示配慮の児童は児童用で氏名だけ表示する');
   assert.equal(vm.runInContext('typeof openNotebookRecordEditor',context),'function','ノート評価履歴の編集画面を用意する');
   assert.equal(vm.runInContext('typeof openTestScoreList',context),'function','過去に取り込んだテストの点数一覧を開ける');
   assert.equal(vm.runInContext("testViewpoint('知識・技能')",context),'knowledge','Excelの知識・技能列を判定する');
@@ -401,11 +431,19 @@ function testSeparateScriptEvaluation(){
   assert.equal(vm.runInContext("testViewpoint('読むこと')",context),'thinking','国語の読むことを思考・判断・表現へ分類する');
   assert.equal(vm.runInContext("manualQuizDefinition('kanji').subject",context),'国語','漢字テストを国語へ分類する');
   assert.equal(vm.runInContext("manualQuizDefinition('calculation').subject",context),'算数','計算テストを算数へ分類する');
-  assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(quizScoreChoices(12))',context)),[12,10,5,0],'満点を残しつつ5点刻みの候補を作る');
+  assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(quizBaseScoreChoices())',context)),[100,90,80,70,60,50,40,30,20,10,0],'100点から0点まで10点刻みの候補を作る');
+  assert.equal(vm.runInContext('quizCanAddFive(50)',context),true,'10点刻みの点数には＋5点できる');
+  assert.equal(vm.runInContext('quizCanAddFive(55)',context),false,'＋5点を続けて二重加算しない');
+  assert.equal(vm.runInContext('quizCanAddFive(100)',context),false,'100点を超えて加算しない');
+  assert.equal(vm.runInContext('quizScoreWithFive(50)',context),55,'50点へ＋5点して55点にする');
+  assert.equal(vm.runInContext('quizScoreWithFive(55)',context),55,'＋5点済みの点数は変えない');
+  const parsedTest=JSON.parse(vm.runInContext(`JSON.stringify(testWorkbookSheets([{name:'国語',rows:[['','','(1)','','総得点'],['','','物語文','',''],['','','知・技','',''],['番号','氏名',100,'',1400],[1,'青木',80,'',80]]}]))`,context));
+  assert.equal(parsedTest[0].tests[0].columns.length,1,'紙テストの累計得点列を観点別得点へ混入させない');
+  assert.equal(parsedTest[0].tests[0].columns[0].viewpoint,'knowledge');
   assert.equal(vm.runInContext("numberValue('')",context),null,'未入力の評価基準を0点として扱わない');
   assert.equal(vm.runInContext("isSmallTestRecord({sourceFile:'手入力'})",context),true,'旧形式の手入力小テストも判定する');
   vm.runInContext("state.testGradeThresholds={A:{points:90,percent:90},'B+':{points:80,percent:80},B:{points:70,percent:70},'B-':{points:60,percent:60}}",context);
-  assert.equal(vm.runInContext("testRecordGradePoint({}, {point:8,max:10})",context),4,'共通割合基準で小テストを評価換算する');
+  assert.equal(vm.runInContext("testRecordGradePoint({point:8,max:10})",context),4,'共通割合基準で小テストを評価換算する');
   assert.equal(vm.runInContext("thresholdSequenceValid(state.testGradeThresholds,'percent')",context),true,'共通基準の降順を検証する');
   vm.runInContext('state.testGradeThresholds=null',context);
   assert.equal(vm.runInContext("combinedCriterionSummary(testStudentSummary([{total:16,maxTotal:20,scores:[{label:'漢字',point:8,max:10},{label:'読むこと',point:8,max:10}]}]),notebookStudentSummary([{viewpointGrades:{knowledge:'B',thinking:'B+',attitude:'B'},status:'evaluated'}])).knowledge.label",context),'B','共通基準が未設定のテストは成績目安へ反映しない');
@@ -423,7 +461,7 @@ function testSeparateScriptEvaluation(){
 }
 
 async function testWeeklyStateTransitions(){
-  const stores={records:new Map(),trash:new Map(),meta:new Map()},clone=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));let sequence=0;
+  const stores={records:new Map(),trash:new Map(),meta:new Map(),students:new Map(),enrollments:new Map()},clone=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));let sequence=0;
   const ClassDB={uid:prefix=>`${prefix}_${++sequence}`,now:()=>new Date().toISOString(),deviceId:()=>'test-device',async get(store,key){return clone(stores[store]?.get(key));},async getAll(store){return [...(stores[store]?.values()||[])].map(clone);},async getAllByIndex(store,index,value){return [...(stores[store]?.values()||[])].filter(item=>item[index]===value).map(clone);},async put(store,item){const saved={...clone(item),createdAt:item.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString(),deviceId:'test-device'};stores[store].set(saved.id||saved.key,saved);return clone(saved);},async remove(store,key){stores[store].delete(key);},async getMeta(key,fallback=null){return clone(stores.meta.get(key)?.value??fallback);},async applyBatch({puts={},deletes={}}={}){for(const [store,items] of Object.entries(puts))for(const item of items||[])stores[store].set(item.id||item.key,clone(item));for(const [store,keys] of Object.entries(deletes))for(const key of keys||[])stores[store].delete(key);}};
   const element=()=>({open:false,innerHTML:'',classList:{add(){},remove(){}},querySelector(){return null;},querySelectorAll(){return[];},addEventListener(){},setAttribute(){}}),documentStub={getElementById:element,addEventListener(){},querySelector(){return element();},querySelectorAll(){return[];},createTreeWalker(){return{nextNode(){return false;}}},documentElement:{dataset:{},style:{setProperty(){}}}};
   const sandbox={console,document:documentStub,NodeFilter:{SHOW_TEXT:4},navigator:{onLine:true},localStorage:global.localStorage,crypto:require('node:crypto').webcrypto,TextEncoder,TextDecoder,Uint8Array,Blob,URL,setTimeout,clearTimeout,ClassDB};sandbox.window=sandbox;sandbox.window.addEventListener=()=>{};sandbox.window.matchMedia=()=>({matches:false});const context=vm.createContext(sandbox);
@@ -436,6 +474,16 @@ async function testWeeklyStateTransitions(){
   context.__occurrence=current[0];await vm.runInContext("Promise.all([applyWeeklyTap('s1',__occurrence,async()=>{}),applyWeeklyTap('s1',__occurrence,async()=>{})])",context);assert.equal((await ClassDB.get('records',`weekly_${current[0].id}_s1`)).status,'forgotten','素早い2回押しを順番に処理する');await vm.runInContext("applyWeeklyTap('s1',__occurrence,async()=>{})",context);assert.equal((await ClassDB.get('records',`weekly_${current[0].id}_s1`)).status,'unsubmitted','3回目で未提出へ戻す');
   await vm.runInContext("ClassDB.put('records',{id:'weekly-stale',type:'weeklySubmission',classId:'c1',studentId:'s2',occurrenceId:__occurrence.id,status:'forgotten',forgottenOn:'2000-01-01'})",context);await vm.runInContext("weeklyData('c1')",context);assert.equal((await ClassDB.get('records','weekly-stale')).status,'unsubmitted','前日に忘れた週宿題は翌日に未提出へ戻す');
   await vm.runInContext("ClassDB.put('records',{id:`weekly_${__occurrence.id}_s1`,type:'weeklySubmission',classId:'c1',studentId:'s1',date:__occurrence.dueDate,dueDate:__occurrence.dueDate,title:__occurrence.title,occurrenceId:__occurrence.id,status:'submitted'})",context);await vm.runInContext('endWeeklySeries(__occurrence)',context);assert.equal((await ClassDB.get('records','weekly-old')).seriesActive,false,'繰り返し終了を過去回へ反映する');assert.equal((await ClassDB.get('records',`weekly_${current[0].id}_s1`)).status,'submitted','終了しても提出記録を残す');await vm.runInContext('resumeWeeklySeries(__occurrence)',context);assert.equal((await ClassDB.get('records','weekly-old')).seriesActive,true,'終了した繰り返しを再開できる');await vm.runInContext('setWeeklyVisibility([__occurrence.id],true)',context);const hidden=JSON.parse(await vm.runInContext("(async()=>JSON.stringify(await weeklyData('c1')))()",context));assert.ok(!hidden.occurrences.some(item=>item.id===context.__occurrence.id),'非表示の宿題を通常一覧から外す');assert.ok(hidden.allOccurrences.some(item=>item.id===context.__occurrence.id),'非表示の宿題も管理一覧には残す');await vm.runInContext('setWeeklyVisibility([__occurrence.id],false)',context);assert.ok((await ClassDB.get('records',context.__occurrence.id)).hidden===false,'非表示の宿題を再表示できる');
+  await ClassDB.put('records',{id:'quiz-ja',type:'testScore',classId:'c1',studentId:'s1',sourceTestId:'quiz-ja',sourceFile:'手入力',sourceKind:'quiz',subject:'国語',title:'漢字',date:'2026-09-01',total:8,maxTotal:10,scores:[]});
+  await ClassDB.put('records',{id:'paper-ja',type:'testScore',classId:'c1',studentId:'s1',sourceTestId:'paper-ja',sourceFile:'採点表.xlsx',sourceKind:'paper',subject:'国語',title:'物語文',date:'2026-09-02',total:80,maxTotal:100,scores:[]});
+  await ClassDB.put('records',{id:'paper-math',type:'testScore',classId:'c1',studentId:'s1',sourceTestId:'paper-math',sourceFile:'採点表.xlsx',sourceKind:'paper',subject:'算数',title:'分数',date:'2026-09-03',total:70,maxTotal:100,scores:[]});
+  assert.deepEqual(JSON.parse(await vm.runInContext("(async()=>JSON.stringify((await testGroupsForClass('c1','quiz')).map(item=>item.id)))()",context)),['quiz-ja'],'小テスト一覧へ紙テストを混在させない');
+  assert.deepEqual(JSON.parse(await vm.runInContext("(async()=>JSON.stringify((await testGroupsForClass('c1','paper','国語')).map(item=>item.id)))()",context)),['paper-ja'],'成績管理の紙テスト履歴を選択教科だけに絞る');
+  await ClassDB.put('students',{id:'exchange-student',name:'交流児童'});await ClassDB.put('enrollments',{id:'exchange-enrollment',classId:'c1',studentId:'exchange-student',number:30,submissionExempt:true,startDate:'2026-04-01'});
+  vm.runInContext("state.classes=[{id:'c1',name:'テスト組',activeSeatLayout:['exchange-student'],activeSeatCols:1,dailyStudentOrder:['exchange-student']}];state.selectedClassId='c1'",context);
+  const exchangeTeacherCard=await vm.runInContext("teacherRosterCards('c1',[],{orderMode:'seat',preserveSeatShape:true,seatOnly:row=>submissionExempt(row)})",context);
+  assert.ok(exchangeTeacherCard.includes('交流児童')&&exchangeTeacherCard.includes('exchange-seat-only'),'交流児童は教師用の提出座席にも氏名だけ残す');
+  assert.ok(!exchangeTeacherCard.includes('data-tool-student')&&!exchangeTeacherCard.includes('detail-button'),'交流児童の提出操作と詳細操作を座席から外す');
 }
 
 async function testImportValidation(){
