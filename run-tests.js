@@ -283,16 +283,16 @@ function testShellAndNavigation(){
   assert.ok(shellMatch);
   const assets=[...shellMatch[1].matchAll(/'\.\/([^']+)'/g)].map(match=>match[1].split('?')[0]).filter(Boolean);
   for(const asset of assets)assert.ok(fs.existsSync(path.join(root,asset)),`キャッシュ対象 ${asset} が存在する`);
-  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=68"></script>`));
-  assert.ok(index.includes('styles.css?v=68'),'CSSに公開版番号を付ける');
-  assert.ok(app.includes("register('./sw.js?v=68'"),'Service Workerの公開版番号を付ける');
+  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=69"></script>`));
+  assert.ok(index.includes('styles.css?v=69'),'CSSに公開版番号を付ける');
+  assert.ok(app.includes("register('./sw.js?v=69'"),'Service Workerの公開版番号を付ける');
   assert.ok(app.includes('dateInEnrollment(item.dueDate,currentEnrollment)'),'転入前・転出後の提出予定を未提出扱いにしない');
   assert.ok(app.includes('previousEnrollmentId'),'再在籍は過去の在籍期間を上書きしない');
   assert.ok(app.includes('data-ended-student'),'転出済み児童の過去記録を開ける');
   assert.ok(app.includes('offerSeatForTransfer'),'転入児童を現在の座席へ配置できる');
   assert.ok(app.includes('showUndoToast'),'記録変更を短時間取り消せる');
   assert.ok(app.includes('data-trash-restore'),'30日間のごみ箱から記録を復元できる');
-  assert.ok(app.includes("APP_VERSION='68'")&&app.includes('APP_UPDATED_AT'),'データ管理に公開版と更新日時を表示する');
+  assert.ok(app.includes("APP_VERSION='69'")&&app.includes('APP_UPDATED_AT'),'データ管理に公開版と更新日時を表示する');
   assert.ok(app.includes("NOTEBOOK_POINTS={'A':5,'B+':4,'B':3,'B-':2,'C':1}"),'ノート評価の平均換算を定義する');
   assert.ok(app.includes("NOTEBOOK_DEFAULT_GRADES={knowledge:'B',thinking:'B',attitude:'B'}"),'ノート評価の初回入力を3観点すべてBにする');
   assert.ok(app.includes("label:'知識・技能'")&&app.includes("label:'思考・判断・表現'")&&app.includes("label:'主体的に学習に取り組む態度'"),'ノート評価の3観点を定義する');
@@ -348,6 +348,9 @@ function testShellAndNavigation(){
   assert.ok(app.includes('quizBaseScoreChoices')&&app.includes('data-quiz-score-plus-five')&&app.includes('data-quiz-score-confirm'),'小テストを10点刻み・＋5点・決定で入力できる');
   assert.ok(app.includes("QUIZ_MAX_SCORE=100")&&!app.includes('id="manual-quiz-max"'),'小テストを100点満点に固定する');
   assert.ok(app.includes("classItem.activeSeatLayout.map")&&app.includes('--manual-quiz-cols'),'小テストの座席順に児童用と同じ座席形状と空席を反映する');
+  assert.ok(app.includes("dialog.classList.add('quiz-entry-dialog')")&&styles.includes('.app-dialog.quiz-entry-dialog'),'小テスト入力だけ広い座席画面を使用する');
+  assert.ok(styles.includes('.quiz-score-picker{position:fixed'),'小テストの点数パネルをスクロール不要の固定表示にする');
+  assert.ok(styles.includes('grid-template-columns:repeat(var(--manual-quiz-cols,6),minmax(0,1fr))'),'狭い画面でも座席列を画面内へ収める');
   assert.ok(app.includes("scores.clear();pickerStudentId=null;pickerScore=null;renderRoster()"),'小テスト種別を変えたとき別教科の入力点を持ち越さない');
   assert.ok(app.includes("subjectExempt(row,selected.subject)")&&app.includes("eligibleIds.has(studentId)"),'教科対象外の児童へ小テストを登録しない');
   assert.ok(app.includes("data-pupil-occasional-choice")&&app.includes("state.pupilOccasionalId=button.dataset.pupilOccasionalChoice"),'児童用画面で複数の提出物を切り替えられる');
@@ -360,7 +363,7 @@ function testShellAndNavigation(){
 
 function testApplicationSplit(){
   const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
-  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=68"></script>`));
+  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=69"></script>`));
   assert.ok(positions.every(position=>position>=0),'分割した全スクリプトを読み込む');
   assert.deepEqual(positions,[...positions].sort((a,b)=>a-b),'依存関係どおりの順序で読み込む');
   for(const file of applicationFiles)execFileSync(process.execPath,['--check',path.join(root,file)]);
@@ -388,7 +391,7 @@ function testSeparateScriptEvaluation(){
     if(file==='app.js')source=source.replace('loadState().catch(','Promise.resolve().catch(');
     vm.runInContext(source,context,{filename:file});
   }
-  assert.equal(vm.runInContext('APP_VERSION',context),'68');
+  assert.equal(vm.runInContext('APP_VERSION',context),'69');
   vm.runInContext("state.informationMode='compact';applyTheme()",context);
   assert.equal(documentStub.documentElement.dataset.information,'compact');
   assert.equal(documentStub.documentElement.dataset.explanations,'false');
@@ -417,6 +420,10 @@ function testSeparateScriptEvaluation(){
   assert.equal(vm.runInContext("dailyForgottenWeight({status:'partialForgotten',hadPartialForgotten:true})",context),0.5,'一部忘れたを月間0.5回として数える');
   assert.equal(vm.runInContext("dailyForgottenWeight({status:'submitted',partialForgottenAt:'2026-09-01'})",context),0.5,'解決後も一部忘れた履歴を月間集計に残す');
   assert.equal(vm.runInContext("homeworkMedalEligible('s1',new Map([['s1',.5]]),new Set(['s1']),5)",context),false,'一部忘れた児童を上限内でも達成アイコン対象外にする');
+  const spacedPrintName=vm.runInContext("printStudentNameHtml('田中　太郎')",context);
+  assert.ok(spacedPrintName.includes('<span>田中</span><span>太郎</span>'),'席替え印刷は氏名の全角スペース位置で改行する');
+  assert.ok(!spacedPrintName.includes('田中　太郎'),'印刷用氏名を分割前の文字列のまま残さない');
+  assert.ok(vm.runInContext("printStudentNameHtml('大久保田中　太郎').includes('name-sm')",context),'長い姓は印刷時に自動縮小する');
   assert.equal(vm.runInContext("subjectExempt({enrollment:{excludedSubjects:['算数']}},'算数')",context),true,'参加しない教科を児童ごとに判定する');
   const exchangePupilCard=vm.runInContext("studentCard({student:{id:'s1',name:'交流児童'},enrollment:{number:30,submissionExempt:true}},{status:'forgotten'},'daily',true,new Set(['s1']))",context);
   assert.ok(exchangePupilCard.includes('交流児童')&&exchangePupilCard.includes('exchange-seat-only')&&exchangePupilCard.includes('disabled'),'交流児童は児童用の座席に氏名だけ残す');
