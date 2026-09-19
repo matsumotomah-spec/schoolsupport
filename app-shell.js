@@ -31,6 +31,7 @@
         </section>
         ${own||support?`<section class="tools-sub">
           ${toolHtml('occasional','▤','提出物',counts.occasional)}
+          ${toolHtml('behavior','行','行動の記録',0)}
           ${own?toolHtml('seating','▦','席替え',0):''}
           ${toolHtml('grades','点','成績管理',0)}
           ${own?toolHtml('reports','文','所見素材',0):''}
@@ -58,7 +59,7 @@
     const classItem=selectedClass(),own=classItem?.isOwn,support=isSupportClass(classItem),tasks=[];
     if(own||support)tasks.push(['daily','毎日の宿題','今日の提出を確認']);
     if(own||support)tasks.push(['weekly','週宿題','今週分の提出を確認']);
-    tasks.push(['memo','児童メモ','よかった姿を記録'],['assessment','ノート評価','ノートをすばやく評価'],['occasional','提出物','書類などの提出を確認']);
+    tasks.push(['memo','児童メモ','よかった姿を記録'],['behavior','行動の記録','よい姿をカテゴリー別に記録'],['assessment','ノート評価','ノートをすばやく評価'],['occasional','提出物','書類などの提出を確認']);
     if(own||support)tasks.splice(2,0,['certificate','ミニ賞状','渡した児童を記録']);
     if(support)tasks.push(['support','学習記録','教科・単元ごとに記録']);
     tasks.push(['tests','小テスト','漢字・計算テストを直接入力'],['grades','成績管理','紙テスト取込と成績一覧']);
@@ -91,9 +92,9 @@
   async function savePupilOverviewOptions(options){state.pupilOverviewVisibility={...state.pupilOverviewVisibility,...options};state.showMonthlyForgotten=state.pupilOverviewVisibility.monthly;await ClassDB.setMeta('pupilOverviewVisibility',state.pupilOverviewVisibility);await ClassDB.setMeta('showMonthlyForgotten',state.showMonthlyForgotten);}
 
   async function openTool(tool){
-    const routes={daily:renderTeacherDaily,weekly:renderWeekly,certificate:renderCertificates,memo:renderMemos,assessment:renderNotebook,tests:renderTests,grades:renderGradebook,occasional:renderOccasional,support:renderSupport,reports:renderReports,seating:renderSeating};
-    if(rolloverDue()&&!state.rolloverContinue&&['daily','weekly','certificate','memo','assessment','tests','grades','occasional','support'].includes(tool)){confirmOldYearContinuation(()=>openTool(tool));return;}
-    if(['daily','weekly','certificate','memo','assessment','tests','grades','occasional','support','reports','seating'].includes(tool)&&!(await rosterForClass(selectedClass()?.id)).length){state.settingsTab='classes';state.classSettingsView='roster';state.rosterDraft=[];state.rosterLoadedForClassId=null;await renderSettings();showToast('先に名簿を登録してください');return;}
+    const routes={daily:renderTeacherDaily,weekly:renderWeekly,certificate:renderCertificates,memo:renderMemos,behavior:renderBehavior,assessment:renderNotebook,tests:renderTests,grades:renderGradebook,occasional:renderOccasional,support:renderSupport,reports:renderReports,seating:renderSeating};
+    if(rolloverDue()&&!state.rolloverContinue&&['daily','weekly','certificate','memo','behavior','assessment','tests','grades','occasional','support'].includes(tool)){confirmOldYearContinuation(()=>openTool(tool));return;}
+    if(['daily','weekly','certificate','memo','behavior','assessment','tests','grades','occasional','support','reports','seating'].includes(tool)&&!(await rosterForClass(selectedClass()?.id)).length){state.settingsTab='classes';state.classSettingsView='roster';state.rosterDraft=[];state.rosterLoadedForClassId=null;await renderSettings();showToast('先に名簿を登録してください');return;}
     if(tool==='daily'&&state.onboardingStep===3)await setOnboardingStep(4);
     if(routes[tool])routes[tool]();else showToast('この機能は次の実装段階で追加します');
   }
@@ -109,7 +110,7 @@
     return `<div class="app-shell">${headerHtml(title,actions)}<main class="page">${onboardingBannerHtml()}${body}</main>${key==='student'?'':teacherFooter(key)}</div>`;
   }
 
-  function activeToolRenderer(){return{daily:renderTeacherDaily,weekly:renderWeekly,certificate:renderCertificates,memo:renderMemos,assessment:renderNotebook,tests:renderTests,grades:renderGradebook,occasional:renderOccasional,support:renderSupport,reports:renderReports,seating:renderSeating}[state.activeTool]||renderHome;}
+  function activeToolRenderer(){return{daily:renderTeacherDaily,weekly:renderWeekly,certificate:renderCertificates,memo:renderMemos,behavior:renderBehavior,assessment:renderNotebook,tests:renderTests,grades:renderGradebook,occasional:renderOccasional,support:renderSupport,reports:renderReports,seating:renderSeating}[state.activeTool]||renderHome;}
   function openPrintPreview({title,caption='',content,returnAction=activeToolRenderer()}){
     document.body.classList.add('print-preview-active');
     app.innerHTML=`<div class="print-preview-shell"><header class="print-preview-toolbar"><div><strong>印刷プレビュー</strong><span>座席表以外の操作部分は印刷されません</span></div><div class="button-row"><button type="button" class="button" id="print-preview-back">戻る</button><button type="button" class="button primary" id="print-preview-print">印刷する</button></div></header><main class="print-document"><h1>${esc(title)}</h1>${caption?`<p class="print-caption">${esc(caption)}</p>`:''}${content}</main></div>`;
@@ -118,7 +119,7 @@
     document.getElementById('print-preview-print').addEventListener('click',()=>window.print());
   }
 
-  function teacherFooter(active){const classItem=selectedClass(),allowed=!classItem?.isOwn&&!isSupportClass(classItem)?['memo','assessment','tests','grades','occasional']:['daily','weekly','certificate','memo','assessment','tests','grades','occasional'];const labels={daily:'毎日の宿題',weekly:'週宿題',certificate:'ミニ賞状',memo:'児童メモ',assessment:'ノート評価',tests:'小テスト',grades:'成績管理',occasional:'提出物'};return`<nav class="teacher-footer" aria-label="日常機能" style="--footer-count:${allowed.length}">${allowed.map(id=>`<button type="button" data-footer-tool="${id}" aria-current="${active===id?'page':'false'}" title="${labels[id]}へ切り替える"><span>${featureIcon(id)}</span>${labels[id]}</button>`).join('')}</nav>`;}
+  function teacherFooter(active){const classItem=selectedClass(),allowed=!classItem?.isOwn&&!isSupportClass(classItem)?['memo','assessment','tests','grades','occasional']:['daily','weekly','certificate','memo','behavior','assessment','tests','grades','occasional'];const labels={daily:'毎日の宿題',weekly:'週宿題',certificate:'ミニ賞状',memo:'児童メモ',behavior:'行動',assessment:'ノート評価',tests:'小テスト',grades:'成績管理',occasional:'提出物'};return`<nav class="teacher-footer" aria-label="日常機能" style="--footer-count:${allowed.length}">${allowed.map(id=>`<button type="button" data-footer-tool="${id}" aria-current="${active===id?'page':'false'}" title="${labels[id]}へ切り替える"><span>${featureIcon(id)}</span>${labels[id]}</button>`).join('')}</nav>`;}
   function wireToolHome(){const key=state.activeTool||state.route.replace('teacher-','');wireCommonHeader(key);wireOnboardingStop();document.querySelector('[data-breadcrumb-home]')?.addEventListener('click',()=>navigateSafely(renderHome));document.querySelectorAll('[data-footer-tool]').forEach(button=>button.addEventListener('click',()=>navigateSafely(()=>openTool(button.dataset.footerTool))));}
 
   function activeSeatGridTemplate(classItem){const cols=Math.max(1,Number(classItem?.activeSeatCols)||6),aisles=new Set((classItem?.activeSeatAisleAfterColumns||[]).map(Number)),tracks=[];for(let column=1;column<=cols;column++){tracks.push('minmax(0,1fr)');if(column<cols&&aisles.has(column))tracks.push('var(--teacher-aisle-track,minmax(18px,.25fr))');}return tracks.join(' ');}

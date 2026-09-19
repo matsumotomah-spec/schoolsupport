@@ -8,7 +8,7 @@ const vm=require('node:vm');
 const {execFileSync}=require('node:child_process');
 
 const root=path.resolve(__dirname,'..');
-const applicationFiles=['app-core.js','app-shell.js','app-settings.js','app-records.js','app-grades.js','app-seating.js','app-reports.js','app-data.js','app.js'];
+const applicationFiles=['app-core.js','app-shell.js','app-settings.js','app-records.js','app-behavior.js','app-grades.js','app-seating.js','app-reports.js','app-data.js','app.js'];
 const applicationSource=()=>applicationFiles.map(file=>fs.readFileSync(path.join(root,file),'utf8')).join('\n');
 global.window=global;
 global.localStorage={length:0,key(){return null;},getItem(){return null;},removeItem(){}};
@@ -283,16 +283,20 @@ function testShellAndNavigation(){
   assert.ok(shellMatch);
   const assets=[...shellMatch[1].matchAll(/'\.\/([^']+)'/g)].map(match=>match[1].split('?')[0]).filter(Boolean);
   for(const asset of assets)assert.ok(fs.existsSync(path.join(root,asset)),`キャッシュ対象 ${asset} が存在する`);
-  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=69"></script>`));
-  assert.ok(index.includes('styles.css?v=69'),'CSSに公開版番号を付ける');
-  assert.ok(app.includes("register('./sw.js?v=69'"),'Service Workerの公開版番号を付ける');
+  for(const script of ['db.js','migration.js','xlsx-reader.js','csv-export.js',...applicationFiles])assert.ok(index.includes(`<script src="${script}?v=70"></script>`));
+  assert.ok(index.includes('styles.css?v=70'),'CSSに公開版番号を付ける');
+  assert.ok(app.includes("register('./sw.js?v=70'"),'Service Workerの公開版番号を付ける');
   assert.ok(app.includes('dateInEnrollment(item.dueDate,currentEnrollment)'),'転入前・転出後の提出予定を未提出扱いにしない');
   assert.ok(app.includes('previousEnrollmentId'),'再在籍は過去の在籍期間を上書きしない');
   assert.ok(app.includes('data-ended-student'),'転出済み児童の過去記録を開ける');
   assert.ok(app.includes('offerSeatForTransfer'),'転入児童を現在の座席へ配置できる');
   assert.ok(app.includes('showUndoToast'),'記録変更を短時間取り消せる');
   assert.ok(app.includes('data-trash-restore'),'30日間のごみ箱から記録を復元できる');
-  assert.ok(app.includes("APP_VERSION='69'")&&app.includes('APP_UPDATED_AT'),'データ管理に公開版と更新日時を表示する');
+  assert.ok(app.includes("APP_VERSION='70'")&&app.includes('APP_UPDATED_AT'),'データ管理に公開版と更新日時を表示する');
+  assert.ok(app.includes("behavior:renderBehavior")&&app.includes("toolHtml('behavior','行','行動の記録'"),'ホームと画面遷移から行動の記録を開ける');
+  assert.ok(app.includes("type:'behaviorMark'")&&app.includes("status:nextMarked?'marked':'cleared'"),'○の追加と解除を同期可能な状態として保存する');
+  assert.ok(app.includes('この件数は、よい姿を見つけて記録した量です')&&styles.includes('.behavior-heatmap'),'件数を評価と混同しないヒートマップを表示する');
+  assert.ok(!app.includes('今日の記録がある児童だけ表示')&&!app.includes('前回のカテゴリーを続けて記録'),'不要と指定された操作を追加しない');
   assert.ok(app.includes("NOTEBOOK_POINTS={'A':5,'B+':4,'B':3,'B-':2,'C':1}"),'ノート評価の平均換算を定義する');
   assert.ok(app.includes("NOTEBOOK_DEFAULT_GRADES={knowledge:'B',thinking:'B',attitude:'B'}"),'ノート評価の初回入力を3観点すべてBにする');
   assert.ok(app.includes("label:'知識・技能'")&&app.includes("label:'思考・判断・表現'")&&app.includes("label:'主体的に学習に取り組む態度'"),'ノート評価の3観点を定義する');
@@ -363,7 +367,7 @@ function testShellAndNavigation(){
 
 function testApplicationSplit(){
   const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
-  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=69"></script>`));
+  const positions=applicationFiles.map(file=>index.indexOf(`<script src="${file}?v=70"></script>`));
   assert.ok(positions.every(position=>position>=0),'分割した全スクリプトを読み込む');
   assert.deepEqual(positions,[...positions].sort((a,b)=>a-b),'依存関係どおりの順序で読み込む');
   for(const file of applicationFiles)execFileSync(process.execPath,['--check',path.join(root,file)]);
@@ -391,11 +395,15 @@ function testSeparateScriptEvaluation(){
     if(file==='app.js')source=source.replace('loadState().catch(','Promise.resolve().catch(');
     vm.runInContext(source,context,{filename:file});
   }
-  assert.equal(vm.runInContext('APP_VERSION',context),'69');
+  assert.equal(vm.runInContext('APP_VERSION',context),'70');
   vm.runInContext("state.informationMode='compact';applyTheme()",context);
   assert.equal(documentStub.documentElement.dataset.information,'compact');
   assert.equal(documentStub.documentElement.dataset.explanations,'false');
   vm.runInContext("state.year={startDate:'2026-04-01',firstTermEnd:'2026-10-10',endDate:'2027-03-31'}",context);
+  assert.equal(vm.runInContext('BEHAVIOR_CATEGORIES.length',context),10,'行動の記録は通知表の10カテゴリーを持つ');
+  assert.equal(vm.runInContext("new Set(BEHAVIOR_CATEGORIES.map(item=>item.id)).size",context),10,'カテゴリーIDを重複させない');
+  assert.equal(vm.runInContext("behaviorPeriodRange('back').start",context),'2026-10-11','後期は前期終了日の翌日から集計する');
+  assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify([0,1,2,4,6].map(behaviorHeatLevel))',context)),[0,1,2,3,4],'件数を固定5段階の濃さへ変換する');
   assert.equal(vm.runInContext("(()=>{const week=currentWeekStart(),data={classId:'c1',occurrences:[{id:'w1',recurring:true,seriesId:'series1',dueDate:moveDate(week,-7)}],skippedWeeks:[]};return missingRecurringWeeks(data).length})()",context),1,'有効な毎週宿題は今週分の作成対象にする');
   assert.equal(vm.runInContext("(()=>{const week=currentWeekStart(),data={classId:'c1',occurrences:[{id:'w1',recurring:true,seriesId:'series1',dueDate:moveDate(week,-7)}],skippedWeeks:[`c1|series1|${week}`]};return missingRecurringWeeks(data).length})()",context),0,'この週だけ削除した毎週宿題は再作成案内を出さない');
   assert.equal(vm.runInContext("notebookSummaryPeriodRange('back').start",context),'2026-10-11');
