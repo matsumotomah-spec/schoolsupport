@@ -8,8 +8,8 @@
   const PIN_LENGTH=6;
   const PIN_MAX_FAILURES=5;
   const PIN_LOCK_MS=30*1000;
-  const APP_VERSION='74';
-  const APP_UPDATED_AT='2026-09-20 15:00';
+  const APP_VERSION='76';
+  const APP_UPDATED_AT='2026-09-20 16:00';
   const PIN_ATTEMPT_KEY='classSupportPinAttemptsV1';
   const COLORS=['#d85b5b','#ef9fb4','#4e78b8','#9adfe8','#efd66e','#397257','#7651a8'];
   const SUBJECTS=['国語','算数','理科','社会','生活','音楽','図画工作','家庭','体育','外国語','道徳','総合','自立活動'];
@@ -21,8 +21,8 @@
     '作品（文・絵）':['丁寧に仕上げた','工夫が見られた','自分らしく表現した']
   };
   const MEMO_TAGS=['集中していた','意欲的だった','自力でできた','工夫していた','最後まで取り組んだ','発表した','考えを伝えた','友達と協力した'];
-  const STANDARD_ICONS={daily:'宿',weekly:'週',certificate:'賞',memo:'メ',behavior:'行',assessment:'B',tests:'テ',grades:'点',occasional:'提',seating:'席',reports:'所',support:'学'};
-  const EMOJI_ICON_CHOICES={daily:['✅','📚','✏️','📝'],weekly:['📅','📘','📒','🗓️'],certificate:['🏅','🎖️','🌟','👏'],memo:['📝','✍️','💡','📌'],behavior:['🌱','✅','⭐','🧭'],assessment:['💯','📊','🅰️','📖'],tests:['✏️','🔢','🧮','📋'],grades:['📈','🧮','📋','🎯'],occasional:['📨','📄','📥','📋'],seating:['🪑','🧩','🏫','↔️'],reports:['✍️','📜','💬','🗒️'],support:['🧭','📚','🧩','🎯']};
+  const STANDARD_ICONS={daily:'宿',weekly:'週',certificate:'賞',records:'記',memo:'メ',behavior:'行',assessment:'B',tests:'テ',grades:'点',occasional:'提',seating:'席',reports:'所',support:'学'};
+  const EMOJI_ICON_CHOICES={daily:['✅','📚','✏️','📝'],weekly:['📅','📘','📒','🗓️'],certificate:['🏅','🎖️','🌟','👏'],records:['📝','🌱','✍️','📌'],memo:['📝','✍️','💡','📌'],behavior:['🌱','✅','⭐','🧭'],assessment:['💯','📊','🅰️','📖'],tests:['✏️','🔢','🧮','📋'],grades:['📈','🧮','📋','🎯'],occasional:['📨','📄','📥','📋'],seating:['🪑','🧩','🏫','↔️'],reports:['✍️','📜','💬','🗒️'],support:['🧭','📚','🧩','🎯']};
   const REWARD_ICONS=['✨','💯','👍','🌟','🏅','👏','✅','📚','🌈','🚀'];
   const DEFAULT_EMOJI_ICONS=Object.fromEntries(Object.entries(EMOJI_ICON_CHOICES).map(([id,icons])=>[id,icons[0]]));
   const state={
@@ -79,6 +79,7 @@
     home:['教師用ホーム','操作するクラスを選び、今日使う機能を開きます。「要対応○人」は確認が必要な児童数です。','児童に渡すときは、画面下の「児童用の提出画面」を押してください。',['最初に上部の「操作中」で現在のクラスを確認します。','大きい機能ボタン、または画面下部の機能名を押します。','週の初めに案内が出たら、今週分の週宿題を作るか選びます。']],
     daily:['毎日の宿題','その日の提出状況と、今週の未解決の忘れ物を確認します。','教師用では、児童名を押すたびに提出→忘れた→欠席→未提出の順で切り替わります。',['児童用では、提出→忘れた→一部忘れた→未確認の順です。','一部忘れたは月間0.5回として集計し、達成アイコンの対象外になります。','児童詳細の「宿題・提出物」から、児童用画面で個別に状態を隠せます。']],
     weekly:['週宿題','毎週または今週限りの宿題を作り、提出状況を記録します。','児童名を押すたびに、提出→忘れた→未提出の順で切り替わります。',['「毎週」にしても年度末まで一括作成しません。','次の月曜日以降に案内が出たら「今週分を作る」を押します。','土曜日の自動忘れを設定すると、金曜日までに未提出の児童を自動で「忘れた」にします。設定した日数以上の欠席児童は免除されます。']],
+    records:['児童の記録','児童メモと行動の○を、同じ入口から記録・集計します。','一般級はカテゴリーを選んでから児童を押します。個別支援級は児童を選び、メモと行動の○をまとめて記録します。',['行動の○は、見つけたよい姿の記録です。○がない日は、できなかったという意味ではありません。','期間集計では、記録した○の件数を通知表作成時の材料として確認できます。']],
     memo:['児童メモ','児童を選び、教科とプラス評価タグを選ぶだけで保存できます。','個別支援級では、今期にメモがない教科を上部に表示します。'],
     behavior:['行動の記録','よい姿をカテゴリー別に○で記録し、期間集計のヒートマップで通知表判断の材料を確認します。','カテゴリーを選び、座席表または出席番号順の児童名を押します。',['○がない日は、できなかったという意味ではありません。','同じ児童・カテゴリーは1日1件として数えます。','期間集計の件数だけで評価を自動決定しません。']],
     certificate:['ミニ賞状','児童名を1回押すと「渡した」と記録します。同じ名前をもう一度押すと理由タグの追加や取消ができます。','まず配付の有無だけを素早く記録し、理由は必要なときだけ追加できます。タグは設定の「メモ・賞状の選択肢」から編集できます。'],
@@ -87,7 +88,7 @@
     grades:['成績管理','Excelの採点表からテスト得点を取り込み、ノート評価と同じ一覧で確認できます。','「Excelのテスト採点表を取り込む」を押し、内容を確認してから登録します。',['テストは得点率、ノートは3観点平均として並びます。','氏名は出席番号を優先し、空白を無視して名簿と結び付けます。','通知表の評定は自動決定しません。教師が判断するための材料です。']],
     occasional:['提出物','登録済みの提出物を一覧で確認し、児童ごとの提出状況を記録します。','「＋ 新しい提出物を作る」から複数の提出物を追加できます。',['提出物カードを選んでから児童名を押します。','緑は提出済み、灰色・赤は未提出です。','回収が終わったら「回収を終える」を押します。']],
     seating:['席替え','列数・行数・空席・印刷用通路と配慮条件を設定して、教室に合う座席表を作ります。','8列×5行なども設定できます。通路は列の間を選ぶと、印刷時に机約1列分の余白になります。',['空席は座席番号として残り、通路は座席数に含めません。','ドラッグ後も満たせていない配慮条件を再計算します。','確定後に「日常画面へ反映」を押すと宿題画面へ反映します。']],
-    settings:['設定','普段変更する項目を6つに整理しています。最初は「クラス・児童」を確認してください。','画面の見え方やタグは「日常の表示・入力」、同期や保存は「データ管理」から変更できます。'],
+    settings:['設定','設定は目的別に整理しています。最初は「クラス・名簿」を確認してください。','画面の見え方やタグは「表示・入力」、同期や保存、年度やPINは「データ・安全」から変更できます。'],
     appearance:['日常の表示・入力','画面表示、児童用表示、アイコン、メモ・賞状の選択肢、所見の文章設定をまとめています。','上部の3項目から、変更したい内容を選びます。',['宿題の条件達成アイコンは10種類から選べます。','1か月の忘れ回数を児童用画面に出すか選べます。','設定後は「保存」を押し、ホームで表示を確認します。']],
     data:['データ管理','目的を選んで、iPadとPCの記録をまとめる、故障に備えて保存する、Excel用の一覧を作る、削除した記録を戻す操作を行います。','普段は「iPadとPCの記録をまとめる」、月に1回は「故障に備えて保存する」を使います。'],
     support:['学習記録','教科と現在の学習単元を確認し、児童ごとの学習記録を入力します。','児童名を押して記録します。学ぶ単元が変わったときは「学習するまとまりを変更」を押します。'],
@@ -319,7 +320,7 @@
   function pcPinlessEligible(){return Boolean(state.pcPinlessMode&&isDesktopDevice());}
   function unlockTeacher(secret=null){state.teacherUntil=Date.now()+AUTH_MS;if(secret)state.sessionSecret=secret;scheduleLock();}
   function teacherActive(){return Date.now()<state.teacherUntil;}
-  function scheduleLock(){clearTimeout(state.lockTimer);const wait=Math.max(0,state.teacherUntil-Date.now());state.lockTimer=setTimeout(()=>{state.sessionSecret=null;if(state.route.startsWith('teacher'))renderPupil();},wait);}
+  function scheduleLock(){clearTimeout(state.lockTimer);const wait=Math.max(0,state.teacherUntil-Date.now());state.lockTimer=setTimeout(()=>{if(pcPinlessEligible()&&state.route.startsWith('teacher')){state.teacherUntil=Date.now()+AUTH_MS;scheduleLock();return;}state.sessionSecret=null;if(state.route.startsWith('teacher'))renderPupil();},wait);}
   function touchTeacher(){if(!state.route.startsWith('teacher')||!teacherActive())return;state.teacherUntil=Date.now()+AUTH_MS;scheduleLock();}
   document.addEventListener('pointerdown',touchTeacher,{passive:true});
   document.addEventListener('keydown',touchTeacher);
