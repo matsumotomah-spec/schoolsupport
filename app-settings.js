@@ -1,7 +1,7 @@
 "use strict";
 
   function renderSettingsContent(){
-    const activeTab=['appearance','tags','prompt'].includes(state.settingsTab)?'appearance':['year','data','safety'].includes(state.settingsTab)?'safety':state.settingsTab;
+    const activeTab=['appearance','tags','prompt','footer'].includes(state.settingsTab)?'appearance':['year','data','safety'].includes(state.settingsTab)?'safety':state.settingsTab;
     document.querySelectorAll('[data-settings-tab]').forEach(button=>button.setAttribute('aria-selected',String(button.dataset.settingsTab===activeTab)));
     if(state.settingsTab==='guide')renderSettingsGuide();
     if(state.settingsTab==='year'){renderYearSettings();wirePcPinlessSettings();}
@@ -9,6 +9,7 @@
     if(state.settingsTab==='appearance')renderAppearanceSettings();
     if(state.settingsTab==='tags')renderTagSettings();
     if(state.settingsTab==='prompt')renderPromptSettings();
+    if(state.settingsTab==='footer')renderFooterSettings();
     if(state.settingsTab==='data')renderDataSettings();
     if(state.settingsTab==='safety')renderSafetySettings();
     if(state.settingsTab==='help')renderHelpContent();
@@ -27,8 +28,11 @@
     target.querySelector('.settings-start p').textContent='最初に「クラス・名簿」を確認してください。同期・保存、年度、PINは必要なときだけ「データ・安全」から開けます。';target.querySelectorAll('[data-guide-tab]').forEach(button=>button.addEventListener('click',()=>{state.settingsTab=button.dataset.guideTab;renderSettingsContent();}));
   }
 
-  function dailySettingsNav(active){return`<nav class="settings-subnav" aria-label="日常の表示・入力設定"><button type="button" data-daily-settings="appearance" aria-selected="${active==='appearance'}">表示・アイコン</button><button type="button" data-daily-settings="tags" aria-selected="${active==='tags'}">メモ・賞状の選択肢</button><button type="button" data-daily-settings="prompt" aria-selected="${active==='prompt'}">所見の文章設定</button></nav>`;}
+  function dailySettingsNav(active){return`<nav class="settings-subnav" aria-label="日常の表示・入力設定"><button type="button" data-daily-settings="appearance" aria-selected="${active==='appearance'}">表示・アイコン</button><button type="button" data-daily-settings="footer" aria-selected="${active==='footer'}">フッターメニュー</button><button type="button" data-daily-settings="tags" aria-selected="${active==='tags'}">メモ・賞状の選択肢</button><button type="button" data-daily-settings="prompt" aria-selected="${active==='prompt'}">所見の文章設定</button></nav>`;}
   function wireDailySettingsNav(){document.querySelectorAll('[data-daily-settings]').forEach(button=>button.addEventListener('click',()=>{state.settingsTab=button.dataset.dailySettings;renderSettingsContent();}));}
+
+  async function saveFooterLayout(layout){state.footerLayout=normalizeFooterLayout(layout);await ClassDB.setMeta('footerLayout',state.footerLayout);showToast('すべてのクラスのフッターメニューを更新しました');renderFooterSettings();}
+  function renderFooterSettings(){const target=document.getElementById('settings-content'),layout=normalizeFooterLayout(state.footerLayout);target.innerHTML=`${dailySettingsNav('footer')}<section class="panel"><h1>フッターメニュー</h1><p class="muted">この並びは、すべてのクラスで共通です。項目を押して表示・非表示を切り替え、▲▼で順番を変えます。最低3項目は表示します。</p><div class="footer-layout-list">${FOOTER_ITEMS.map(([id,label])=>{const index=layout.indexOf(id),selected=index>=0;return`<div class="footer-layout-row ${selected?'selected':''}"><button type="button" class="footer-layout-select" data-footer-toggle="${id}" aria-pressed="${selected}"><span aria-hidden="true">${featureIcon(id)}</span><strong>${esc(label)}</strong><small>${selected?`${index+1}番目・表示中`:'非表示'}</small></button><div class="footer-layout-order" ${selected?'':'hidden'}><button type="button" class="button" data-footer-up="${id}" ${index===0?'disabled':''} aria-label="${esc(label)}を上へ">▲</button><button type="button" class="button" data-footer-down="${id}" ${index===layout.length-1?'disabled':''} aria-label="${esc(label)}を下へ">▼</button></div></div>`;}).join('')}</div><div class="button-row end section"><button type="button" class="button" id="footer-reset">おすすめの並びに戻す</button></div></section>`;wireDailySettingsNav();target.querySelectorAll('[data-footer-toggle]').forEach(button=>button.addEventListener('click',async()=>{const id=button.dataset.footerToggle,next=[...layout],index=next.indexOf(id);if(index>=0){if(next.length<=3){showToast('フッターには3項目以上を表示してください');return;}next.splice(index,1);}else next.push(id);await saveFooterLayout(next);}));target.querySelectorAll('[data-footer-up]').forEach(button=>button.addEventListener('click',async()=>{const index=layout.indexOf(button.dataset.footerUp);if(index<=0)return;const next=[...layout];[next[index-1],next[index]]=[next[index],next[index-1]];await saveFooterLayout(next);}));target.querySelectorAll('[data-footer-down]').forEach(button=>button.addEventListener('click',async()=>{const index=layout.indexOf(button.dataset.footerDown);if(index<0||index===layout.length-1)return;const next=[...layout];[next[index],next[index+1]]=[next[index+1],next[index]];await saveFooterLayout(next);}));document.getElementById('footer-reset').addEventListener('click',()=>saveFooterLayout(DEFAULT_FOOTER_LAYOUT));}
 
   function renderSafetySettings(){
     const target=document.getElementById('settings-content');
