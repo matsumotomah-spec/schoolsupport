@@ -21,16 +21,17 @@
         ${state.classes.length>1?`<nav class="class-tabs compact-class-tabs" aria-label="クラス選択">${state.classes.map(item=>`<button type="button" class="class-tab" data-class-id="${item.id}" aria-pressed="${item.id===state.selectedClassId}"><span class="class-tab-dot" style="--tab-color:${esc(item.color||'#397257')}"></span>${esc(item.name)}${item.id===state.selectedClassId?'<small>操作中</small>':''}</button>`).join('')}</nav>`:''}
         ${dashboard}
         ${rosterPrompt}
-        <section class="tools-main ${!own&&!support?'limited':''}">
+        <section class="tools-main ${!own&&!support?'limited':'core-tools'}">
           ${!own&&!support?`${toolHtml('assessment','A','ノート評価',0,true)}${toolHtml('records','記','児童の記録',counts.memo)}${toolHtml('tests','テ','小テスト',0)}${toolHtml('grades','点','成績管理',0)}${toolHtml('occasional','▤','提出物',counts.occasional)}`:`
           ${support?toolHtml('records','記','児童の記録',counts.memo,true):toolHtml('daily','✓','毎日の宿題',counts.daily,true)}
           ${support?toolHtml('daily','✓','毎日の宿題',counts.daily):toolHtml('weekly','▣','週宿題',counts.weekly)}
-          ${support?toolHtml('weekly','▣','週宿題',counts.weekly):toolHtml('certificate','☆','ミニ賞状',0)}
-          ${support?toolHtml('certificate','☆','ミニ賞状',0):toolHtml('records','記','児童の記録',counts.memo)}
-          ${toolHtml('assessment','A','ノート評価',0)}${toolHtml('tests','テ','小テスト',0)}`}
+          ${support?toolHtml('weekly','▣','週宿題',counts.weekly):toolHtml('records','記','児童の記録',counts.memo)}
+          ${toolHtml('assessment','A','ノート評価',0)}`}
         </section>
         ${own||support?`<section class="tools-sub">
           ${toolHtml('occasional','▤','提出物',counts.occasional)}
+          ${toolHtml('tests','テ','小テスト',0)}
+          ${support?toolHtml('certificate','☆','ミニ賞状',0):toolHtml('certificate','☆','ミニ賞状',0)}
           ${own?toolHtml('seating','▦','席替え',0):''}
           ${toolHtml('grades','点','成績管理',0)}
           ${own?toolHtml('reports','文','所見素材',0):''}
@@ -47,7 +48,7 @@
     wireCommonHeader('home');
     document.getElementById('start-rollover')?.addEventListener('click',renderYearRollover);
     document.getElementById('backup-from-home')?.addEventListener('click',openDataManagement);document.getElementById('backup-later')?.addEventListener('click',async()=>{const until=new Date(Date.now()+7*86400000).toISOString();state.backupDismissedUntil=until;await ClassDB.setMeta('backupDismissedUntil',until);renderHome();});
-    if(!state.migrationPromptShown&&!await ClassDB.getMeta('lastLegacyMigration',null)){const legacy=LegacyMigration.fromStorage();if(legacy.length){state.migrationPromptShown=true;openDialog(`<h2>旧ツールのデータが見つかりました</h2><p>${legacy.length}件のデータ群があります。内容と移行先を確認してから一括移行できます。</p><div class="dialog-actions"><button type="button" class="button" id="legacy-prompt-later">後で</button><button type="button" class="button primary" id="legacy-prompt-review">内容を確認</button></div>`);document.getElementById('legacy-prompt-later').addEventListener('click',closeDialog);document.getElementById('legacy-prompt-review').addEventListener('click',()=>{closeDialog();openLegacyMigrationReview(legacy);});}}
+    if(!state.migrationPromptShown&&!await ClassDB.getMeta('lastLegacyMigration',null)){const legacy=LegacyMigration.fromStorage();if(legacy.length){state.migrationPromptShown=true;openDialog(`<h2>以前の形式のデータが見つかりました</h2><p>${legacy.length}件のデータ群があります。内容と移行先を確認してから一括移行できます。</p><div class="dialog-actions"><button type="button" class="button" id="legacy-prompt-later">後で</button><button type="button" class="button primary" id="legacy-prompt-review">内容を確認</button></div>`);document.getElementById('legacy-prompt-later').addEventListener('click',closeDialog);document.getElementById('legacy-prompt-review').addEventListener('click',()=>{closeDialog();openLegacyMigrationReview(legacy);});}}
     if(!dialog.open)maybePromptWeeklyCreation('teacher');
   }
 
@@ -59,10 +60,8 @@
     const classItem=selectedClass(),own=classItem?.isOwn,support=isSupportClass(classItem),tasks=[];
     if(own||support)tasks.push(['daily','毎日の宿題','今日の提出を確認']);
     if(own||support)tasks.push(['weekly','週宿題','今週分の提出を確認']);
-    tasks.push(['records','児童の記録','メモと行動の○を記録'],['assessment','ノート評価','ノートをすばやく評価'],['occasional','提出物','書類などの提出を確認']);
-    if(own||support)tasks.splice(2,0,['certificate','ミニ賞状','渡した児童を記録']);
+    tasks.push(['records','児童の記録','メモと行動の○を記録'],['assessment','ノート評価','ノートをすばやく評価'],['certificate','ミニ賞状','渡した児童を記録'],['occasional','提出物','書類などの提出を確認'],['tests','小テスト','漢字・計算テストを直接入力'],['grades','成績管理','紙テスト取込と成績一覧']);
     if(support)tasks.push(['support','学習記録','教科・単元ごとに記録']);
-    tasks.push(['tests','小テスト','漢字・計算テストを直接入力'],['grades','成績管理','紙テスト取込と成績一覧']);
     if(own)tasks.push(['seating','席替え','条件を設定して席替え'],['reports','所見素材','記録から素材を作成']);
     document.getElementById('home-menu-drawer')?.remove();document.getElementById('home-menu-backdrop')?.remove();
     const previous=document.activeElement,backdrop=document.createElement('button'),drawer=document.createElement('aside');backdrop.id='home-menu-backdrop';backdrop.className='home-menu-backdrop';backdrop.type='button';backdrop.setAttribute('aria-label','メニューを閉じる');drawer.id='home-menu-drawer';drawer.className='home-menu-drawer';drawer.setAttribute('role','dialog');drawer.setAttribute('aria-modal','true');drawer.setAttribute('aria-label','やりたいことから選ぶ');drawer.innerHTML=`<div class="home-menu-head"><div><small>操作中</small><h2>${esc(classItem?.name||'クラス未設定')}</h2></div><button type="button" class="header-button header-icon" data-home-menu-close aria-label="閉じる">×</button></div><p class="muted small">やりたいことを選ぶと、その画面へ直接移動します。</p><nav class="home-menu-list" aria-label="記録する">${tasks.map(([id,label,description])=>`<button type="button" data-home-menu-tool="${id}"><span class="tool-icon" aria-hidden="true">${featureIcon(id)}</span><span><strong>${esc(label)}</strong><small>${esc(description)}</small></span><b>›</b></button>`).join('')}</nav><div class="home-menu-section"><h3>準備・管理</h3><button type="button" data-home-menu-settings="classes"><span>👥</span><span><strong>クラス・児童</strong><small>クラスや名簿を変更</small></span><b>›</b></button><button type="button" data-home-menu-settings="appearance"><span>◐</span><span><strong>日常の表示・入力設定</strong><small>文字、アイコン、タグを変更</small></span><b>›</b></button><button type="button" data-home-menu-settings="data"><span>⇄</span><span><strong>データ管理</strong><small>同期、保存、取り込み</small></span><b>›</b></button><button type="button" data-home-menu-pupil><span>☝</span><span><strong>児童用の提出画面</strong><small>児童に操作してもらう</small></span><b>›</b></button></div>`;

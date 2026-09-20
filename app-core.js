@@ -8,8 +8,8 @@
   const PIN_LENGTH=6;
   const PIN_MAX_FAILURES=5;
   const PIN_LOCK_MS=30*1000;
-  const APP_VERSION='86';
-  const APP_UPDATED_AT='2026-09-20 18:35';
+  const APP_VERSION='88';
+  const APP_UPDATED_AT='2026-09-20 19:30';
   const PIN_ATTEMPT_KEY='classSupportPinAttemptsV1';
   const COLORS=['#d85b5b','#ef9fb4','#4e78b8','#9adfe8','#efd66e','#397257','#7651a8'];
   const SUBJECTS=['国語','算数','理科','社会','生活','音楽','図画工作','家庭','体育','外国語','道徳','総合','自立活動'];
@@ -205,7 +205,7 @@
       <div class="app-shell">
         ${headerHtml('初回設定','',false,false)}
       <main class="page narrow">
-          <section class="welcome-card"><span class="setup-kicker">最初の準備 1 / 2</span><h1>ようこそ</h1><p>まずクラス名と、先生だけが使う番号を登録します。次の画面で児童名を登録すれば、すぐに宿題の提出確認を始められます。</p><ol class="setup-checklist"><li class="current"><strong>いま：</strong>クラスと先生用の番号を決める</li><li><strong>つぎ：</strong>児童の氏名を登録する</li><li><strong>完了：</strong>教師ホームから「毎日の宿題」を開く</li></ol><details class="setup-existing"><summary>以前のデータを戻したい場合</summary><div class="button-row section"><button type="button" class="button" id="setup-restore">保存したバックアップから戻す</button><button type="button" class="button" id="setup-legacy-check">以前のツールのデータを確認</button></div></details></section>
+          <section class="welcome-card"><span class="setup-kicker">最初の準備 1 / 2</span><h1>ようこそ</h1><p>まずクラス名と、先生だけが使う番号を登録します。次の画面で児童名を登録すれば、すぐに宿題の提出確認を始められます。</p><ol class="setup-checklist"><li class="current"><strong>いま：</strong>クラスと先生用の番号を決める</li><li><strong>つぎ：</strong>児童の氏名を登録する</li><li><strong>完了：</strong>教師ホームから「毎日の宿題」を開く</li></ol><details class="setup-existing"><summary>以前のデータを戻したい場合</summary><div class="button-row section"><button type="button" class="button" id="setup-restore">保存したバックアップから戻す</button><button type="button" class="button" id="setup-legacy-check">以前の形式のデータを確認</button></div></details></section>
           <div class="setup-steps"><span class="step active"></span><span class="step"></span></div>
           <h1>クラスの準備</h1>
           <p class="muted">上から順に入力してください。「通常はそのままでよい」と書かれた項目は、必要な場合だけ変更します。</p>
