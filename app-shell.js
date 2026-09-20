@@ -37,10 +37,10 @@
           ${support?toolHtml('support','◇','学習記録',counts.support):''}
         </section>`:''}
         <div class="home-footer"><button type="button" class="button primary" id="pupil-mode">児童用の提出画面</button></div>
-      </main></div>`;
+      </main>${teacherFooter('home')}</div>`;
     document.querySelectorAll('[data-class-id]').forEach(button=>button.addEventListener('click',async()=>{state.selectedClassId=button.dataset.classId;state.rosterDraft=[];state.rosterLoadedForClassId=null;await ClassDB.setMeta('selectedClassId',state.selectedClassId);renderHome();}));
     document.querySelectorAll('[data-tool]').forEach(button=>button.addEventListener('click',()=>openTool(button.dataset.tool)));
-    document.querySelectorAll('[data-footer-tool]').forEach(button=>button.addEventListener('click',()=>openTool(button.dataset.footerTool)));
+    document.querySelectorAll('[data-footer-tool]').forEach(button=>button.addEventListener('click',()=>openFooterItem(button.dataset.footerTool)));
     document.getElementById('pupil-mode').addEventListener('click',()=>renderPupil('all'));
     document.getElementById('home-open-roster')?.addEventListener('click',()=>{state.settingsTab='classes';state.classSettingsView='roster';state.rosterDraft=[];state.rosterLoadedForClassId=null;renderSettings();});
     wireOnboardingStop();
@@ -101,6 +101,8 @@
     if(routes[tool])routes[tool]();else showToast('この機能は次の実装段階で追加します');
   }
 
+  function openFooterItem(item){if(item==='settings'){state.settingsTab='guide';state.classSettingsView='list';renderSettings();return;}openTool(item);}
+
   function confirmOldYearContinuation(onContinue){
     openDialog(`<h2>年度を確認してください</h2><p>現在は${esc(state.year.label)}です。${schoolYear()}年度へ切り替えずに記録を続けますか。</p><p class="muted">「一時継続」は、このアプリを閉じるまで有効です。ホームの切替案内は残ります。</p><div class="dialog-actions"><button type="button" class="button" id="rollover-temporary">一時継続</button><button type="button" class="button primary" id="rollover-now">新年度へ切り替える</button></div>`);
     document.getElementById('rollover-temporary').addEventListener('click',()=>{state.rolloverContinue=true;closeDialog();onContinue();});
@@ -122,7 +124,7 @@
   }
 
   function teacherFooter(active){const allowed=normalizeFooterLayout(state.footerLayout);return`<nav class="teacher-footer" aria-label="日常機能" style="--footer-count:${allowed.length}">${allowed.map(id=>`<button type="button" data-footer-tool="${id}" aria-current="${active===id?'page':'false'}" title="${footerLabel(id)}へ切り替える"><span>${featureIcon(id)}</span>${footerLabel(id)}</button>`).join('')}</nav>`;}
-  function wireToolHome(){const key=state.activeTool||state.route.replace('teacher-','');wireCommonHeader(key);wireOnboardingStop();document.querySelector('[data-breadcrumb-home]')?.addEventListener('click',()=>navigateSafely(renderHome));document.querySelectorAll('[data-footer-tool]').forEach(button=>button.addEventListener('click',()=>navigateSafely(()=>openTool(button.dataset.footerTool))));}
+  function wireToolHome(){const key=state.activeTool||state.route.replace('teacher-','');wireCommonHeader(key);wireOnboardingStop();document.querySelector('[data-breadcrumb-home]')?.addEventListener('click',()=>navigateSafely(renderHome));document.querySelectorAll('[data-footer-tool]').forEach(button=>button.addEventListener('click',()=>navigateSafely(()=>openFooterItem(button.dataset.footerTool))));}
 
   function activeSeatGridTemplate(classItem){const cols=Math.max(1,Number(classItem?.activeSeatCols)||6),aisles=new Set((classItem?.activeSeatAisleAfterColumns||[]).map(Number)),tracks=[];for(let column=1;column<=cols;column++){tracks.push('minmax(0,1fr)');if(column<cols&&aisles.has(column))tracks.push('var(--teacher-aisle-track,minmax(18px,.25fr))');}return tracks.join(' ');}
   function submissionExempt(row){return Boolean(row?.enrollment?.submissionExempt);}
@@ -338,7 +340,7 @@
       <nav class="settings-nav" aria-label="設定項目">${[['guide','設定トップ'],['classes','クラス・名簿'],['appearance','表示・入力'],['safety','データ・安全'],['help','使い方を探す']].map(([id,label])=>`<button type="button" class="settings-tab" data-settings-tab="${id}" aria-selected="${id==='appearance'?['appearance','tags','prompt'].includes(state.settingsTab):id==='safety'?['safety','year','data'].includes(state.settingsTab):state.settingsTab===id}" title="${label}を開く">${label}</button>`).join('')}</nav>
       <div id="settings-content"></div>
     </main>${teacherFooter('settings')}</div>`;
-    wireCommonHeader('settings');document.querySelector('[data-breadcrumb-home]')?.addEventListener('click',()=>navigateSafely(renderHome));document.querySelectorAll('[data-footer-tool]').forEach(button=>button.addEventListener('click',()=>navigateSafely(()=>openTool(button.dataset.footerTool))));
+    wireCommonHeader('settings');document.querySelector('[data-breadcrumb-home]')?.addEventListener('click',()=>navigateSafely(renderHome));document.querySelectorAll('[data-footer-tool]').forEach(button=>button.addEventListener('click',()=>navigateSafely(()=>openFooterItem(button.dataset.footerTool))));
     document.querySelectorAll('[data-settings-tab]').forEach(button=>button.addEventListener('click',()=>navigateSafely(()=>{state.settingsTab=button.dataset.settingsTab;if(state.settingsTab==='classes'){state.classSettingsView='list';state.rosterDraft=[];state.rosterLoadedForClassId=null;}renderSettingsContent();})));
     renderSettingsContent();
   }
