@@ -1,5 +1,5 @@
-const CACHE_NAME='class-support-shell-v88';
-const SHELL=['./','./index.html','./styles.css?v=88','./db.js?v=88','./migration.js?v=88','./xlsx-reader.js?v=88','./csv-export.js?v=88','./app-core.js?v=88','./app-shell.js?v=88','./app-settings.js?v=88','./app-records.js?v=88','./app-behavior.js?v=88','./app-grades.js?v=88','./app-seating.js?v=88','./app-reports.js?v=88','./app-data.js?v=88','./app.js?v=88','./manifest.webmanifest','./icon.svg'];
+const CACHE_NAME='class-support-shell-v89';
+const SHELL=['./','./index.html','./styles.css?v=89','./db.js?v=89','./migration.js?v=89','./xlsx-reader.js?v=89','./csv-export.js?v=89','./app-core.js?v=89','./app-shell.js?v=89','./app-settings.js?v=89','./app-records.js?v=89','./app-behavior.js?v=89','./app-grades.js?v=89','./app-seating.js?v=89','./app-reports.js?v=89','./app-data.js?v=89','./app.js?v=89','./manifest.webmanifest','./icon.svg'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)));
