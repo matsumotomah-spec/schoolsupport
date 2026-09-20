@@ -8,8 +8,8 @@
   const PIN_LENGTH=6;
   const PIN_MAX_FAILURES=5;
   const PIN_LOCK_MS=30*1000;
-  const APP_VERSION='70';
-  const APP_UPDATED_AT='2026-09-19 12:00';
+  const APP_VERSION='74';
+  const APP_UPDATED_AT='2026-09-20 15:00';
   const PIN_ATTEMPT_KEY='classSupportPinAttemptsV1';
   const COLORS=['#d85b5b','#ef9fb4','#4e78b8','#9adfe8','#efd66e','#397257','#7651a8'];
   const SUBJECTS=['国語','算数','理科','社会','生活','音楽','図画工作','家庭','体育','外国語','道徳','総合','自立活動'];
@@ -67,6 +67,8 @@
     informationMode:'standard',
     rosterDensity:'auto',
     focusMode:false,
+    pcPinlessMode:false,
+    lastSyncAt:null,
     studentReturnTool:null,
     onboardingStep:0
   };
@@ -75,13 +77,13 @@
 
   const HELP_TOPICS={
     home:['教師用ホーム','操作するクラスを選び、今日使う機能を開きます。「要対応○人」は確認が必要な児童数です。','児童に渡すときは、画面下の「児童用の提出画面」を押してください。',['最初に上部の「操作中」で現在のクラスを確認します。','大きい機能ボタン、または画面下部の機能名を押します。','週の初めに案内が出たら、今週分の週宿題を作るか選びます。']],
-    daily:['毎日の宿題','その日の提出状況と、今週の未解決の忘れ物を確認します。','教師用では、児童名を押すたびに提出→忘れた→欠席→未確認の順で切り替わります。',['児童用では、提出→忘れた→一部忘れた→未確認の順です。','一部忘れたは月間0.5回として集計し、達成アイコンの対象外になります。','児童詳細の「宿題・提出物」から、児童用画面で個別に状態を隠せます。']],
-    weekly:['週宿題','毎週または今週限りの宿題を作り、提出状況を記録します。','児童名を押すたびに、提出→忘れた→未提出の順で切り替わります。',['「毎週」にしても年度末まで一括作成しません。','次の月曜日以降に案内が出たら「今週分を作る」を押します。','案内を閉じた場合も、週宿題画面のボタンから作成できます。']],
+    daily:['毎日の宿題','その日の提出状況と、今週の未解決の忘れ物を確認します。','教師用では、児童名を押すたびに提出→忘れた→欠席→未提出の順で切り替わります。',['児童用では、提出→忘れた→一部忘れた→未確認の順です。','一部忘れたは月間0.5回として集計し、達成アイコンの対象外になります。','児童詳細の「宿題・提出物」から、児童用画面で個別に状態を隠せます。']],
+    weekly:['週宿題','毎週または今週限りの宿題を作り、提出状況を記録します。','児童名を押すたびに、提出→忘れた→未提出の順で切り替わります。',['「毎週」にしても年度末まで一括作成しません。','次の月曜日以降に案内が出たら「今週分を作る」を押します。','土曜日の自動忘れを設定すると、金曜日までに未提出の児童を自動で「忘れた」にします。設定した日数以上の欠席児童は免除されます。']],
     memo:['児童メモ','児童を選び、教科とプラス評価タグを選ぶだけで保存できます。','個別支援級では、今期にメモがない教科を上部に表示します。'],
     behavior:['行動の記録','よい姿をカテゴリー別に○で記録し、期間集計のヒートマップで通知表判断の材料を確認します。','カテゴリーを選び、座席表または出席番号順の児童名を押します。',['○がない日は、できなかったという意味ではありません。','同じ児童・カテゴリーは1日1件として数えます。','期間集計の件数だけで評価を自動決定しません。']],
     certificate:['ミニ賞状','児童名を1回押すと「渡した」と記録します。同じ名前をもう一度押すと理由タグの追加や取消ができます。','まず配付の有無だけを素早く記録し、理由は必要なときだけ追加できます。タグは設定の「メモ・賞状の選択肢」から編集できます。'],
     assessment:['ノート評価','児童名を1回押すと、知識・技能、思考・判断・表現、主体的に学習に取り組む態度の3観点をすべてBで記録します。','よくできた観点や気になる観点がある児童だけ、同じ名前をもう一度押して変更します。',['3観点は1つの画面で変更でき、ほかの観点はBのまま残せます。','教科を選ぶと、前期・後期・年間の観点別平均を確認できます。','欠席・未提出は平均に含めず、成績は自動決定しません。']],
-    tests:['小テスト','漢字テスト・計算テストを、座席順または出席番号順で直接入力します。','種類・実施日・満点を決め、ボタン入力または直接入力で点数を付けます。',['名前を1回押すと満点、もう一度押すと5点刻みで変更できます。','過去の日付も入力できます。','Excelの紙テストは「成績管理」から取り込みます。']],
+    tests:['小テスト','漢字テスト・計算テストを、座席順または出席番号順で直接入力します。','種類・実施日を決め、タッチ入力または直接入力で100点満点の点数を付けます。',['タッチ入力は100・90・80…10点と＋5点で、少ない操作で入力できます。','直接入力では0〜100点の整数を入力できます。','Excelの紙テストは「成績管理」から取り込みます。']],
     grades:['成績管理','Excelの採点表からテスト得点を取り込み、ノート評価と同じ一覧で確認できます。','「Excelのテスト採点表を取り込む」を押し、内容を確認してから登録します。',['テストは得点率、ノートは3観点平均として並びます。','氏名は出席番号を優先し、空白を無視して名簿と結び付けます。','通知表の評定は自動決定しません。教師が判断するための材料です。']],
     occasional:['提出物','登録済みの提出物を一覧で確認し、児童ごとの提出状況を記録します。','「＋ 新しい提出物を作る」から複数の提出物を追加できます。',['提出物カードを選んでから児童名を押します。','緑は提出済み、灰色・赤は未提出です。','回収が終わったら「回収を終える」を押します。']],
     seating:['席替え','列数・行数・空席・印刷用通路と配慮条件を設定して、教室に合う座席表を作ります。','8列×5行なども設定できます。通路は列の間を選ぶと、印刷時に机約1列分の余白になります。',['空席は座席番号として残り、通路は座席数に含めません。','ドラッグ後も満たせていない配慮条件を再計算します。','確定後に「日常画面へ反映」を押すと宿題画面へ反映します。']],
@@ -90,12 +92,12 @@
     data:['データ管理','目的を選んで、iPadとPCの記録をまとめる、故障に備えて保存する、Excel用の一覧を作る、削除した記録を戻す操作を行います。','普段は「iPadとPCの記録をまとめる」、月に1回は「故障に備えて保存する」を使います。'],
     support:['学習記録','教科と現在の学習単元を確認し、児童ごとの学習記録を入力します。','児童名を押して記録します。学ぶ単元が変わったときは「学習するまとまりを変更」を押します。'],
     student:['児童概要','未解決の宿題・提出物を確認して解決し、メモ・評価・賞状・提出物を追加できます。','概要の未解決件数または機能別タブを押し、確認・追加ボタンから操作します。'],
-    pupil:['児童用提出画面','一覧で自分の未提出を確認し、毎日の宿題・週宿題・提出物を記録します。','最初に「一覧」で名前を確認し、必要な機能へ移動して自分の名前を押します。',['緑の「提出」、赤の「忘れた」、灰色の「未提出・未確認」を確認します。','名前を押した直後は、色と0.5秒の動きで変更を知らせます。','右上の歯車は先生用です。教師用PINが必要です。']]
+    pupil:['児童用提出画面','一覧で自分の未提出を確認し、毎日の宿題・週宿題・提出物を記録します。','最初に「一覧」で名前を確認し、必要な機能へ移動して自分の名前を押します。',['緑の「提出」、赤の「忘れた」、灰色の「未提出・未確認」を確認します。','名前を押した直後は、色と0.5秒の動きで変更を知らせます。','右上の歯車は先生用です。PC専用モードでもタッチ端末ではPINが必要です。']]
   };
 
   function esc(value){return String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));}
   function friendlyTerms(value){return String(value??'').replaceAll('新年度パスワード','新しいデータ保護パスワード').replaceAll('年度パスワード','データ保護パスワード').replaceAll('教師用PIN','教師画面PIN').replaceAll('復旧コード','緊急復旧コード').replaceAll('入力候補・タグ','メモ・賞状の選択肢').replaceAll('机約1列分の余白','氏名欄の約半分幅');}
-  function applyFriendlyTerms(root){if(!root)return;const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);nodes.forEach(node=>{const changed=friendlyTerms(node.nodeValue);if(changed!==node.nodeValue)node.nodeValue=changed;});root.querySelectorAll?.('[title],[aria-label],[placeholder]').forEach(element=>['title','aria-label','placeholder'].forEach(name=>{if(element.hasAttribute(name))element.setAttribute(name,friendlyTerms(element.getAttribute(name)));}));}
+  function applyFriendlyTerms(root){if(!root)return;const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);nodes.forEach(node=>{const changed=friendlyTerms(node.nodeValue);if(changed!==node.nodeValue)node.nodeValue=changed;});root.querySelectorAll?.('[title],[aria-label],[placeholder]').forEach(element=>['title','aria-label','placeholder'].forEach(name=>{if(element.hasAttribute(name))element.setAttribute(name,friendlyTerms(element.getAttribute(name)));}));const daily=root.querySelector?.('.daily-guide');if(daily){const dailyWalker=document.createTreeWalker(daily,NodeFilter.SHOW_TEXT),dailyNodes=[];while(dailyWalker.nextNode())dailyNodes.push(dailyWalker.currentNode);dailyNodes.forEach(node=>{node.nodeValue=node.nodeValue.replaceAll('未確認','未提出');});}}
   function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
   function schoolYear(){const d=new Date();return d.getMonth()>=3?d.getFullYear():d.getFullYear()-1;}
   function yearNumberOf(year){const direct=Number(year?.yearNumber);if(Number.isFinite(direct)&&direct>0)return direct;const match=String(year?.label||'').match(/\d{4}/);return match?Number(match[0]):0;}
@@ -170,6 +172,7 @@
     state.pupilOverviewVisibility={daily:true,weekly:true,occasional:true,monthly:legacyMonthly,reward:true,...savedPupilOverview};
     state.showMonthlyForgotten=state.pupilOverviewVisibility.monthly;
     state.pupilKanaMode=Boolean(await ClassDB.getMeta('pupilKanaMode',false));
+    state.pcPinlessMode=Boolean(await ClassDB.getMeta('pcPinlessMode',false));
     const savedInformationMode=await ClassDB.getMeta('informationMode',null),legacyExplanations=await ClassDB.getMeta('showExplanations',true);
     state.informationMode=['compact','standard','detailed'].includes(savedInformationMode)?savedInformationMode:(legacyExplanations?'standard':'compact');state.showExplanations=state.informationMode!=='compact';state.rosterDensity=await ClassDB.getMeta('rosterDensity','auto');state.onboardingStep=Number(await ClassDB.getMeta('onboardingStep',0));
     applyTheme();
@@ -180,7 +183,7 @@
     state.classes=(await ClassDB.getAllByIndex('classes','yearId',state.year.id)).sort((a,b)=>(b.isOwn-a.isOwn)||(a.order-b.order));
     if(!state.classes.length){await resetToWelcomePreservingLegacy();return;}
     state.selectedClassId=await ClassDB.getMeta('selectedClassId',state.classes[0]?.id||null);
-    state.lastBackupAt=await ClassDB.getMeta('lastBackupAt',null);state.backupDismissedUntil=await ClassDB.getMeta('backupDismissedUntil',null);
+    state.lastBackupAt=await ClassDB.getMeta('lastBackupAt',null);state.lastSyncAt=await ClassDB.getMeta('lastSyncAt',null);state.backupDismissedUntil=await ClassDB.getMeta('backupDismissedUntil',null);
     if(!state.classes.some(item=>item.id===state.selectedClassId))state.selectedClassId=state.classes[0]?.id||null;
     requireTeacher(renderHome);
   }
@@ -312,6 +315,8 @@
   function downloadCsv(name,text){const blob=new Blob([text],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   async function runOnce(button,operation){if(!button||button.dataset.busy==='true')return;button.dataset.busy='true';button.disabled=true;button.setAttribute('aria-busy','true');try{return await operation();}finally{button.disabled=false;button.dataset.busy='false';button.removeAttribute('aria-busy');}}
 
+  function isDesktopDevice(){const ua=String(navigator.userAgent||'');return !/Android|iPhone|iPad|iPod|Mobile/i.test(ua)&&Number(navigator.maxTouchPoints||0)===0;}
+  function pcPinlessEligible(){return Boolean(state.pcPinlessMode&&isDesktopDevice());}
   function unlockTeacher(secret=null){state.teacherUntil=Date.now()+AUTH_MS;if(secret)state.sessionSecret=secret;scheduleLock();}
   function teacherActive(){return Date.now()<state.teacherUntil;}
   function scheduleLock(){clearTimeout(state.lockTimer);const wait=Math.max(0,state.teacherUntil-Date.now());state.lockTimer=setTimeout(()=>{state.sessionSecret=null;if(state.route.startsWith('teacher'))renderPupil();},wait);}
@@ -320,7 +325,7 @@
   document.addEventListener('keydown',touchTeacher);
 
   async function requireTeacher(onSuccess){
-    if(teacherActive()){onSuccess();return;}
+    if(teacherActive()||pcPinlessEligible()){unlockTeacher();onSuccess();return;}
     if(!state.year.pinAuth){openPinMigration(onSuccess);return;}
     openPinAuthentication(onSuccess);
   }
