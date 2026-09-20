@@ -601,3 +601,4 @@ h3{font-size:1rem;margin-bottom:8px}
 
 @media(prefers-reduced-motion:reduce){.just-updated{animation:none}.student-card{transition:none}}
 @media(hover:hover){.button:not(:disabled):hover,.header-button:not(:disabled):hover,.settings-category-card:not(:disabled):hover,.settings-route-card:not(:disabled):hover,.tool:not(:disabled):hover,.class-context-button:not(:disabled):hover{border-color:color-mix(in srgb,var(--class-color) 55%,var(--line));background-color:color-mix(in srgb,var(--class-color) 7%,var(--surface))}.button.primary:not(:disabled):hover,.tool.daily:not(:disabled):hover{filter:brightness(.96)}}
+.settings-modal-card{margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}.settings-modal-card h3{margin:0 0 8px;font-size:.98rem}.settings-modal-card>.field+.field{margin-top:10px}

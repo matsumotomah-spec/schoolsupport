@@ -1,6 +1,6 @@
 "use strict";
 
-  if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=84',{updateViaCache:'none'}).then(registration=>registration.update()).catch(()=>{}));
+  if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=85',{updateViaCache:'none'}).then(registration=>registration.update()).catch(()=>{}));
   window.addEventListener('error',event=>{console.error(event.error||event.message);showToast('画面処理でエラーが発生しました');});
   window.addEventListener('unhandledrejection',event=>{console.error(event.reason);showToast('保存処理を完了できませんでした。もう一度お試しください');});
   window.addEventListener('online',()=>{updateConnectionStatus();showToast('オンラインに戻りました');});
