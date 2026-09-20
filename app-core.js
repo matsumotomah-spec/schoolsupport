@@ -8,7 +8,7 @@
   const PIN_LENGTH=6;
   const PIN_MAX_FAILURES=5;
   const PIN_LOCK_MS=30*1000;
-  const APP_VERSION='76';
+  const APP_VERSION='78';
   const APP_UPDATED_AT='2026-09-20 16:00';
   const PIN_ATTEMPT_KEY='classSupportPinAttemptsV1';
   const COLORS=['#d85b5b','#ef9fb4','#4e78b8','#9adfe8','#efd66e','#397257','#7651a8'];
@@ -418,5 +418,8 @@
   }
 
   async function setOnboardingStep(step){state.onboardingStep=step;await ClassDB.setMeta('onboardingStep',step);}
-  function onboardingBannerHtml(){if(!state.onboardingStep)return'';const data={2:['2 / 4','児童を登録します','氏名を入力して「この児童を登録」を押してください。'],3:['3 / 4','毎日の宿題を開きます','名簿登録はできています。次に、教師ホームの「毎日の宿題」を開いて画面を確認します。'],4:['4 / 4','児童用画面を確認します','提出確認画面を確認できました。最後に「児童用の提出画面」を開けば準備完了です。']}[state.onboardingStep];if(!data)return'';return`<section class="onboarding-banner"><span>はじめの準備 ${data[0]}</span><div><strong>${data[1]}</strong><p>${data[2]}</p></div><button type="button" class="button" data-onboarding-stop>案内を終了</button></section>`;}
-  function wireOnboardingStop(){document.querySelector('[data-onboarding-stop]')?.addEventListener('click',async()=>{await setOnboardingStep(0);document.querySelector('.onboarding-banner')?.remove();showToast('初回案内を終了しました');});}
+  function onboardingTarget(){if(state.onboardingStep===2)return state.classSettingsView==='roster'?['[data-roster-row="0"] [data-field="name"]','氏名の入力欄']:["#home-open-roster",'「児童を登録する」'];if(state.onboardingStep===3)return state.classSettingsView==='roster'?['#roster-start-daily','「毎日の宿題を始める」']:['[data-tool="daily"]','「毎日の宿題」'];if(state.onboardingStep===4)return state.route==='teacher-home'?['#pupil-mode','「児童用の提出画面」']:['[data-common-home]','「ホーム」'];return null;}
+  function onboardingBannerHtml(){if(!state.onboardingStep)return'';const data={2:['2 / 4','児童を登録します','氏名を入力して、右側の「この児童を登録」を押します。'],3:['3 / 4','毎日の宿題を確認します','名簿登録はできています。次は毎日の提出確認を開きます。'],4:['4 / 4','児童用画面を確認します','最後に、児童が提出する画面を開いて確認します。']}[state.onboardingStep],target=onboardingTarget();if(!data)return'';return`<section class="onboarding-banner"><span>はじめの準備 ${data[0]}</span><div><strong>${data[1]}</strong><p>${data[2]}</p></div><div class="button-row"><button type="button" class="button primary" data-onboarding-highlight>${esc(target?.[1]||'押す場所')}を強調</button><button type="button" class="button" data-onboarding-stop>案内を終了</button></div></section>`;}
+  function highlightOnboardingTarget(){const target=onboardingTarget(),element=target&&document.querySelector(target[0]);if(!element){showToast('この画面には次の操作がありません。教師用ホームまたは名簿画面を開いてください。');return;}document.querySelectorAll('.onboarding-target').forEach(node=>node.classList.remove('onboarding-target'));element.classList.add('onboarding-target');element.scrollIntoView({behavior:'smooth',block:'center'});element.focus?.({preventScroll:true});}
+  async function restartOnboarding(){const classItem=selectedClass();if(!classItem){renderSetup();return;}const roster=await rosterForClass(classItem.id);await setOnboardingStep(roster.length?3:2);renderHome();}
+  function wireOnboardingStop(){document.querySelector('[data-onboarding-stop]')?.addEventListener('click',async()=>{await setOnboardingStep(0);document.querySelector('.onboarding-banner')?.remove();showToast('初回案内を終了しました');});document.querySelector('[data-onboarding-highlight]')?.addEventListener('click',highlightOnboardingTarget);}
