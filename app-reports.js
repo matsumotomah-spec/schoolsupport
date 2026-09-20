@@ -58,7 +58,7 @@
   async function renderPromptSettings(){
     const prompt=await ClassDB.getMeta('reportPromptTemplate',defaultReportPrompt());
     document.getElementById('settings-content').innerHTML=`<section class="panel"><h1>所見プロンプト設定</h1><p class="muted">全クラス共通です。{name}、{class}、{term}、{materials} は作成時に自動で置き換わります。</p><form id="report-prompt-form"><div class="field"><label for="report-prompt-template">AI用プロンプト</label><textarea class="textarea report-output" id="report-prompt-template">${esc(prompt)}</textarea></div><div class="button-row end section"><button type="button" class="button" id="report-prompt-reset">推奨設定に戻す</button><button type="submit" class="button primary">保存</button></div></form></section>`;
-    document.getElementById('settings-content').insertAdjacentHTML('afterbegin',dailySettingsNav('prompt'));wireDailySettingsNav();
+    const target=document.getElementById('settings-content');target.insertAdjacentHTML('afterbegin',settingsPageLead('所見の文章設定','所見作成で使う観点や文章の下書きを整えます。','records'));cardifySettingsPanels(target);wireSettingsHome(target);
     document.getElementById('report-prompt-reset').addEventListener('click',()=>{document.getElementById('report-prompt-template').value=defaultReportPrompt();});document.getElementById('report-prompt-form').addEventListener('submit',async event=>{event.preventDefault();await ClassDB.setMeta('reportPromptTemplate',document.getElementById('report-prompt-template').value.trim()||defaultReportPrompt());showToast('所見プロンプトを保存しました');});
   }
 
