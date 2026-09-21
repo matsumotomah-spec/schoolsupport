@@ -63,7 +63,7 @@
     const classItem=selectedClass();
     const seatRoster=await rosterForClass(classItem.id,true);
     const numberRoster=await rosterForClass(classItem.id,false);
-    let orderMode='seat',inputMode='buttons',pickerStudentId=null,pickerScore=null;
+    let orderMode='seat',inputMode='buttons',pickerStudentId=null,pickerScore=null,lastKind='kanji',lastDate=today(),lastTitle='漢字テスト';
     const scores=new Map();
     openDialog(`<h2>漢字・計算テストを入力</h2><p class="muted">100点満点です。ボタン入力は、最初に名前を押すと100点、もう一度押すと10点刻みと＋5点で変更できます。</p><form id="manual-quiz-form"><div class="form-grid"><div class="field"><label for="manual-quiz-kind">小テストの種類</label><select class="select" id="manual-quiz-kind"><option value="kanji">漢字テスト（国語）</option><option value="calculation">計算テスト（算数）</option></select></div><div class="field"><label for="manual-quiz-date">実施日</label><input class="input" id="manual-quiz-date" type="date" value="${today()}" required></div><div class="field full"><label for="manual-quiz-title">テスト名</label><input class="input" id="manual-quiz-title" value="漢字テスト" placeholder="例：漢字小テスト③"></div></div><div class="manual-quiz-toolbar section"><fieldset><legend>並び方</legend><div class="order-toggle"><button type="button" data-quiz-order="seat" aria-pressed="true">座席順</button><button type="button" data-quiz-order="number" aria-pressed="false">出席番号順</button></div></fieldset><fieldset><legend>入力方法</legend><div class="order-toggle"><button type="button" data-quiz-mode="buttons" aria-pressed="true">ボタン入力</button><button type="button" data-quiz-mode="direct" aria-pressed="false">直接入力</button></div></fieldset></div><div id="manual-quiz-roster"></div><div class="dialog-actions"><button type="button" class="button" id="manual-quiz-cancel">キャンセル</button><button type="submit" class="button primary" ${seatRoster.length?'':'disabled'}>点数を保存</button></div></form>`);
     dialog.classList.add('quiz-entry-dialog');
@@ -89,9 +89,13 @@
       target.querySelectorAll('[data-manual-quiz-score]').forEach(input=>input.addEventListener('input',()=>{const value=numberValue(input.value);if(value===null)scores.delete(input.dataset.manualQuizScore);else scores.set(input.dataset.manualQuizScore,value);}));
     };
     document.getElementById('manual-quiz-cancel').addEventListener('click',closeDialog);
-    kind.addEventListener('change',()=>{title.value=manualQuizDefinition(kind.value).label;scores.clear();pickerStudentId=null;pickerScore=null;renderRoster();showToast('種類を変更したため、入力中の点数をクリアしました');});
-    document.querySelectorAll('[data-quiz-order]').forEach(button=>button.addEventListener('click',()=>{orderMode=button.dataset.quizOrder;pickerStudentId=null;pickerScore=null;document.querySelectorAll('[data-quiz-order]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));renderRoster();}));
-    document.querySelectorAll('[data-quiz-mode]').forEach(button=>button.addEventListener('click',()=>{inputMode=button.dataset.quizMode;pickerStudentId=null;pickerScore=null;document.querySelectorAll('[data-quiz-mode]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));renderRoster();}));
+    const hasQuizInput=()=>scores.size>0;
+    const confirmQuizChange=message=>!hasQuizInput()||window.confirm(`${message}\n\n入力済みの点数は保持されます。`);
+    kind.addEventListener('change',()=>{const next=kind.value;if(!confirmQuizChange('小テストの種類を変更しますか？')){kind.value=lastKind;return;}lastKind=next;title.value=manualQuizDefinition(next).label;lastTitle=title.value;scores.clear();pickerStudentId=null;pickerScore=null;renderRoster();showToast('種類を変更したため、入力中の点数をクリアしました');});
+    document.querySelectorAll('[data-quiz-order]').forEach(button=>button.addEventListener('click',()=>{const next=button.dataset.quizOrder;if(next===orderMode)return;if(!confirmQuizChange('児童の並び方を変更しますか？'))return;orderMode=next;pickerStudentId=null;pickerScore=null;document.querySelectorAll('[data-quiz-order]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));renderRoster();}));
+    document.querySelectorAll('[data-quiz-mode]').forEach(button=>button.addEventListener('click',()=>{const next=button.dataset.quizMode;if(next===inputMode)return;if(!confirmQuizChange('入力方法を変更しますか？'))return;inputMode=next;pickerStudentId=null;pickerScore=null;document.querySelectorAll('[data-quiz-mode]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));renderRoster();}));
+    document.getElementById('manual-quiz-date').addEventListener('change',event=>{if(event.target.value===lastDate)return;if(!confirmQuizChange('実施日を変更しますか？')){event.target.value=lastDate;return;}lastDate=event.target.value;});
+    title.addEventListener('change',event=>{if(event.target.value===lastTitle)return;if(!confirmQuizChange('テスト名を変更しますか？')){event.target.value=lastTitle;return;}lastTitle=event.target.value;});
     document.getElementById('manual-quiz-form').addEventListener('submit',async event=>{
       event.preventDefault();const selected=manualQuizDefinition(kind.value),date=document.getElementById('manual-quiz-date').value,max=QUIZ_MAX_SCORE,testTitle=title.value.trim()||selected.label;
       if(!date){showToast('実施日を入力してください');return;}
@@ -99,6 +103,8 @@
       const entries=[...scores].filter(([studentId,point])=>eligibleIds.has(studentId)&&Number.isFinite(point));
       if(!entries.length){showToast('1人以上の点数を入力してください');return;}
       if(entries.some(([,point])=>point<0||point>max)){showToast(`点数は0〜${max}点で入力してください`);return;}
+      const missing=seatRoster.filter(row=>!subjectExempt(row,selected.subject)&&!scores.has(row.student.id));
+      if(missing.length&&!window.confirm(`未入力の児童が${missing.length}人います。\n\n${missing.slice(0,8).map(row=>row.student.name).join('、')}${missing.length>8?' ほか':''}\n\n入力済みの児童だけ保存しますか？`))return;
       const term=date<=state.year.firstTermEnd?'front':'back',sourceTestId=ClassDB.uid('manualQuiz');
       const records=entries.map(([studentId,point])=>({id:`testScore_${sourceTestId}_${studentId}`,type:'testScore',classId:classItem.id,studentId,date,term,subject:selected.subject,title:testTitle,round:'',sourceFile:'手入力',sourceKind:'quiz',quizKind:selected.kind,sourceTestId,total:point,maxTotal:max,scores:[{label:selected.label,viewpoint:'knowledge',point,max}]}));
       await ClassDB.putMany('records',records);closeDialog();showToast(`${selected.label}を${records.length}人分保存しました`);renderTests();
