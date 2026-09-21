@@ -1,150 +1,97 @@
-# JS依存関係・責務マップ（v127）
+# JS依存関係・責務マップ（v129）
 
-生成日：2026-09-21  
-対象：`work/v105`
+更新日：2026-09-22  
+対象：`work/v105`  
+根拠：`index.html` の実際の script 読み込み順と各ファイルの現行内容。
 
 ## 読み込み順
 
-1. `db.js`
-2. `migration.js`
-3. `xlsx-reader.js`
-4. `csv-export.js`
-5. `app-core.js`
-6. `app-shell.js`
-7. `app-settings-core.js`
-8. `app-help.js`
-9. `app-settings-display.js`
-10. `app-settings-records.js`
-11. `app-settings-security.js`
-12. `app-settings-classes.js`
-13. `app-settings.js`（互換マーカー）
-14. `app-data-import.js`
-15. `app-data-crypto.js`
-16. `app-data-sync.js`
-17. `app-data-migration.js`
-18. `app-records.js`
-19. `app-behavior.js`
-20. `app-grades.js`
-21. `app-seating.js`
-22. `app-reports.js`
-23. `app-data.js`（データ画面・互換入口）
-24. `app.js`
+1. `db.js` — IndexedDB のストア、meta、バッチ更新
+2. `migration.js` — 旧データの読取りと変換
+3. `xlsx-reader.js` — XLSX の読取り
+4. `csv-export.js` — CSV 出力データの生成
+5. `app-core.js` — 共通状態、認証、日付・文字列処理、下書き状態
+6. `app-shell.js` — 教師用・児童用シェル、ホーム、共通一覧
+7. `app-settings-core.js` — 設定ルーター、設定カード、設定ページ骨格
+8. `app-help.js` — ヘルプ本文と検索
+9. `app-settings-display.js` — 表示、児童用表示、アイコン、フッター
+10. `app-settings-records.js` — メモ・賞状・支援級タグの候補
+11. `app-settings-security.js` — 年度、PIN、データ保護、新年度切替
+12. `app-settings-classes.js` — クラス、名簿、転出入、統合、交流配慮
+13. `app-settings.js` — 旧参照を維持する互換マーカー
+14. `app-data-import.js` — 外部表の検査と取込
+15. `app-data-crypto.js` — PBKDF2/AES-GCM、暗号化ファイル、バックアップ
+16. `app-data-sync.js` — 同期履歴、差分計画、統合、同期練習
+17. `app-data-migration.js` — 旧形式移行、削除確認、CSV、全消去
+18. `app-notebook-history.js` — ノート評価履歴の集約と表示
+19. `app-records.js` — 宿題、提出物、ノート評価、記録の保存・編集
+20. `app-behavior.js` — 行動記録
+21. `app-grades.js` — 小テスト・成績の確認
+22. `app-seating.js` — 席替え
+23. `app-reports.js` — 所見と児童概要
+24. `app-data.js` — データ管理画面と各データ機能の入口
+25. `app.js` — 起動、Service Worker、共通入力・離脱処理
 
-## ファイル規模
+この順番は通常 script のグローバル参照に依存する。ES module 化や順番の入替えは、別途すべての参照を移行するまで行わない。
+
+## 現在の規模
 
 | ファイル | バイト数 | 関数定義数 |
 |---|---:|---:|
-| `app-behavior.js` | 19187 | 16 |
-| `app-core.js` | 59428 | 81 |
-| `app-data.js` | 84457 | 60 |
-| `app-grades.js` | 39961 | 26 |
-| `app-records.js` | 88265 | 65 |
-| `app-reports.js` | 41708 | 21 |
-| `app-seating.js` | 35029 | 29 |
-| `app-help.js` | 33907 | 16 |
-| `app-data-import.js` | 17880 | 12 |
-| `app-data-crypto.js` | 14941 | 14 |
-| `app-data-sync.js` | 14992 | 17 |
-| `app-data-migration.js` | 21989 | 14 |
-| `app-settings-core.js` | 7836 | 9 |
-| `app-settings-display.js` | 20257 | 9 |
-| `app-settings-records.js` | 4241 | 2 |
-| `app-settings-security.js` | 27556 | 15 |
-| `app-settings-classes.js` | 48122 | 22 |
+| `db.js` | 6,122 | 21 |
+| `migration.js` | 17,253 | 22 |
+| `xlsx-reader.js` | 6,811 | 12 |
+| `csv-export.js` | 5,480 | 8 |
+| `app-core.js` | 60,176 | 88 |
+| `app-shell.js` | 74,981 | 73 |
+| `app-settings-core.js` | 10,496 | 16 |
+| `app-help.js` | 34,604 | 17 |
+| `app-settings-display.js` | 18,499 | 9 |
+| `app-settings-records.js` | 4,675 | 2 |
+| `app-settings-security.js` | 27,630 | 15 |
+| `app-settings-classes.js` | 49,064 | 22 |
 | `app-settings.js` | 150 | 0 |
-| `app-data.js` | 13468 | 3 |
-| `app-shell.js` | 73825 | 71 |
-| `app.js` | 2762 | 0 |
-| `csv-export.js` | 5480 | 8 |
-| `db.js` | 6122 | 21 |
-| `migration.js` | 17253 | 22 |
-| `sw.js` | 1370 | 0 |
-| `xlsx-reader.js` | 6811 | 12 |
+| `app-data-import.js` | 17,880 | 12 |
+| `app-data-crypto.js` | 14,941 | 14 |
+| `app-data-sync.js` | 14,992 | 17 |
+| `app-data-migration.js` | 21,989 | 14 |
+| `app-notebook-history.js` | 2,261 | 0 |
+| `app-records.js` | 87,290 | 66 |
+| `app-behavior.js` | 19,187 | 16 |
+| `app-grades.js` | 40,801 | 27 |
+| `app-seating.js` | 35,029 | 29 |
+| `app-reports.js` | 41,717 | 21 |
+| `app-data.js` | 14,673 | 3 |
+| `app.js` | 2,853 | 0 |
 
-## 主要なファイル間参照
+## 境界とデータ互換性
 
-短すぎる汎用名とオブジェクトメソッド名を除き、他ファイルで定義された関数を直接呼び出している箇所を抽出しています。
+| 領域 | 担当 | 固定する互換境界 |
+|---|---|---|
+| 保存 | `db.js` | IndexedDB のストア名、キー、meta キー、レコード形式 |
+| 暗号化・同期 | `app-data-crypto.js`、`app-data-sync.js` | 暗号化封筒 v1/v2、同期ペイロード v1、競合時に新しい更新日時を採用する規則 |
+| 記録 | `app-records.js`、`app-notebook-history.js` | 既存の記録 type、ノート評価の旧 sessionKey の読取り |
+| 設定 | `app-settings-*.js` | 設定値の meta キー、明示保存と自動保存の意味 |
+| 表示 | `app-shell.js`、`app-settings-display.js` | 教師用と児童用の操作境界、説明量で主操作・状態・順序を変えない規則 |
 
-| 呼び出し元 | 参照先 | 参照関数数 | 代表的な関数 |
-|---|---|---:|---|
-| `app-behavior.js` | `app-core.js` | 9 | `today`、`jpDate`、`moveDate`、`selectedClass`、`isSupportClass`、`showUndoToast`、`feedbackClass`、`closeDialog` ほか |
-| `app-behavior.js` | `app-records.js` | 2 | `recordModeTabs`、`renderStudentRecords` |
-| `app-behavior.js` | `app-shell.js` | 9 | `teacherToolShell`、`wireToolHome`、`activeSeatGridTemplate`、`teacherOrderMode`、`teacherOrderControlHtml`、`wireTeacherOrder`、`pupilDateNav`、`rosterForClass` ほか |
-| `app-behavior.js` | `db.js` | 1 | `getAllByIndex` |
-| `app-core.js` | `app-data.js` | 6 | `readImportText`、`validateEncryptedEnvelope`、`validateSyncPayload`、`protectText`、`decryptEnvelope`、`resetToWelcomePreservingLegacy` |
-| `app-core.js` | `app-records.js` | 1 | `mondayOf` |
-| `app-core.js` | `app-settings.js` | 1 | `saveRoster` |
-| `app-core.js` | `app-shell.js` | 6 | `renderHome`、`headerHtml`、`teacherFooter`、`renderPupil`、`rosterForClass`、`renderSettings` |
-| `app-core.js` | `db.js` | 6 | `deviceId`、`getAll`、`getAllByIndex`、`getMeta`、`setMeta`、`replaceAllRaw` |
-| `app-core.js` | `migration.js` | 1 | `fromStorage` |
-| `app-data.js` | `app-core.js` | 18 | `today`、`jpDate`、`selectedClass`、`isSupportClass`、`normalizeStudentName`、`applyClassTheme`、`showToast`、`closeDialog` ほか |
-| `app-data.js` | `app-records.js` | 1 | `mondayOf` |
-| `app-data.js` | `app-reports.js` | 1 | `currentTermRange` |
-| `app-data.js` | `app-settings.js` | 3 | `settingsPageLead`、`wireSettingsHome`、`cardifySettingsPanels` |
-| `app-data.js` | `app-shell.js` | 7 | `renderHome`、`teacherToolShell`、`wireToolHome`、`renderPupil`、`rosterForClass`、`rosterForRange`、`renderSettings` |
-| `app-data.js` | `csv-export.js` | 2 | `submissionRows`、`assessmentRows` |
-| `app-data.js` | `db.js` | 9 | `deviceId`、`getAll`、`getAllByIndex`、`putMany`、`getMeta`、`setMeta`、`resetAll`、`applyBatch` ほか |
-| `app-data.js` | `migration.js` | 5 | `fromFiles`、`fromStorage`、`roster`、`records`、`classPatch` |
-| `app-grades.js` | `app-core.js` | 10 | `today`、`jpDate`、`selectedClass`、`classSubjects`、`normalizeStudentName`、`applyClassTheme`、`showToast`、`closeDialog` ほか |
-| `app-grades.js` | `app-records.js` | 4 | `simpleHash`、`notebookSummaryPeriodRange`、`notebookAverageLabel`、`notebookStudentSummary` |
-| `app-grades.js` | `app-shell.js` | 7 | `operationTipHtml`、`teacherToolShell`、`wireToolHome`、`subjectExempt`、`renderPupil`、`rosterForClass`、`rosterForRange` |
-| `app-grades.js` | `db.js` | 3 | `getAllByIndex`、`putMany`、`setMeta` |
-| `app-grades.js` | `xlsx-reader.js` | 1 | `readWorkbook` |
-| `app-records.js` | `app-behavior.js` | 4 | `behaviorDraft`、`behaviorCategory`、`behaviorRecordId`、`renderBehavior` |
-| `app-records.js` | `app-core.js` | 21 | `today`、`jpDate`、`shortJpDate`、`moveDate`、`daysBetween`、`currentWeekStart`、`slashDate`、`pupilText` ほか |
-| `app-records.js` | `app-shell.js` | 17 | `renderHome`、`operationTipHtml`、`teacherToolShell`、`wireToolHome`、`submissionExempt`、`subjectExempt`、`teacherRosterCards`、`teacherOrderMode` ほか |
-| `app-records.js` | `db.js` | 5 | `deviceId`、`getAll`、`getAllByIndex`、`getMeta`、`applyBatch` |
-| `app-reports.js` | `app-core.js` | 15 | `today`、`jpDate`、`shortJpDate`、`moveDate`、`daysBetween`、`slashDate`、`selectedClass`、`classSubjects` ほか |
-| `app-reports.js` | `app-records.js` | 11 | `notebookSessionKey`、`notebookGradeText`、`notebookViewpointGrades`、`notebookOverallGrade`、`notebookViewpointText`、`notebookViewpointPickerHtml`、`wireNotebookViewpointPicker`、`readNotebookViewpointGrades` ほか |
-| `app-reports.js` | `app-settings.js` | 3 | `settingsPageLead`、`wireSettingsHome`、`cardifySettingsPanels` |
-| `app-reports.js` | `app-shell.js` | 15 | `renderHome`、`openTool`、`teacherToolShell`、`wireToolHome`、`teacherRosterCards`、`wireStudentDetails`、`renderPupil`、`rosterForClass` ほか |
-| `app-reports.js` | `db.js` | 4 | `getAllByIndex`、`putRaw`、`getMeta`、`setMeta` |
-| `app-seating.js` | `app-core.js` | 8 | `today`、`jpDate`、`selectedClass`、`applyClassTheme`、`showToast`、`closeDialog`、`openDialog`、`teacherActive` |
-| `app-seating.js` | `app-shell.js` | 5 | `teacherToolShell`、`openPrintPreview`、`wireToolHome`、`renderPupil`、`rosterForClass` |
-| `app-seating.js` | `db.js` | 3 | `getAllByIndex`、`getMeta`、`setMeta` |
-| `app-settings.js` | `app-core.js` | 34 | `normalizeFooterLayout`、`footerLabel`、`navigateSafely`、`today`、`schoolYear`、`yearNumberOf`、`jpDate`、`selectedClass` ほか |
-| `app-settings.js` | `app-data.js` | 9 | `readImportText`、`validateEncryptedEnvelope`、`validateSyncPayload`、`protectText`、`unprotectText`、`decryptEnvelope`、`collectYearPayload`、`createEncryptedFile` ほか |
-| `app-settings.js` | `app-reports.js` | 3 | `defaultReportPrompt`、`renderPromptSettings`、`renderStudentOverview` |
-| `app-settings.js` | `app-seating.js` | 1 | `renderSeating` |
-| `app-settings.js` | `app-shell.js` | 11 | `renderHome`、`pupilOverviewOptionsHtml`、`readPupilOverviewOptions`、`savePupilOverviewOptions`、`openTool`、`openFooterItem`、`teacherToolShell`、`wireToolHome` ほか |
-| `app-settings.js` | `db.js` | 6 | `deviceId`、`getAll`、`getAllByIndex`、`getMeta`、`setMeta`、`applyBatch` |
-| `app-shell.js` | `app-core.js` | 37 | `normalizeFooterLayout`、`footerLabel`、`navigateSafely`、`today`、`schoolYear`、`rolloverDue`、`jpDate`、`shortJpDate` ほか |
-| `app-shell.js` | `app-data.js` | 1 | `openLegacyMigrationReview` |
-| `app-shell.js` | `app-records.js` | 10 | `weeklyData`、`missingRecurringWeeks`、`currentWeeklyOccurrences`、`weeklyRenewalNotice`、`injectWeeklyDeadlineNotice`、`wireWeeklyRenewal`、`maybePromptWeeklyCreation`、`mondayOf` ほか |
-| `app-shell.js` | `app-reports.js` | 1 | `renderStudentOverview` |
-| `app-shell.js` | `app-settings.js` | 3 | `renderSettingsContent`、`renderHelp`、`renderYearRollover` |
-| `app-shell.js` | `db.js` | 6 | `deviceId`、`getAll`、`getAllByIndex`、`getMeta`、`setMeta`、`applyBatch` |
-| `app-shell.js` | `migration.js` | 1 | `fromStorage` |
-| `app.js` | `app-core.js` | 5 | `friendlyTerms`、`applyFriendlyTerms`、`showToast`、`loadState`、`toggleTheme` |
-| `app.js` | `app-shell.js` | 1 | `updateConnectionStatus` |
+`app-settings.js` はファイル順と過去の参照を保つためだけに残る。新しい設定実装は対応する `app-settings-*.js` に置く。
 
-## 重複定義
+## 設定画面の責務
 
-- v117の全JSを機械検査し、同名のトップレベル関数重複は0件。
-- `helpLandingHtml` は `app-help.js` に1件のみ。
+- `app-settings-core.js` は設定内の移動を `openSettingsRoute` と `navigateSafely` に集約する。
+- `app-settings-display.js` は即時保存の設定を `data-auto-save` として扱い、離脱確認の対象にしない。
+- `app-settings-classes.js` は名簿の明示保存下書きを `state.drafts.roster` に保持する。
+- `app-settings-records.js`、`app-settings-security.js`、`app-reports.js`、`app-data.js`、`app-settings-classes.js`、`app-settings-display.js` の移行済み画面は、描画後のカード加工を使わず、初期 HTML から役割付きカードを出力する。
 
-## 設定・データ領域の分割境界
+## 検証の入口
 
-- `app-settings-core.js`：設定ルーター、パンくず、共通カード、設定ページ骨格。
-- `app-help.js`：ヘルプ本文、検索、初回ガイド、画面移動。
-- `app-settings-display.js`：情報量、明るさ、児童一覧、児童用表示、アイコン、フッター。
-- `app-settings-records.js`：児童メモ・賞状・支援級タグ、記録候補の入口。
-- `app-settings-security.js`：年度、教師用PIN、年度パスワード、PIN省略、新年度切替。
-- `app-settings-classes.js`：クラス編集、名簿、転入・転出、統合、交流配慮。
-- `app-settings.js`：互換マーカーのみ（新規実装は追加しない）。
-- `app-data-import.js`：ファイルサイズ・形式検証、外部表取込。
-- `app-data-crypto.js`：PBKDF2/AES-GCM、暗号化ファイル、バックアップ、事前スナップショット。
-- `app-data-sync.js`：同期履歴、同期練習、差分計画、確認ダイアログ、統合。
-- `app-data-migration.js`：旧形式移行、削除確認、CSV出力、全データ削除。
-- `app-data.js`：データ画面の描画と設定ルートの互換入口。データ処理本体は新4ファイルに置き、v119で目的カードを単一ナビゲーションへ整理。
-- `app-data.js`：暗号化、同期計画、バックアップ復元、CSV、外部取込、旧データ移行、画面描画が同居しています。
-- `app-reports.js`：所見画面に加え、設定用の所見プロンプト編集を保持しています。
-- `app-shell.js`：ホーム・共通シェルに加え、設定・ヘルプへの直接導線を保持しています。
+`tests/run-tests.js` は次の回帰テストを順番に読み込む。
 
-## 分割時に固定する境界
+1. `notebook-history-regression.test.js`
+2. `data-format-regression.test.js`
+3. `settings-card-regression.test.js`
+4. `release-integrity.test.js`
+5. `daily-input-regression.test.js`
+6. `gradebook-regression.test.js`
 
-1. IndexedDBストア名、metaキー、レコード形式、暗号化ファイル形式は変更しません。
-2. `renderSettingsContent` を設定ルートの唯一の描画入口にします（v116で実施）。
-3. ヘルプからの移動は共通設定ルーターへ寄せます。
-4. 暗号化・同期計画はDOM描画から分け、入出力画面から呼び出します。
-5. ファイル移動だけの版で構文・参照・保存値を確認してからUIを変更します。
+構文検査とこれらの回帰テストは Node 実行環境で確認済みである。ブラウザ、iPad Safari、実データを使う同期は別の実機確認として扱い、ここで確認済みとはしない。

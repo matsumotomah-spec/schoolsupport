@@ -8,8 +8,8 @@
   const PIN_LENGTH=6;
   const PIN_MAX_FAILURES=5;
   const PIN_LOCK_MS=30*1000;
-  const APP_VERSION='127';
-  const APP_UPDATED_AT='2026-09-21 23:20';
+  const APP_VERSION='129';
+  const APP_UPDATED_AT='2026-09-22 06:40';
   const PIN_ATTEMPT_KEY='classSupportPinAttemptsV1';
   const COLORS=['#d85b5b','#ef9fb4','#4e78b8','#9adfe8','#efd66e','#397257','#7651a8'];
   const SUBJECTS=['国語','算数','理科','社会','生活','音楽','図画工作','家庭','体育','外国語','道徳','総合','自立活動'];
@@ -75,10 +75,17 @@
     lastSyncAt:null,
     studentReturnTool:null,
     onboardingStep:0,
-    footerLayout:[...DEFAULT_FOOTER_LAYOUT]
+    footerLayout:[...DEFAULT_FOOTER_LAYOUT],
+    drafts:{roster:false,forms:new Set(),nextFormId:0}
   };
-  let unsavedChanges=false;
-  async function navigateSafely(action){if(unsavedChanges&&state.route==='teacher-settings'&&state.settingsTab==='classes'&&state.classSettingsView==='roster'){const saved=await saveRoster({silent:true,rerender:false});if(!saved)return;action();return;}if(unsavedChanges&&!window.confirm('入力中の変更が保存されていません。移動しますか？'))return;unsavedChanges=false;action();}
+  function rosterDraftIsDirty(){return Boolean(state.drafts?.roster);}
+  function markRosterDraftDirty(dirty=true){state.drafts.roster=Boolean(dirty);}
+  function formDraftKey(form){if(!form?.dataset)return'';if(!form.dataset.draftKey)form.dataset.draftKey=form.id||`form-${++state.drafts.nextFormId}`;return form.dataset.draftKey;}
+  function markFormDraftDirty(form){const key=formDraftKey(form);if(key)state.drafts.forms.add(key);}
+  function clearFormDraft(form){const key=formDraftKey(form);if(key)state.drafts.forms.delete(key);}
+  function hasUnsavedDraft(){return rosterDraftIsDirty()||state.drafts.forms.size>0;}
+  function clearUnsavedDrafts(){markRosterDraftDirty(false);state.drafts.forms.clear();}
+  async function navigateSafely(action){if(rosterDraftIsDirty()&&state.route==='teacher-settings'&&state.settingsTab==='classes'&&state.classSettingsView==='roster'){const saved=await saveRoster({silent:true,rerender:false});if(!saved)return;action();return;}if(hasUnsavedDraft()&&!window.confirm('入力中の変更が保存されていません。移動しますか？'))return;clearUnsavedDrafts();action();}
 
   const HELP_TOPICS={
     home:['教師用ホーム','操作するクラスを選び、今日使う機能を開きます。「要対応○人」は確認が必要な児童数です。','児童に渡すときは、画面下の「児童用の提出画面」を押してください。',['最初に上部の「操作中」で現在のクラスを確認します。','大きい機能ボタン、または画面下部の機能名を押します。','週の初めに案内が出たら、今週分の週宿題を作るか選びます。']],

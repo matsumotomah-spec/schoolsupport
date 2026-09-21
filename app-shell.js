@@ -43,7 +43,7 @@
     document.querySelectorAll('[data-tool]').forEach(button=>button.addEventListener('click',()=>openTool(button.dataset.tool)));
     document.querySelectorAll('[data-footer-tool]').forEach(button=>button.addEventListener('click',()=>openFooterItem(button.dataset.footerTool)));
     document.getElementById('pupil-mode').addEventListener('click',()=>renderPupil('all'));
-    document.getElementById('home-open-roster')?.addEventListener('click',()=>{state.settingsTab='classes';state.classSettingsView='roster';state.rosterDraft=[];state.rosterLoadedForClassId=null;renderSettings();});
+    document.getElementById('home-open-roster')?.addEventListener('click',()=>openSettingsPage('classes',{classSettingsView:'roster'}));
     wireOnboardingStop();
     wireCommonHeader('home');
     document.getElementById('start-rollover')?.addEventListener('click',renderYearRollover);
@@ -74,7 +74,7 @@
     document.querySelector('[data-home-menu]')?.addEventListener('click',openHomeMenu);
     document.querySelectorAll('[data-common-home]').forEach(button=>button.addEventListener('click',()=>navigateSafely(renderHome)));
     const settingsButton=document.querySelector('[data-common-settings]');if(state.route==='teacher-settings'){settingsButton?.classList.add('settings-active');settingsButton?.setAttribute('aria-current','page');}
-    settingsButton?.addEventListener('click',()=>navigateSafely(()=>{state.settingsTab='guide';state.classSettingsView='list';renderSettings();}));
+    settingsButton?.addEventListener('click',()=>navigateSafely(()=>openSettingsPage('guide')));
     document.querySelector('[data-context-help]')?.addEventListener('click',()=>openContextHelp(helpKey));
     document.querySelector('[data-current-class]')?.addEventListener('click',openClassSwitcher);
     applyTheme();
@@ -96,12 +96,12 @@
     if(tool==='memo')state.toolDraft.recordsMode='memo';if(tool==='behavior')state.toolDraft.recordsMode='behavior';
     const routes={daily:renderTeacherDaily,weekly:renderWeekly,certificate:renderCertificates,records:renderStudentRecords,memo:renderStudentRecords,behavior:renderStudentRecords,assessment:renderNotebook,tests:renderTests,grades:renderGradebook,occasional:renderOccasional,support:renderSupport,reports:renderReports,seating:renderSeating};
     if(rolloverDue()&&!state.rolloverContinue&&['daily','weekly','certificate','records','memo','behavior','assessment','tests','grades','occasional','support'].includes(tool)){confirmOldYearContinuation(()=>openTool(tool));return;}
-    if(['daily','weekly','certificate','records','memo','behavior','assessment','tests','grades','occasional','support','reports','seating'].includes(tool)&&!(await rosterForClass(selectedClass()?.id)).length){state.settingsTab='classes';state.classSettingsView='roster';state.rosterDraft=[];state.rosterLoadedForClassId=null;await renderSettings();showToast('先に名簿を登録してください');return;}
+    if(['daily','weekly','certificate','records','memo','behavior','assessment','tests','grades','occasional','support','reports','seating'].includes(tool)&&!(await rosterForClass(selectedClass()?.id)).length){openSettingsPage('classes',{classSettingsView:'roster'});showToast('先に名簿を登録してください');return;}
     if(tool==='daily'&&state.onboardingStep===3)await setOnboardingStep(4);
     if(routes[tool])routes[tool]();else showToast('この機能は次の実装段階で追加します');
   }
 
-  function openFooterItem(item){if(item==='settings'){state.settingsTab='guide';state.classSettingsView='list';renderSettings();return;}openTool(item);}
+  function openFooterItem(item){if(item==='settings'){openSettingsPage('guide');return;}openTool(item);}
 
   function confirmOldYearContinuation(onContinue){
     openDialog(`<h2>年度を確認してください</h2><p>現在は${esc(state.year.label)}です。${schoolYear()}年度へ切り替えずに記録を続けますか。</p><p class="muted">「一時継続」は、このアプリを閉じるまで有効です。ホームの切替案内は残ります。</p><div class="dialog-actions"><button type="button" class="button" id="rollover-temporary">一時継続</button><button type="button" class="button primary" id="rollover-now">新年度へ切り替える</button></div>`);
