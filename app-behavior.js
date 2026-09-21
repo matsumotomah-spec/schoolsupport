@@ -32,7 +32,6 @@
   async function behaviorRecords(classId,start=state.year.startDate,end=state.year.endDate){return behaviorActiveRecords(await ClassDB.getAllByIndex('records','classId',classId)).filter(item=>item.date>=start&&item.date<=end);}
 
   function behaviorCategoryButtons(counts=new Map(),compact=false,selectedId=null){return`<div class="behavior-category-grid ${compact?'compact':''}">${BEHAVIOR_CATEGORIES.map(item=>`<button type="button" class="behavior-category-card" data-behavior-category="${item.id}" aria-pressed="${item.id===selectedId}"><strong>${esc(item.label)}</strong><span>${esc(item.criterion)}</span>${counts.has(item.id)?`<b>今日の○ ${counts.get(item.id)}人</b>`:''}</button>`).join('')}</div>`;}
-  function behaviorBoundaryHint(){return`<p class="behavior-boundary"><strong>迷ったとき：</strong>目の前の人への配慮＝思いやり／共有物・場所・ルール＝公共心／任された役割＝責任感／進んで働く＝勤労奉仕</p>`;}
 
   async function renderBehavior(){
     const draft=behaviorDraft();state.route='teacher-records';state.activeTool='records';state.toolDraft.recordsMode='behavior';
@@ -42,7 +41,7 @@
     const classItem=selectedClass(),draft=behaviorDraft(),allToday=await behaviorRecords(classItem.id,draft.date,draft.date),counts=new Map(BEHAVIOR_CATEGORIES.map(item=>[item.id,allToday.filter(record=>record.categoryId===item.id).length]));
     const category=behaviorCategory(draft.categoryId);
     if(!category){
-      app.innerHTML=teacherToolShell('児童の記録',`${recordModeTabs('behavior',false)}<section class="panel behavior-category-select"><h1>記録するカテゴリーを選択</h1><p class="muted">よい姿を見つけたカテゴリーを先に選びます。○がない日は、できなかったという意味ではありません。</p>${behaviorBoundaryHint()}${behaviorCategoryButtons(counts)}</section>`);
+      app.innerHTML=teacherToolShell('児童の記録',`${recordModeTabs('behavior',false)}<section class="panel behavior-category-select"><h1>記録するカテゴリーを選択</h1><p class="muted">よい姿を見つけたカテゴリーを先に選びます。○がない日は、できなかったという意味ではありません。</p>${behaviorCategoryButtons(counts)}</section>`);
       wireBehaviorCommon();document.querySelectorAll('[data-behavior-category]').forEach(button=>button.addEventListener('click',()=>{draft.categoryId=button.dataset.behaviorCategory;renderBehavior();}));return;
     }
     const current=allToday.filter(record=>record.categoryId===category.id),currentIds=new Set(current.map(record=>record.studentId));
@@ -62,7 +61,7 @@
   }
 
   function openBehaviorCategoryDialog(counts){
-    openDialog(`<h2>カテゴリーを変更</h2><p class="muted">一言基準を見て、記録するよい姿に最も近いものを選びます。</p>${behaviorBoundaryHint()}${behaviorCategoryButtons(counts,true,behaviorDraft().categoryId)}<div class="dialog-actions"><button type="button" class="button" id="behavior-category-close">閉じる</button></div>`);dialog.classList.add('behavior-category-dialog');
+    openDialog(`<h2>カテゴリーを変更</h2><p class="muted">記録するよい姿に最も近いカテゴリーを選びます。</p>${behaviorCategoryButtons(counts,true,behaviorDraft().categoryId)}<div class="dialog-actions"><button type="button" class="button" id="behavior-category-close">閉じる</button></div>`);dialog.classList.add('behavior-category-dialog');
     document.getElementById('behavior-category-close').addEventListener('click',closeDialog);document.querySelectorAll('[data-behavior-category]').forEach(button=>button.addEventListener('click',async()=>{behaviorDraft().categoryId=button.dataset.behaviorCategory;closeDialog();await renderBehavior();document.getElementById('behavior-current-title')?.focus();}));
   }
   async function toggleBehaviorMark(studentId){

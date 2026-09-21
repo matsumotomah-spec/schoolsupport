@@ -1,6 +1,6 @@
 "use strict";
 
-  if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=101',{updateViaCache:'none'}).then(registration=>registration.update()).catch(()=>{}));
+  if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=102',{updateViaCache:'none'}).then(registration=>registration.update()).catch(()=>{}));
   window.addEventListener('error',event=>{console.error(event.error||event.message);showToast('画面処理でエラーが発生しました');});
   window.addEventListener('unhandledrejection',event=>{console.error(event.reason);showToast('保存処理を完了できませんでした。もう一度お試しください');});
   window.addEventListener('online',()=>{updateConnectionStatus();showToast('オンラインに戻りました');});
@@ -8,7 +8,7 @@
   document.addEventListener('click',event=>{if(event.target.closest('[data-theme-toggle]'))toggleTheme();});
   document.addEventListener('mouseover',event=>{const button=event.target.closest('button');if(button&&!button.title){const label=button.getAttribute('aria-label')||button.textContent.replace(/\s+/g,' ').trim();if(label)button.title=label;}});
   document.addEventListener('input',event=>{if(event.target.matches('.pin-input'))event.target.setCustomValidity(event.target.value&&/^\d{6}$/.test(event.target.value)?'':'教師用PINは数字6桁で入力してください。');});
-  document.addEventListener('input',event=>{if(event.target.closest('#app form,#roster-body'))unsavedChanges=true;});
+  document.addEventListener('input',event=>{if(event.target.closest('#app form,#roster-body')&&!event.target.closest('#appearance-form'))unsavedChanges=true;});
   document.addEventListener('submit',()=>{unsavedChanges=false;},true);
   window.addEventListener('beforeunload',event=>{if(!unsavedChanges)return;event.preventDefault();event.returnValue='';});
   document.addEventListener('invalid',event=>{if(event.target.matches('.pin-input'))event.target.setCustomValidity('教師用PINは数字6桁で入力してください。');},true);
