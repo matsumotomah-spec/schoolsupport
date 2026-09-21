@@ -111,7 +111,7 @@
 
   function teacherToolShell(title,body,actions=''){
     const key=state.activeTool||state.route.replace('teacher-','');
-    return `<div class="app-shell">${headerHtml(title,actions)}<main class="page">${onboardingBannerHtml()}${pagePurposeHtml(pagePurposeFor(key,title))}${body}</main>${key==='student'?'':teacherFooter(key)}</div>`;
+    return `<div class="app-shell">${headerHtml(title,actions)}<main class="page" data-page-key="${esc(key)}">${onboardingBannerHtml()}${pagePurposeHtml(pagePurposeFor(key,title))}<div class="page-content" data-page-content="${esc(key)}">${body}</div></main>${key==='student'?'':teacherFooter(key)}</div>`;
   }
 
   function pagePurposeHtml({title,purpose,scope='現在のクラス',saveState='日常の記録は端末内へ自動保存',helpKey=state.activeTool||'home'}={}){
