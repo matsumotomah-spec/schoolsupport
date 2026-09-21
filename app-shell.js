@@ -22,7 +22,7 @@
         ${dashboard}
         ${rosterPrompt}
         <section class="tools-main ${!own&&!support?'limited':'core-tools'}">
-          ${!own&&!support?`${toolHtml('assessment','A','ノート評価',0,true)}${toolHtml('records','記','児童の記録',counts.memo)}${toolHtml('tests','テ','小テスト',0)}${toolHtml('grades','点','成績管理',0)}${toolHtml('occasional','▤','提出物',counts.occasional)}`:`
+          ${!own&&!support?`${toolHtml('assessment','A','ノート評価',0,true)}${toolHtml('records','記','児童の記録',counts.memo)}${toolHtml('occasional','▤','提出物',counts.occasional)}${toolHtml('tests','テ','小テスト',0)}${toolHtml('grades','点','成績管理',0)}`:`
           ${support?toolHtml('records','記','児童の記録',counts.memo,true):toolHtml('daily','✓','毎日の宿題',counts.daily,true)}
           ${support?toolHtml('daily','✓','毎日の宿題',counts.daily):toolHtml('weekly','▣','週宿題',counts.weekly)}
           ${support?toolHtml('weekly','▣','週宿題',counts.weekly):toolHtml('records','記','児童の記録',counts.memo)}

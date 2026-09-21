@@ -8,8 +8,8 @@
   const PIN_LENGTH=6;
   const PIN_MAX_FAILURES=5;
   const PIN_LOCK_MS=30*1000;
-  const APP_VERSION='89';
-  const APP_UPDATED_AT='2026-09-20 20:00';
+  const APP_VERSION='90';
+  const APP_UPDATED_AT='2026-09-21 08:00';
   const PIN_ATTEMPT_KEY='classSupportPinAttemptsV1';
   const COLORS=['#d85b5b','#ef9fb4','#4e78b8','#9adfe8','#efd66e','#397257','#7651a8'];
   const SUBJECTS=['国語','算数','理科','社会','生活','音楽','図画工作','家庭','体育','外国語','道徳','総合','自立活動'];
@@ -145,7 +145,7 @@
     document.querySelector('meta[name="theme-color"]').setAttribute('content',color);
   }
   function showToast(message){toastElement.innerHTML=`<span>${esc(message)}</span>`;toastElement.classList.remove('with-action');toastElement.classList.add('show');clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>toastElement.classList.remove('show'),2200);}
-  function showUndoToast(message,undo){toastElement.innerHTML=`<span>${esc(message)}</span><button type="button">元に戻す</button>`;toastElement.classList.add('show','with-action');clearTimeout(showToast.timer);const button=toastElement.querySelector('button');let available=true;button.addEventListener('click',async()=>{if(!available)return;available=false;button.disabled=true;await undo();toastElement.classList.remove('show','with-action');showToast('元に戻しました');});showToast.timer=setTimeout(()=>{available=false;toastElement.classList.remove('show','with-action');},7000);}
+  function showUndoToast(message,undo){toastElement.innerHTML=`<span>${esc(message)}</span><button type="button" aria-label="直前の変更を元に戻す">元に戻す</button>`;toastElement.classList.add('show','with-action');clearTimeout(showToast.timer);const button=toastElement.querySelector('button');let available=true;button.addEventListener('click',async()=>{if(!available)return;available=false;button.disabled=true;await undo();toastElement.classList.remove('show','with-action');showToast('元に戻しました');});showToast.timer=setTimeout(()=>{available=false;toastElement.classList.remove('show','with-action');},10000);}
   function markFeedback(studentId,status){state.feedback={studentId,status,until:Date.now()+700};}
   function feedbackClass(studentId){const item=state.feedback;if(!item||item.studentId!==studentId||Date.now()>item.until)return'';return` just-updated feedback-${item.status||'changed'}`;}
   function closeDialog(){if(dialog.open)dialog.close();dialog.innerHTML='';dialog.className='app-dialog';}
