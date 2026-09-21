@@ -621,3 +621,12 @@ h3{font-size:1rem;margin-bottom:8px}
 .app-dialog.quiz-entry-dialog .dialog-body{padding-bottom:86px;overscroll-behavior:contain}
 @media(max-width:900px){.panel,.settings-detail-card{padding:13px}.toolbar-line{align-items:stretch}.toolbar-line>.button{max-width:100%}.button-row>.button,.button-row>label.button{min-height:44px}.table-wrap{scrollbar-width:thin}}
 @media(max-width:820px) and (orientation:portrait){.manual-quiz-grid.seat-shaped{grid-template-columns:repeat(4,minmax(0,1fr))}.manual-quiz-card{min-height:64px;padding:6px}.manual-quiz-card span{font-size:.82rem}}
+/* 共通ページ骨格：目的、適用範囲、保存状態、ヘルプを同じ位置に置く。 */
+.page-purpose{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;margin:0 0 16px;padding:16px 18px;border:1px solid var(--line,#d7dfd8);border-left:5px solid var(--accent,#397257);border-radius:14px;background:var(--panel,#fff)}
+.page-purpose h1{margin:2px 0 6px;font-size:clamp(1.25rem,3.2vw,1.75rem)}
+.page-purpose p{margin:0;line-height:1.6}
+.page-purpose-kicker{font-size:.82rem;font-weight:700;color:var(--accent,#397257)}
+.page-purpose-status{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end;min-width:max-content}
+.page-purpose-help{min-height:44px}
+.settings-page-status{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+@media (max-width:700px){.page-purpose{display:block;padding:14px}.page-purpose-status{justify-content:flex-start;margin-top:12px}.page-purpose-status .status-pill,.page-purpose-help{width:100%;justify-content:center;text-align:center}.page-purpose-help{display:flex;align-items:center}}

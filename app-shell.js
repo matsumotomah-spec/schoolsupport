@@ -111,7 +111,20 @@
 
   function teacherToolShell(title,body,actions=''){
     const key=state.activeTool||state.route.replace('teacher-','');
-    return `<div class="app-shell">${headerHtml(title,actions)}<main class="page">${onboardingBannerHtml()}${body}</main>${key==='student'?'':teacherFooter(key)}</div>`;
+    return `<div class="app-shell">${headerHtml(title,actions)}<main class="page">${onboardingBannerHtml()}${pagePurposeHtml(pagePurposeFor(key,title))}${body}</main>${key==='student'?'':teacherFooter(key)}</div>`;
+  }
+
+  function pagePurposeHtml({title,purpose,scope='現在のクラス',saveState='日常の記録は端末内へ自動保存',helpKey=state.activeTool||'home'}={}){
+    return `<section class="page-purpose" aria-label="この画面の目的と保存状態"><div><p class="page-purpose-kicker">${esc(scope)}</p><h1>${esc(title||'')}</h1><p>${esc(purpose||'')}</p></div><div class="page-purpose-status"><span class="status-pill good">${esc(saveState)}</span><button type="button" class="button page-purpose-help" data-page-purpose-help="${esc(helpKey)}">この画面の使い方</button></div></section>`;
+  }
+
+  function wirePagePurposeHelp(target=document){target.querySelectorAll('[data-page-purpose-help]').forEach(button=>button.addEventListener('click',()=>openContextHelp(button.dataset.pagePurposeHelp)));}
+
+  function pagePurposeFor(key,title){
+    const purposes={daily:'今日の提出状況を児童ごとに記録します。',weekly:'週ごとの宿題の提出状況を確認・記録します。',certificate:'ミニ賞状を渡した記録を残します。',records:'児童の成長や行動を記録します。',assessment:'ノート評価を3観点で記録します。',tests:'小テストの得点を児童ごとに記録します。',grades:'紙テスト・小テスト・ノート評価を成績検討用にまとめて確認します。',occasional:'家庭から集める提出物の状況を確認します。',support:'個別支援級の学習記録を残します。',reports:'所見の根拠になる記録を確認します。',seating:'座席と配慮条件を整えます。',data:'同期・ファイル保存・復元を目的別に行います。'};
+    const scope=key==='data'?'年度・全クラス共通':selectedClass()?.name||'現在のクラス';
+    const saveState=key==='data'?'操作前に対象と結果を確認します':'記録は端末内へ自動保存';
+    return{title,purpose:purposes[key]||'この画面で必要な操作を行います。',scope,saveState,helpKey:key};
   }
 
   function activeToolRenderer(){return{daily:renderTeacherDaily,weekly:renderWeekly,certificate:renderCertificates,records:renderStudentRecords,memo:renderStudentRecords,behavior:renderStudentRecords,assessment:renderNotebook,tests:renderTests,grades:renderGradebook,occasional:renderOccasional,support:renderSupport,reports:renderReports,seating:renderSeating}[state.activeTool]||renderHome;}
@@ -124,7 +137,7 @@
   }
 
   function teacherFooter(active){const allowed=normalizeFooterLayout(state.footerLayout);return`<nav class="teacher-footer" aria-label="日常機能" style="--footer-count:${allowed.length}">${allowed.map(id=>`<button type="button" data-footer-tool="${id}" aria-current="${active===id?'page':'false'}" title="${footerLabel(id)}へ切り替える"><span>${featureIcon(id)}</span>${footerLabel(id)}</button>`).join('')}</nav>`;}
-  function wireToolHome(){const key=state.activeTool||state.route.replace('teacher-','');wireCommonHeader(key);wireOnboardingStop();document.querySelector('[data-breadcrumb-home]')?.addEventListener('click',()=>navigateSafely(renderHome));document.querySelectorAll('[data-footer-tool]').forEach(button=>button.addEventListener('click',()=>navigateSafely(()=>openFooterItem(button.dataset.footerTool))));}
+  function wireToolHome(){const key=state.activeTool||state.route.replace('teacher-','');wireCommonHeader(key);wireOnboardingStop();wirePagePurposeHelp();document.querySelector('[data-breadcrumb-home]')?.addEventListener('click',()=>navigateSafely(renderHome));document.querySelectorAll('[data-footer-tool]').forEach(button=>button.addEventListener('click',()=>navigateSafely(()=>openFooterItem(button.dataset.footerTool))));}
 
   function activeSeatGridTemplate(classItem){const cols=Math.max(1,Number(classItem?.activeSeatCols)||6),aisles=new Set((classItem?.activeSeatAisleAfterColumns||[]).map(Number)),tracks=[];for(let column=1;column<=cols;column++){tracks.push('minmax(0,1fr)');if(column<cols&&aisles.has(column))tracks.push('var(--teacher-aisle-track,minmax(18px,.25fr))');}return tracks.join(' ');}
   function submissionExempt(row){return Boolean(row?.enrollment?.submissionExempt);}
