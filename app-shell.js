@@ -115,7 +115,7 @@
   }
 
   function pagePurposeHtml({title,purpose,scope='現在のクラス',saveState='日常の記録は端末内へ自動保存',helpKey=state.activeTool||'home'}={}){
-    return `<section class="page-purpose" aria-label="この画面の目的と保存状態"><div><p class="page-purpose-kicker">${esc(scope)}</p><h1>${esc(title||'')}</h1><p>${esc(purpose||'')}</p></div><div class="page-purpose-status"><span class="status-pill good">${esc(saveState)}</span><button type="button" class="button page-purpose-help" data-page-purpose-help="${esc(helpKey)}">この画面の使い方</button></div></section>`;
+    return `<section class="page-purpose" aria-label="この画面の目的と保存状態"><div><p class="page-purpose-kicker">${esc(scope)}</p><h1>${esc(title||'')}</h1><p class="page-purpose-description">${esc(purpose||'')}</p></div><div class="page-purpose-status"><span class="status-pill good">${esc(saveState)}</span><button type="button" class="button page-purpose-help" data-page-purpose-help="${esc(helpKey)}">この画面の使い方</button></div></section>`;
   }
 
   function wirePagePurposeHelp(target=document){target.querySelectorAll('[data-page-purpose-help]').forEach(button=>button.addEventListener('click',()=>openContextHelp(button.dataset.pagePurposeHelp)));}
@@ -349,7 +349,7 @@
     if(!teacherActive()){renderPupil();return;}
     state.route='teacher-settings';state.activeTool='settings';
     const classItem=selectedClass();applyClassTheme(classItem);
-    app.innerHTML=`<div class="app-shell">${headerHtml('設定')}<main class="page"><div id="settings-content"></div></main>${teacherFooter('settings')}</div>`;
+    app.innerHTML=`<div class="app-shell">${headerHtml('設定')}<main class="page settings-page" data-page-key="settings"><div id="settings-content" class="settings-content" data-settings-content></div></main>${teacherFooter('settings')}</div>`;
     wireCommonHeader('settings');document.querySelector('[data-breadcrumb-home]')?.addEventListener('click',()=>navigateSafely(renderHome));document.querySelectorAll('[data-footer-tool]').forEach(button=>button.addEventListener('click',()=>navigateSafely(()=>openFooterItem(button.dataset.footerTool))));
     renderSettingsContent();
   }
