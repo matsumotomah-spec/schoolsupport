@@ -127,6 +127,21 @@
     return{title,purpose:purposes[key]||'この画面で必要な操作を行います。',scope,saveState,helpKey:key};
   }
 
+  function wireTeacherCardRoles(root=document){
+    const content=root.querySelector('.page-content');if(!content)return;
+    content.querySelectorAll(':scope > .panel, :scope > details.panel').forEach(card=>{
+      card.classList.add('teacher-content-card');
+      if(card.classList.contains('danger-zone'))card.dataset.cardRole='危険操作';
+      else if(card.matches('.notice,.dashboard,.summary-row'))card.dataset.cardRole='状態';
+    });
+  }
+  function wireTeacherInputPattern(root=document){
+    root.querySelectorAll('.roster-view-controls,.manual-quiz-toolbar').forEach(control=>{control.classList.add('teacher-input-pattern');control.setAttribute('data-input-pattern','児童を選ぶ → 入力する → 自動保存');});
+    root.querySelectorAll('[data-teacher-order],[data-quiz-order]').forEach(button=>button.classList.add('input-pattern-order'));
+    root.querySelectorAll('[data-quiz-mode]').forEach(button=>button.classList.add('input-pattern-mode'));
+    root.querySelectorAll('.teacher-student-grid,.manual-quiz-grid').forEach(grid=>grid.classList.add('teacher-input-grid'));
+  }
+
   function activeToolRenderer(){return{daily:renderTeacherDaily,weekly:renderWeekly,certificate:renderCertificates,records:renderStudentRecords,memo:renderStudentRecords,behavior:renderStudentRecords,assessment:renderNotebook,tests:renderTests,grades:renderGradebook,occasional:renderOccasional,support:renderSupport,reports:renderReports,seating:renderSeating}[state.activeTool]||renderHome;}
   function openPrintPreview({title,caption='',content,returnAction=activeToolRenderer()}){
     document.body.classList.add('print-preview-active');
@@ -137,7 +152,7 @@
   }
 
   function teacherFooter(active){const allowed=normalizeFooterLayout(state.footerLayout);return`<nav class="teacher-footer" aria-label="日常機能" style="--footer-count:${allowed.length}">${allowed.map(id=>`<button type="button" data-footer-tool="${id}" aria-current="${active===id?'page':'false'}" title="${footerLabel(id)}へ切り替える"><span>${featureIcon(id)}</span>${footerLabel(id)}</button>`).join('')}</nav>`;}
-  function wireToolHome(){const key=state.activeTool||state.route.replace('teacher-','');wireCommonHeader(key);wireOnboardingStop();wirePagePurposeHelp();document.querySelector('[data-breadcrumb-home]')?.addEventListener('click',()=>navigateSafely(renderHome));document.querySelectorAll('[data-footer-tool]').forEach(button=>button.addEventListener('click',()=>navigateSafely(()=>openFooterItem(button.dataset.footerTool))));}
+  function wireToolHome(){const key=state.activeTool||state.route.replace('teacher-','');wireTeacherCardRoles();wireTeacherInputPattern();wireCommonHeader(key);wireOnboardingStop();wirePagePurposeHelp();document.querySelector('[data-breadcrumb-home]')?.addEventListener('click',()=>navigateSafely(renderHome));document.querySelectorAll('[data-footer-tool]').forEach(button=>button.addEventListener('click',()=>navigateSafely(()=>openFooterItem(button.dataset.footerTool))));}
 
   function activeSeatGridTemplate(classItem){const cols=Math.max(1,Number(classItem?.activeSeatCols)||6),aisles=new Set((classItem?.activeSeatAisleAfterColumns||[]).map(Number)),tracks=[];for(let column=1;column<=cols;column++){tracks.push('minmax(0,1fr)');if(column<cols&&aisles.has(column))tracks.push('var(--teacher-aisle-track,minmax(18px,.25fr))');}return tracks.join(' ');}
   function submissionExempt(row){return Boolean(row?.enrollment?.submissionExempt);}
