@@ -36,8 +36,8 @@
   function createSyncPracticeFile(){const sample={format:'class-support-sync-practice',version:1,createdAt:ClassDB.now(),message:'このファイルには実際の児童情報や記録は入っていません。'};downloadText(`同期練習用_${syncDateStamp()}.json`,JSON.stringify(sample,null,2));showToast('練習用ファイルを保存しました');}
   function wireDataSectionTabs(root=document){
     const heading=root.querySelector('.data-heading');if(!heading)return;
-    root.querySelectorAll('[data-data-section="data-sync"],[data-data-section="data-backup"]').forEach(node=>{node.classList.add('card-role-navigation');node.dataset.cardRole='移動';});
-    root.querySelectorAll('[data-data-section="data-restore"]').forEach(node=>{node.classList.add('card-role-navigation');node.dataset.cardRole='危険操作';});
+    root.querySelectorAll('[data-data-section="data-sync"],[data-data-section="data-backup"]').forEach(node=>{node.classList.add('card-role-navigation','settings-choice-card');node.dataset.cardRole='選択';});
+    root.querySelectorAll('[data-data-section="data-restore"]').forEach(node=>{node.classList.add('card-role-navigation','settings-choice-card');node.dataset.cardRole='危険操作';});
     root.querySelector('#data-sync')?.setAttribute('data-card-role','実行');
     root.querySelector('#data-backup')?.setAttribute('data-card-role','実行');
     root.querySelector('.danger-zone')?.setAttribute('data-card-role','危険操作');
