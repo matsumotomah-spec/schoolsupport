@@ -1,0 +1,10 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const source=fs.readFileSync(path.resolve(__dirname,"..","app-data.js"),"utf8");
+assert.doesNotMatch(source,/<details class="panel data-advanced"/);
+assert.doesNotMatch(source,/<details class="panel danger-zone data-advanced"/);
+assert.match(source,/settings-detail-card data-advanced/);
+assert.match(source,/data-card-role="危険"/);
+console.log("data-management-card-regression: passed");

@@ -1,0 +1,12 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const css=fs.readFileSync(path.resolve(__dirname,"..","styles.css"),"utf8");
+const grades=fs.readFileSync(path.resolve(__dirname,"..","app-grades.js"),"utf8");
+assert.match(css,/\.quiz-score-picker\{[^}]*z-index:60/);
+assert.match(css,/\.quiz-score-picker\{[^}]*max-height:min\(52dvh,520px\)/);
+assert.match(css,/max-width:820px\) and \(orientation:portrait\).*quiz-score-picker/s);
+assert.match(grades,/manual-quiz-grid/);
+assert.match(grades,/data-quiz-score-choice/);
+console.log("quiz-narrow-layout-regression: passed");

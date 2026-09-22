@@ -1,0 +1,12 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const root=path.resolve(__dirname,"..");
+const shell=fs.readFileSync(path.join(root,"app-shell.js"),"utf8");
+const csv=fs.readFileSync(path.join(root,"csv-export.js"),"utf8");
+assert.match(shell,/未確認/);
+assert.match(shell,/未提出/);
+assert.match(csv,/unconfirmed:'未確認'/);
+assert.match(csv,/unsubmitted:'未提出'/);
+console.log("daily-status-terminology: passed");

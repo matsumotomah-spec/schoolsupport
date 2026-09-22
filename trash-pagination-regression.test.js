@@ -1,0 +1,12 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const core=fs.readFileSync(path.resolve(__dirname,"..","app-core.js"),"utf8");
+const data=fs.readFileSync(path.resolve(__dirname,"..","app-data.js"),"utf8");
+assert.match(core,/trashDisplayLimit:50/);
+assert.match(data,/trash\.slice\(0,state\.trashDisplayLimit\|\|50\)/);
+assert.match(data,/id=\"trash-more\"/);
+assert.match(data,/さらに50件表示/);
+assert.match(data,/filter\(trashBelongsToCurrentYear\)/);
+console.log("trash-pagination-regression: passed");

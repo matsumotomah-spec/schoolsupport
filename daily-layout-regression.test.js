@@ -1,0 +1,13 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const root=path.resolve(__dirname,"..");
+const shell=fs.readFileSync(path.join(root,"app-shell.js"),"utf8");
+const records=fs.readFileSync(path.join(root,"app-records.js"),"utf8");
+const css=fs.readFileSync(path.join(root,"styles.css"),"utf8");
+assert.match(shell,/<details class="daily-utility">/);
+assert.match(records,/<details class="weekly-utility">/);
+assert.match(shell,/未確認/);
+assert.match(css,/behavior-category-grid\{grid-template-columns:repeat\(3/);
+console.log("daily-layout-regression: passed");

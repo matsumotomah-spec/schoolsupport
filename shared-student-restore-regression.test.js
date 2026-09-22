@@ -1,0 +1,10 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const source=fs.readFileSync(path.resolve(__dirname,"..","app-data-migration.js"),"utf8");
+assert.match(source,/const sharedStudentIds=new Set\(allEnrollments\.filter\(row=>row\.classId!==restoredClass\.id\)/);
+assert.match(source,/const students=\(bundle\.students\|\|\[\]\)\.filter\(row=>!sharedStudentIds\.has\(row\.id\)\|\|!existingStudentIds\.has\(row\.id\)\)/);
+assert.match(source,/if\(await ClassDB\.get\('classes',restoredClass\.id\)\)return 0/);
+assert.match(source,/const existingRecordIds=new Set\(allRecords\.map\(row=>row\.id\)\)/);
+console.log("shared-student-restore-regression: passed");

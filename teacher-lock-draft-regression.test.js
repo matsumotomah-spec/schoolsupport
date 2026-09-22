@@ -1,0 +1,13 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const core=fs.readFileSync(path.resolve(__dirname,"..","app-core.js"),"utf8");
+const shell=fs.readFileSync(path.resolve(__dirname,"..","app-shell.js"),"utf8");
+assert.match(core,/function sensitiveDraftForm\(form\)/);
+assert.match(core,/input\[type="password"\]/);
+assert.match(core,/function preserveLockedDialog\(\)/);
+assert.match(core,/function restoreLockedDialog\(\)/);
+assert.match(core,/if\(!preserved\)clearUnsavedDrafts\(\)/);
+assert.match(shell,/if\(!restoreLockedDialog\(\)\)renderHome\(\)/);
+console.log("teacher-lock-draft-regression: passed");

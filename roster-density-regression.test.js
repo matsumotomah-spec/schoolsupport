@@ -1,0 +1,10 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const source=fs.readFileSync(path.resolve(__dirname,"..","app-shell.js"),"utf8");
+assert.match(source,/state\.rosterDensity==='compact'/);
+assert.match(source,/state\.rosterDensity==='auto'/);
+assert.match(source,/function teacherRosterCards/);
+assert.match(source,/function pupilStudentGrid/);
+console.log("roster-density-regression: passed");

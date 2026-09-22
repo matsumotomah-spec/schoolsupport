@@ -1,0 +1,11 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const core=fs.readFileSync(path.resolve(__dirname,"..","app-core.js"),"utf8");
+const reports=fs.readFileSync(path.resolve(__dirname,"..","app-reports.js"),"utf8");
+const records=fs.readFileSync(path.resolve(__dirname,"..","app-records.js"),"utf8");
+assert.match(core,/function normalRecord\(item\)\{return Boolean\(item&&!item\.needsReview&&!item\.deletedAt\)/);
+assert.match(reports,/normalRecord\(item\)/);
+assert.match(records,/normalRecord\(item\)/);
+console.log("conflict-separation-regression: passed");

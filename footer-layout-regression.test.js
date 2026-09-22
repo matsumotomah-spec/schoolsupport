@@ -1,0 +1,12 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const root=path.resolve(__dirname,"..");
+const css=fs.readFileSync(path.join(root,"styles.css"),"utf8");
+const display=fs.readFileSync(path.join(root,"app-settings-display.js"),"utf8");
+assert.match(css,/\.teacher-footer/);
+assert.match(css,/safe-area-inset-bottom/);
+assert.match(display,/function refreshFooterBar/);
+assert.match(display,/--footer-count/);
+console.log("footer-layout-regression: passed");

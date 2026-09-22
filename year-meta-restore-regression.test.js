@@ -1,0 +1,10 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const source=fs.readFileSync(path.resolve(__dirname,"..","db.js"),"utf8");
+assert.match(source,/const YEAR_SYNC_META_KEYS=new Set/);
+assert.match(source,/staleYearMeta=\(await getAll\('meta'\)\)\.filter\(item=>YEAR_SYNC_META_KEYS\.has\(item\.key\)&&!incomingMetaKeys\.has\(item\.key\)\)/);
+assert.match(source,/students:deletableStudents\.filter\(id=>!ids\('students'\)\.has\(id\)\),meta:staleYearMeta/);
+assert.doesNotMatch(source,/deletes:\{[^}]*pcPinlessMode/);
+console.log("year-meta-restore-regression: passed");

@@ -4,6 +4,7 @@
   const DB_NAME='class-support-v1';
   const DB_VERSION=1;
   const STORES=['meta','years','classes','students','enrollments','records','trash'];
+  const YEAR_SYNC_META_KEYS=new Set(['testGradeThresholds','pupilOverviewVisibility','pupilKanaMode','showMonthlyForgotten','weeklySkippedWeeks','memoTags','certificateTags','supportTags','reportPromptTemplate','homeworkMedalLimit']);
 
   function requestResult(request){
     return new Promise((resolve,reject)=>{
@@ -174,5 +175,21 @@
     await applyBatch({clear:STORES,puts});
   }
 
-  window.ClassDB={open,uid,now,deviceId,get,getAll,getAllByIndex,put,putMany,putRaw,putManyRaw,remove,getMeta,setMeta,applyBatch,replaceAllRaw,resetAll};
+  async function replaceYearRaw(data={},yearId){
+    if(!yearId)throw new Error('復元対象の年度を指定してください');
+    const classes=await getAllByIndex('classes','yearId',yearId),classIds=new Set(classes.map(item=>item.id));
+    const allEnrollments=await getAll('enrollments'),enrollments=allEnrollments.filter(item=>classIds.has(item.classId)),studentIds=new Set(enrollments.map(item=>item.studentId));
+    const records=(await getAll('records')).filter(item=>classIds.has(item.classId)),trash=(await getAll('trash')).filter(item=>classIds.has(item.record?.classId)||(item.kind==='classBundle'&&item.classBundle?.class?.yearId===yearId));
+    const remainingEnrollmentStudents=new Set(allEnrollments.filter(item=>!classIds.has(item.classId)).map(item=>item.studentId));
+    // Students can be enrolled in more than one year.  A year-only restore
+    // must not overwrite the profile that another year is currently using.
+    const incoming={years:(data.years||[]).filter(item=>item.id===yearId),classes:(data.classes||[]).filter(item=>item.yearId===yearId),students:(data.students||[]).filter(item=>!remainingEnrollmentStudents.has(item.id)),enrollments:data.enrollments||[],records:data.records||[],trash:data.trash||[],meta:data.meta||[]};
+    const ids=name=>new Set((incoming[name]||[]).map(item=>item.id||item.key));
+    const incomingMetaKeys=ids('meta'),staleYearMeta=(await getAll('meta')).filter(item=>YEAR_SYNC_META_KEYS.has(item.key)&&!incomingMetaKeys.has(item.key)).map(item=>item.key);
+    const deletableStudents=[...studentIds].filter(id=>!remainingEnrollmentStudents.has(id));
+    const remove=(name,items,key='id')=>items.map(item=>item[key]).filter(id=>!ids(name).has(id));
+    await applyBatch({puts:incoming,deletes:{years:[yearId].filter(id=>!ids('years').has(id)),classes:remove('classes',classes),enrollments:remove('enrollments',enrollments),records:remove('records',records),trash:remove('trash',trash),students:deletableStudents.filter(id=>!ids('students').has(id)),meta:staleYearMeta}});
+  }
+
+  window.ClassDB={open,uid,now,deviceId,get,getAll,getAllByIndex,put,putMany,putRaw,putManyRaw,remove,getMeta,setMeta,applyBatch,replaceAllRaw,replaceYearRaw,resetAll};
 })();

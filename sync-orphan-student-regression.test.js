@@ -1,0 +1,10 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const source=fs.readFileSync(path.resolve(__dirname,"..","app-data-sync.js"),"utf8");
+assert.match(source,/async function syncOrphanStudentIds\(plan\)/);
+assert.match(source,/const remaining=\(await ClassDB\.getAll\('enrollments'\)\)/);
+assert.match(source,/if\(orphanStudents\.length\)deletes\.students=orphanStudents/);
+assert.match(source,/const orphanStudents=approveDeletes\?await syncOrphanStudentIds\(plan\):\[\]/);
+console.log("sync-orphan-student-regression: passed");

@@ -1,0 +1,24 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const vm=require("node:vm");
+const source=fs.readFileSync(path.resolve(__dirname,"..","app-data-sync.js"),"utf8");
+const start=source.indexOf("  function newerThan");
+const end=source.indexOf("  async function readEncryptedImport");
+const batchStart=source.indexOf("  function syncBatchForPlan");
+const batchEnd=source.indexOf("  async function applySyncPlan");
+const localClass={id:"class-1",updatedAt:"2026-09-01T00:00:00.000Z"};
+const localRecord={id:"record-1",classId:"class-1",updatedAt:"2026-09-01T00:00:00.000Z"};
+const context={ClassDB:{getAll:async store=>store==='trash'?[]:[localRecord],get:async(store,id)=>store==='classes'&&id==='class-1'?localClass:null,getAllByIndex:async store=>store==='records'?[localRecord]:[],uid:()=>"unused"},isYearSyncMeta:()=>true};
+vm.createContext(context);
+vm.runInContext(`${source.slice(start,end)}${source.slice(batchStart,batchEnd)};this.buildSyncPlan=buildSyncPlan;this.syncBatchForPlan=syncBatchForPlan;`,context);
+(async()=>{
+  const trash={id:"trash-class-1",kind:"classBundle",classBundle:{class:localClass,enrollments:[],records:[localRecord],students:[]},deletedAt:"2026-09-02T00:00:00.000Z"};
+  const plan=await context.buildSyncPlan({data:{trash:[trash],meta:[]}});
+  assert.equal(plan.classDeletes.length,1);
+  const batch=context.syncBatchForPlan(plan,true);
+  assert.deepEqual(JSON.parse(JSON.stringify(batch.deletes)),{records:["record-1"],classes:["class-1"]});
+  assert.deepEqual(JSON.parse(JSON.stringify(batch.puts.trash)),[trash]);
+  console.log("sync-class-deletion-regression: passed");
+})().catch(error=>{console.error(error);process.exitCode=1;});

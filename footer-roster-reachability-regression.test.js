@@ -1,0 +1,13 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const shell=fs.readFileSync(path.resolve(__dirname,"..","app-shell.js"),"utf8");
+const css=fs.readFileSync(path.resolve(__dirname,"..","styles.css"),"utf8");
+assert.match(shell,/id=\"teacher-roster-list\"/);
+assert.match(shell,/roster-jump/);
+assert.match(css,/\.page\{[^}]*128px/);
+assert.match(css,/\.teacher-student-grid\{scroll-margin-top:128px;scroll-margin-bottom:128px\}/);
+assert.match(css,/\.roster-jump-wrap/);
+assert.match(css,/position:sticky;top:72px/);
+console.log("footer-roster-reachability-regression: passed");

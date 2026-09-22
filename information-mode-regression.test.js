@@ -1,0 +1,9 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const css=fs.readFileSync(path.resolve(__dirname,"..","styles.css"),"utf8");
+assert.match(css,/:root\[data-information="compact"\] \.settings-page-description/);
+assert.match(css,/:root\[data-information="compact"\] \.operation-guide\{display:none\}/);
+assert.match(css,/:root\[data-information="detailed"\] \.operation-guide\{display:grid\}/);
+console.log("information-mode-regression: passed");

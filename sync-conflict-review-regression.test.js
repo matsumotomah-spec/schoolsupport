@@ -1,0 +1,12 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const sync=fs.readFileSync(path.resolve(__dirname,"..","app-data-sync.js"),"utf8");
+const data=fs.readFileSync(path.resolve(__dirname,"..","app-data.js"),"utf8");
+assert.match(sync,/async function currentYearSyncConflicts\(\)/);
+assert.match(sync,/function openSyncConflictReview\(\)/);
+assert.match(sync,/async function resolveSyncConflict\(conflictId,choice\)/);
+assert.match(sync,/data-conflict-choice/);
+assert.match(data,/id=\"sync-conflict-review\"/);
+console.log("sync-conflict-review-regression: passed");

@@ -8,8 +8,8 @@
   const PIN_LENGTH=6;
   const PIN_MAX_FAILURES=5;
   const PIN_LOCK_MS=30*1000;
-  const APP_VERSION='129';
-  const APP_UPDATED_AT='2026-09-22 06:40';
+  const APP_VERSION='130';
+  const APP_UPDATED_AT='2026-09-22 13:00';
   const PIN_ATTEMPT_KEY='classSupportPinAttemptsV1';
   const COLORS=['#d85b5b','#ef9fb4','#4e78b8','#9adfe8','#efd66e','#397257','#7651a8'];
   const SUBJECTS=['国語','算数','理科','社会','生活','音楽','図画工作','家庭','体育','外国語','道徳','総合','自立活動'];
@@ -76,6 +76,7 @@
     studentReturnTool:null,
     onboardingStep:0,
     footerLayout:[...DEFAULT_FOOTER_LAYOUT],
+    trashDisplayLimit:50,
     drafts:{roster:false,forms:new Set(),nextFormId:0}
   };
   function rosterDraftIsDirty(){return Boolean(state.drafts?.roster);}
@@ -83,8 +84,16 @@
   function formDraftKey(form){if(!form?.dataset)return'';if(!form.dataset.draftKey)form.dataset.draftKey=form.id||`form-${++state.drafts.nextFormId}`;return form.dataset.draftKey;}
   function markFormDraftDirty(form){const key=formDraftKey(form);if(key)state.drafts.forms.add(key);}
   function clearFormDraft(form){const key=formDraftKey(form);if(key)state.drafts.forms.delete(key);}
+  function completeFormDraft(form){
+    // Event.currentTarget becomes null after an await.  Fall back to the
+    // dirty form that is still mounted so successful async saves clear only
+    // their own draft marker.
+    const target=form||document.activeElement?.closest?.('form')||[...document.querySelectorAll('form')].find(candidate=>state.drafts.forms.has(formDraftKey(candidate)));
+    if(target)clearFormDraft(target);
+  }
   function hasUnsavedDraft(){return rosterDraftIsDirty()||state.drafts.forms.size>0;}
   function clearUnsavedDrafts(){markRosterDraftDirty(false);state.drafts.forms.clear();}
+  function normalRecord(item){return Boolean(item&&!item.needsReview&&!item.deletedAt);}
   async function navigateSafely(action){if(rosterDraftIsDirty()&&state.route==='teacher-settings'&&state.settingsTab==='classes'&&state.classSettingsView==='roster'){const saved=await saveRoster({silent:true,rerender:false});if(!saved)return;action();return;}if(hasUnsavedDraft()&&!window.confirm('入力中の変更が保存されていません。移動しますか？'))return;clearUnsavedDrafts();action();}
 
   const HELP_TOPICS={
@@ -155,7 +164,15 @@
   function showUndoToast(message,undo){toastElement.innerHTML=`<span>${esc(message)}</span><button type="button" aria-label="直前の変更を元に戻す">元に戻す</button>`;toastElement.classList.add('show','with-action');clearTimeout(showToast.timer);const button=toastElement.querySelector('button');let available=true;button.addEventListener('click',async()=>{if(!available)return;available=false;button.disabled=true;await undo();toastElement.classList.remove('show','with-action');showToast('元に戻しました');});showToast.timer=setTimeout(()=>{available=false;toastElement.classList.remove('show','with-action');},10000);}
   function markFeedback(studentId,status){state.feedback={studentId,status,until:Date.now()+700};}
   function feedbackClass(studentId){const item=state.feedback;if(!item||item.studentId!==studentId||Date.now()>item.until)return'';return` just-updated feedback-${item.status||'changed'}`;}
-  function closeDialog(){if(dialog.open)dialog.close();dialog.innerHTML='';dialog.className='app-dialog';}
+  function closeDialog(options={}){const form=dialog.querySelector('form');if(form&&!options.keepDraft)clearFormDraft(form);if(dialog.open)dialog.close();if(!options.keepContents)dialog.innerHTML='';dialog.className='app-dialog';}
+  function requestDialogClose(){
+    const form=dialog.querySelector('form');
+    if(form&&state.drafts.forms.has(formDraftKey(form))&&!window.confirm('入力中の変更が保存されていません。閉じますか？'))return false;
+    if(form)clearFormDraft(form);
+    closeDialog();
+    return true;
+  }
+  dialog.addEventListener('cancel',event=>{event.preventDefault();requestDialogClose();});
   function openDialog(html){dialog.className='app-dialog';dialog.innerHTML=`<div class="dialog-body">${html}</div>`;dialog.showModal();}
   function bytesToBase64(bytes){let binary='';bytes.forEach(byte=>binary+=String.fromCharCode(byte));return btoa(binary);}
   function base64ToBytes(value){return Uint8Array.from(atob(value),char=>char.charCodeAt(0));}
@@ -195,7 +212,16 @@
     if(!state.year){renderSetup();return;}
     restorePinAttempts();
     state.classes=(await ClassDB.getAllByIndex('classes','yearId',state.year.id)).sort((a,b)=>(b.isOwn-a.isOwn)||(a.order-b.order));
-    if(!state.classes.length){await resetToWelcomePreservingLegacy();return;}
+    // A year without active classes is a valid state after the last class was
+    // moved to the trash.  Do not treat it as a brand-new installation: doing
+    // so would erase the trash and every other year on the next launch.
+    if(!state.classes.length){
+      state.selectedClassId=null;
+      state.settingsTab='classes';
+      state.classSettingsView='list';
+      requireTeacher(renderSettings);
+      return;
+    }
     state.selectedClassId=await ClassDB.getMeta('selectedClassId',state.classes[0]?.id||null);
     state.lastBackupAt=await ClassDB.getMeta('lastBackupAt',null);state.lastSyncAt=await ClassDB.getMeta('lastSyncAt',null);state.backupDismissedUntil=await ClassDB.getMeta('backupDismissedUntil',null);
     if(!state.classes.some(item=>item.id===state.selectedClassId))state.selectedClassId=state.classes[0]?.id||null;
@@ -203,6 +229,12 @@
   }
 
   async function purgeExpiredTrash(){const now=ClassDB.now(),expired=(await ClassDB.getAll('trash')).filter(item=>item.purgeAfter&&item.purgeAfter<now);for(const item of expired)await ClassDB.remove('trash',item.id);}
+
+  async function reloadStateFromDb(){
+    state.theme=await ClassDB.getMeta('themePreference',window.matchMedia?.('(prefers-color-scheme: dark)').matches?'dark':'light');state.iconMode=await ClassDB.getMeta('featureIconMode','standard');state.emojiIcons={...DEFAULT_EMOJI_ICONS,...await ClassDB.getMeta('featureEmojiIcons',{})};state.rewardIcon=await ClassDB.getMeta('homeworkRewardIcon','✨');
+    const thresholds=await ClassDB.getMeta('testGradeThresholds',null);state.testGradeThresholds=thresholds&&['A','B+','B','B-'].every(key=>thresholds[key]&&typeof thresholds[key]==='object')?thresholds:null;const monthly=await ClassDB.getMeta('showMonthlyForgotten',true),overview=await ClassDB.getMeta('pupilOverviewVisibility',{});state.pupilOverviewVisibility={daily:true,weekly:true,occasional:true,monthly,reward:true,...overview};state.showMonthlyForgotten=state.pupilOverviewVisibility.monthly;state.pupilKanaMode=Boolean(await ClassDB.getMeta('pupilKanaMode',false));state.footerLayout=normalizeFooterLayout(await ClassDB.getMeta('footerLayout',DEFAULT_FOOTER_LAYOUT));state.pcPinlessMode=Boolean(await ClassDB.getMeta('pcPinlessMode',false));
+    const info=await ClassDB.getMeta('informationMode',null),legacyExplanations=await ClassDB.getMeta('showExplanations',true);state.informationMode=['compact','standard','detailed'].includes(info)?info:(legacyExplanations?'standard':'compact');state.showExplanations=state.informationMode!=='compact';state.rosterDensity=await ClassDB.getMeta('rosterDensity','auto');state.onboardingStep=Number(await ClassDB.getMeta('onboardingStep',0));state.year=await ClassDB.get('years',await ClassDB.getMeta('activeYearId'));state.classes=state.year?(await ClassDB.getAllByIndex('classes','yearId',state.year.id)).sort((a,b)=>(b.isOwn-a.isOwn)||(a.order-b.order)):[];state.selectedClassId=await ClassDB.getMeta('selectedClassId',state.classes[0]?.id||null);if(!state.classes.some(item=>item.id===state.selectedClassId))state.selectedClassId=state.classes[0]?.id||null;state.lastBackupAt=await ClassDB.getMeta('lastBackupAt',null);state.lastSyncAt=await ClassDB.getMeta('lastSyncAt',null);state.backupDismissedUntil=await ClassDB.getMeta('backupDismissedUntil',null);applyTheme();return state;
+  }
 
   function renderSetup(){
     state.route='setup';
@@ -333,7 +365,11 @@
   function pcPinlessEligible(){return Boolean(state.pcPinlessMode&&isDesktopDevice());}
   function unlockTeacher(secret=null){state.teacherUntil=Date.now()+AUTH_MS;if(secret)state.sessionSecret=secret;scheduleLock();}
   function teacherActive(){return Date.now()<state.teacherUntil;}
-  function scheduleLock(){clearTimeout(state.lockTimer);const wait=Math.max(0,state.teacherUntil-Date.now());state.lockTimer=setTimeout(()=>{if(pcPinlessEligible()&&state.route.startsWith('teacher')){state.teacherUntil=Date.now()+AUTH_MS;scheduleLock();return;}state.sessionSecret=null;if(state.route.startsWith('teacher'))renderPupil();},wait);}
+  function sensitiveDraftForm(form){return Boolean(form?.querySelector('input[type="password"],.pin-input,[id*="password" i],[id*="credential" i],[id*="recovery" i],[id*="secret" i]'));}
+  function preserveLockedDialog(){const form=dialog.querySelector('form');if(!form||!state.drafts.forms.has(formDraftKey(form))||sensitiveDraftForm(form))return false;const nodes=[];while(dialog.firstChild)nodes.push(dialog.removeChild(dialog.firstChild));state.lockedDialogNodes=nodes;return nodes.length>0;}
+  function restoreLockedDialog(){if(!state.lockedDialogNodes?.length)return false;dialog.innerHTML='';state.lockedDialogNodes.forEach(node=>dialog.appendChild(node));state.lockedDialogNodes=null;dialog.showModal();return true;}
+  function lockTeacherSession(){const preserved=preserveLockedDialog();state.sessionSecret=null;state.pendingSync=null;if(!preserved)clearUnsavedDrafts();closeDialog({keepContents:preserved});if(state.route.startsWith('teacher'))renderPupil();}
+  function scheduleLock(){clearTimeout(state.lockTimer);const wait=Math.max(0,state.teacherUntil-Date.now());state.lockTimer=setTimeout(()=>{if(pcPinlessEligible()&&state.route.startsWith('teacher')){state.teacherUntil=Date.now()+AUTH_MS;scheduleLock();return;}lockTeacherSession();},wait);}
   function touchTeacher(){if(!state.route.startsWith('teacher')||!teacherActive())return;state.teacherUntil=Date.now()+AUTH_MS;scheduleLock();}
   document.addEventListener('pointerdown',touchTeacher,{passive:true});
   document.addEventListener('keydown',touchTeacher);
@@ -347,7 +383,7 @@
   function openPinAuthentication(onSuccess){
     const waitSeconds=Math.max(0,Math.ceil((state.pinLockedUntil-Date.now())/1000));
     openDialog(`<h2>教師用画面を開く</h2><p class="muted">6桁の教師用PINを入力してください。</p><form id="pin-auth-form"><div class="field"><label for="auth-pin">教師用PIN</label><input class="input pin-input" id="auth-pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="off" autofocus required></div><p class="error" id="auth-error" role="alert">${waitSeconds?`入力を${waitSeconds}秒待ってください。`:''}</p><div class="button-row"><button type="button" class="button ghost" id="auth-annual">PINを忘れた場合</button></div><div class="dialog-actions"><button type="button" class="button" id="auth-cancel">キャンセル</button><button type="submit" class="button primary" id="pin-auth-submit" ${waitSeconds?'disabled':''}>認証</button></div></form>`);
-    document.getElementById('auth-cancel').addEventListener('click',closeDialog);
+    document.getElementById('auth-cancel').addEventListener('click',requestDialogClose);
     document.getElementById('auth-annual').addEventListener('click',()=>openAnnualTeacherAuth(onSuccess));
     if(waitSeconds)setTimeout(()=>{if(document.getElementById('pin-auth-form')){closeDialog();openPinAuthentication(onSuccess);}},waitSeconds*1000);
     document.getElementById('pin-auth-form').addEventListener('submit',async event=>{
@@ -369,7 +405,7 @@
 
   function openAnnualTeacherAuth(onSuccess){
     openDialog(`<h2>年度パスワードで認証</h2><p class="muted">PINを忘れた場合の認証です。認証後は教師用PINを変更できます。</p>${state.year?.passwordHint?`<p class="panel small">ヒント：${esc(state.year.passwordHint)}</p>`:''}<form id="annual-auth-form"><div class="field"><label for="auth-password">年度パスワード</label><input class="input" id="auth-password" type="password" autocomplete="current-password" autofocus required></div><p class="error" id="auth-error" role="alert"></p><div class="button-row"><button type="button" class="button ghost" id="auth-recovery">年度パスワードも忘れた場合</button></div><div class="dialog-actions"><button type="button" class="button" id="auth-cancel">キャンセル</button><button type="submit" class="button primary">認証</button></div></form>`);
-    document.getElementById('auth-cancel').addEventListener('click',closeDialog);
+    document.getElementById('auth-cancel').addEventListener('click',requestDialogClose);
     document.getElementById('auth-recovery').addEventListener('click',openPasswordRecovery);
     document.getElementById('annual-auth-form').addEventListener('submit',async event=>{
       event.preventDefault();const password=document.getElementById('auth-password').value;
@@ -380,7 +416,7 @@
 
   function openPinMigration(onSuccess){
     openDialog(`<h2>教師用PINを設定</h2><p class="muted">従来データを安全に引き継ぐため、年度パスワードで一度確認し、日常用の6桁PINを設定します。</p><form id="pin-migration-form"><div class="field"><label for="migration-password">現在の年度パスワード</label><input class="input" id="migration-password" type="password" autocomplete="current-password" required autofocus></div><div class="form-grid section"><div class="field"><label for="migration-pin">新しい教師用PIN</label><input class="input pin-input" id="migration-pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></div><div class="field"><label for="migration-pin2">PIN確認</label><input class="input pin-input" id="migration-pin2" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></div></div><p class="error" id="pin-migration-error"></p><div class="dialog-actions"><button type="button" class="button" id="pin-migration-cancel">キャンセル</button><button type="submit" class="button primary">PINを設定して開く</button></div></form>`);
-    document.getElementById('pin-migration-cancel').addEventListener('click',closeDialog);
+    document.getElementById('pin-migration-cancel').addEventListener('click',requestDialogClose);
     document.getElementById('pin-migration-form').addEventListener('submit',async event=>{
       event.preventDefault();const error=document.getElementById('pin-migration-error'),password=document.getElementById('migration-password').value,pin=document.getElementById('migration-pin').value,pin2=document.getElementById('migration-pin2').value;
       if(!await verifySecret(password,state.year.auth)){error.textContent='年度パスワードが違います。';return;}
@@ -396,14 +432,14 @@
       let settled=false;const finish=value=>{if(settled)return;settled=true;dialog.removeEventListener('cancel',onDialogCancel);resolve(value);};const onDialogCancel=()=>finish(false);
       openDialog(`<h2>年度パスワードを入力</h2><p class="muted">暗号化・復号を行うときだけ必要です。PCログイン時のパスワードのように、本人には覚えやすく他人には推測されにくいものを入力してください。</p>${state.year?.passwordHint?`<p class="panel small">ヒント：${esc(state.year.passwordHint)}</p>`:''}<form id="crypto-auth-form"><div class="field"><label for="crypto-password">年度パスワード</label><input class="input" id="crypto-password" type="password" autocomplete="current-password" autofocus required></div><p class="error" id="crypto-auth-error"></p><div class="dialog-actions"><button type="button" class="button" id="crypto-auth-cancel">キャンセル</button><button type="submit" class="button primary">続ける</button></div></form>`);
       dialog.addEventListener('cancel',onDialogCancel,{once:true});
-      document.getElementById('crypto-auth-cancel').addEventListener('click',()=>{closeDialog();finish(false);});
+      document.getElementById('crypto-auth-cancel').addEventListener('click',()=>{if(requestDialogClose())finish(false);});
       document.getElementById('crypto-auth-form').addEventListener('submit',async event=>{event.preventDefault();const password=document.getElementById('crypto-password').value;if(!await verifySecret(password,state.year.auth)){document.getElementById('crypto-auth-error').textContent='年度パスワードが違います。';return;}state.sessionSecret=password;closeDialog();finish(true);});
     });
   }
 
   function openPasswordRecovery(){
     openDialog(`<h2>復旧コードで開く</h2><p class="muted">この端末にデータが残っていれば、復旧コードだけで年度パスワードを再設定できます。新しい端末やデータ消失時は暗号化バックアップも選んでください。</p>${state.year?.passwordHint?`<p class="panel small">パスワードのヒント：${esc(state.year.passwordHint)}</p>`:''}<form id="password-recovery-form"><div class="field"><label for="recovery-backup-file">暗号化バックアップ（別端末・データ消失時のみ）</label><input class="input" id="recovery-backup-file" type="file" accept=".json,application/json"></div><div class="field section"><label for="recovery-code-input">復旧コード</label><input class="input" id="recovery-code-input" autocomplete="off" required></div><div class="form-grid section"><div class="field"><label for="recovery-new-password">新しい年度パスワード</label><input class="input" id="recovery-new-password" type="password" minlength="8" required></div><div class="field"><label for="recovery-new-password2">新しいパスワードの確認</label><input class="input" id="recovery-new-password2" type="password" minlength="8" required></div></div><p class="error" id="password-recovery-error"></p><div class="dialog-actions"><button type="button" class="button" id="password-recovery-cancel">キャンセル</button><button type="submit" class="button primary">復旧してパスワードを変更</button></div></form>`);
-    document.getElementById('password-recovery-cancel').addEventListener('click',closeDialog);document.getElementById('password-recovery-form').addEventListener('submit',recoverPasswordFromBackup);
+    document.getElementById('password-recovery-cancel').addEventListener('click',requestDialogClose);document.getElementById('password-recovery-form').addEventListener('submit',recoverPasswordFromBackup);
   }
 
   async function recoverPasswordFromBackup(event){
@@ -425,8 +461,8 @@
       meta.push({key:'activeYearId',value:updatedYear.id,updatedAt:timestamp,deviceId},{key:'selectedClassId',value:selectedClassId,updatedAt:timestamp,deviceId});
       const replacement={...payload.data,years:payload.data.years.map(item=>item.id===updatedYear.id?updatedYear:item),meta};
       openDialog(`<h2>${esc(payload.yearLabel)}を復旧しますか</h2><p>クラス ${classes.length}件、児童 ${payload.data.students.length}人、記録 ${payload.data.records.length}件を確認しました。</p><p class="notice"><strong>この端末に現在ある新形式データを、選んだバックアップの内容へ置き換えます。</strong><br>以前のツール用データは削除しません。</p><div class="dialog-actions"><button type="button" class="button" id="recovery-replace-cancel">キャンセル</button><button type="button" class="button primary" id="recovery-replace-confirm">確認して復旧</button></div>`);
-      document.getElementById('recovery-replace-cancel').addEventListener('click',closeDialog);
-      document.getElementById('recovery-replace-confirm').addEventListener('click',event=>runOnce(event.currentTarget,async()=>{try{await ClassDB.replaceAllRaw(replacement);state.year=updatedYear;state.classes=classes;state.selectedClassId=selectedClassId;unlockTeacher(password);closeDialog();showToast('バックアップを復旧し、新しい年度パスワードを設定しました');renderHome();}catch(problem){openDialog(`<h2>復旧を完了できませんでした</h2><p>${esc(problem.message||'端末への保存に失敗しました')}</p><p class="muted">元のデータは変更されていません。空き容量を確認して、もう一度お試しください。</p><div class="dialog-actions"><button type="button" class="button primary" id="recovery-error-close">OK</button></div>`);document.getElementById('recovery-error-close').addEventListener('click',closeDialog);}}));
+      document.getElementById('recovery-replace-cancel').addEventListener('click',requestDialogClose);
+document.getElementById('recovery-replace-confirm').addEventListener('click',event=>runOnce(event.currentTarget,async()=>{try{await ClassDB.replaceAllRaw(replacement);await reloadStateFromDb();unlockTeacher(password);closeDialog();showToast('バックアップを復旧し、新しい年度パスワードを設定しました');renderHome();}catch(problem){openDialog(`<h2>復旧を完了できませんでした</h2><p>${esc(problem.message||'端末への保存に失敗しました')}</p><p class="muted">元のデータは変更されていません。空き容量を確認して、もう一度お試しください。</p><div class="dialog-actions"><button type="button" class="button primary" id="recovery-error-close">OK</button></div>`);document.getElementById('recovery-error-close').addEventListener('click',requestDialogClose);}}));
     }catch(problem){error.textContent=problem.message||'復旧できませんでした';}
   }
 

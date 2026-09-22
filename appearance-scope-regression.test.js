@@ -1,0 +1,10 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const source=fs.readFileSync(path.resolve(__dirname,"..","app-settings-display.js"),"utf8");
+assert.match(source,/const form=target\.querySelector\('#appearance-form'\)/);
+assert.match(source,/form\.querySelector\('input\[name="theme-mode"\]:checked'\)/);
+assert.match(source,/form\.querySelectorAll\('\[data-feature-emoji\]:checked'\)/);
+assert.match(source,/applyTheme\(\);completeFormDraft\(form\);showToast\('変更を自動保存しました'\)/);
+console.log("appearance-scope-regression: passed");

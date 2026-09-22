@@ -1,0 +1,10 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const root=path.resolve(__dirname,"..");
+const shell=fs.readFileSync(path.join(root,"app-shell.js"),"utf8");
+assert.match(shell,/function pupilStudentGrid/);
+assert.match(shell,/state.rosterDensity==='compact'/);
+assert.match(shell,/roomy-roster/);
+console.log("roster-density-scope: passed");

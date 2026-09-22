@@ -1,0 +1,13 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const vm=require("node:vm");
+const source=fs.readFileSync(path.resolve(__dirname,"..","app-data-import.js"),"utf8");
+const fragment=source.match(/function parseExternalTable\([\s\S]*?\n  }/)[0];
+const parseExternalTable=vm.runInNewContext(`${fragment}\nparseExternalTable;`,{});
+assert.deepEqual(JSON.parse(JSON.stringify(parseExternalTable('氏名,メモ\n山田,"改行を含む\n内容"\n佐藤,"""引用"""'))),[['氏名','メモ'],['山田','改行を含む\n内容'],['佐藤','"引用"']]);
+assert.throws(()=>parseExternalTable('氏名,メモ\n山田,"未完'),/引用符/);
+assert.match(source,/出席番号と氏名が不一致/);
+assert.match(source,/throw new Error\('状態を判別できません:/);
+console.log("csv-import-regression: passed");

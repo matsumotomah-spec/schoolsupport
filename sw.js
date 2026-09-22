@@ -1,5 +1,5 @@
-const CACHE_NAME='class-support-shell-v129';
-const SHELL=['./','./index.html','./styles.css?v=129','./db.js?v=129','./migration.js?v=129','./xlsx-reader.js?v=129','./csv-export.js?v=129','./app-core.js?v=129','./app-shell.js?v=129','./app-settings-core.js?v=129','./app-help.js?v=129','./app-settings-display.js?v=129','./app-settings-records.js?v=129','./app-settings-security.js?v=129','./app-settings-classes.js?v=129','./app-settings.js?v=129','./app-data-import.js?v=129','./app-data-crypto.js?v=129','./app-data-sync.js?v=129','./app-data-migration.js?v=129','./app-notebook-history.js?v=129','./app-records.js?v=129','./app-behavior.js?v=129','./app-grades.js?v=129','./app-seating.js?v=129','./app-reports.js?v=129','./app-data.js?v=129','./app.js?v=129','./manifest.webmanifest','./icon.svg'];
+const CACHE_NAME='class-support-shell-v130';
+const SHELL=['./','./index.html','./styles.css?v=130','./db.js?v=130','./migration.js?v=130','./xlsx-reader.js?v=130','./csv-export.js?v=130','./app-core.js?v=130','./app-shell.js?v=130','./app-settings-core.js?v=130','./app-help.js?v=130','./app-settings-display.js?v=130','./app-settings-records.js?v=130','./app-settings-security.js?v=130','./app-settings-classes.js?v=130','./app-settings.js?v=130','./app-data-import.js?v=130','./app-data-crypto.js?v=130','./app-data-sync.js?v=130','./app-data-migration.js?v=130','./app-notebook-history.js?v=130','./app-records.js?v=130','./app-behavior.js?v=130','./app-grades.js?v=130','./app-seating.js?v=130','./app-reports.js?v=130','./app-data.js?v=130','./app.js?v=130','./manifest.webmanifest','./icon.svg'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)));
@@ -7,7 +7,7 @@ self.addEventListener('install',event=>{
 });
 
 self.addEventListener('activate',event=>{
-  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE_NAME).map(key=>caches.delete(key)))));
+  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('class-support-shell-')&&key!==CACHE_NAME).map(key=>caches.delete(key)))));
   self.clients.claim();
 });
 

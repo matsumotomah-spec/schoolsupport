@@ -1,0 +1,13 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const root=path.resolve(__dirname,"..");
+const core=fs.readFileSync(path.join(root,"app-settings-core.js"),"utf8");
+const display=fs.readFileSync(path.join(root,"app-settings-display.js"),"utf8");
+const data=fs.readFileSync(path.join(root,"app-data.js"),"utf8");
+assert.match(core,/function settingsPageLead/);
+assert.match(core,/function settingsRouteCards/);
+assert.match(display,/settingsPageLead/);
+assert.match(data,/settings-detail-card/);
+console.log("settings-common-shell: passed");

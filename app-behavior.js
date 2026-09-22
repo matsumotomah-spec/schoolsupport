@@ -28,7 +28,7 @@
     return{start:state.year.startDate,end:state.year.endDate,label:'年間'};
   }
   function behaviorHeatLevel(count){return count<=0?0:count===1?1:count<=3?2:count<=5?3:4;}
-  function behaviorActiveRecords(records){return records.filter(item=>item.type==='behaviorMark'&&item.status==='marked'&&!item.deletedAt);}
+  function behaviorActiveRecords(records){return records.filter(item=>item.type==='behaviorMark'&&item.status==='marked'&&normalRecord(item));}
   async function behaviorRecords(classId,start=state.year.startDate,end=state.year.endDate){return behaviorActiveRecords(await ClassDB.getAllByIndex('records','classId',classId)).filter(item=>item.date>=start&&item.date<=end);}
 
   function behaviorCategoryButtons(counts=new Map(),compact=false,selectedId=null){return`<div class="behavior-category-grid ${compact?'compact':''}">${BEHAVIOR_CATEGORIES.map(item=>`<button type="button" class="behavior-category-card" data-behavior-category="${item.id}" aria-pressed="${item.id===selectedId}"><strong>${esc(item.label)}</strong><span>${esc(item.criterion)}</span>${counts.has(item.id)?`<b>今日の○ ${counts.get(item.id)}人</b>`:''}</button>`).join('')}</div>`;}
@@ -62,7 +62,7 @@
 
   function openBehaviorCategoryDialog(counts){
     openDialog(`<h2>カテゴリーを変更</h2><p class="muted">記録するよい姿に最も近いカテゴリーを選びます。</p>${behaviorCategoryButtons(counts,true,behaviorDraft().categoryId)}<div class="dialog-actions"><button type="button" class="button" id="behavior-category-close">閉じる</button></div>`);dialog.classList.add('behavior-category-dialog');
-    document.getElementById('behavior-category-close').addEventListener('click',closeDialog);document.querySelectorAll('[data-behavior-category]').forEach(button=>button.addEventListener('click',async()=>{behaviorDraft().categoryId=button.dataset.behaviorCategory;closeDialog();await renderBehavior();document.getElementById('behavior-current-title')?.focus();}));
+    document.getElementById('behavior-category-close').addEventListener('click',requestDialogClose);document.querySelectorAll('[data-behavior-category]').forEach(button=>button.addEventListener('click',async()=>{behaviorDraft().categoryId=button.dataset.behaviorCategory;closeDialog();await renderBehavior();document.getElementById('behavior-current-title')?.focus();}));
   }
   async function toggleBehaviorMark(studentId){
     const classItem=selectedClass(),draft=behaviorDraft(),category=behaviorCategory(draft.categoryId),id=behaviorRecordId(classItem.id,draft.date,category.id,studentId);if(behaviorTapLocks.has(id))return;behaviorTapLocks.add(id);
@@ -81,6 +81,6 @@
   function openBehaviorHistory(studentId,categoryId,range,roster,records){
     const row=roster.find(item=>item.student.id===studentId),category=behaviorCategory(categoryId),items=records.filter(item=>item.studentId===studentId&&item.categoryId===categoryId).sort((a,b)=>b.date.localeCompare(a.date));
     openDialog(`<h2>${esc(row?.student.name||'児童')}・${esc(category.label)}</h2><p><strong>${esc(category.criterion)}</strong></p><p class="muted">${esc(jpDate(range.start))}〜${esc(jpDate(range.end))}　${items.length}件</p><div class="behavior-history-list">${items.map(item=>`<div><span>${esc(jpDate(item.date))}</span><button type="button" class="button" data-behavior-clear="${esc(item.id)}">この○を解除</button></div>`).join('')}</div><details class="behavior-examples"><summary>判断の具体例</summary><ul>${category.examples.map(item=>`<li>${esc(item)}</li>`).join('')}</ul></details><div class="dialog-actions"><button type="button" class="button primary" id="behavior-history-close">閉じる</button></div>`);
-    document.getElementById('behavior-history-close').addEventListener('click',closeDialog);document.querySelectorAll('[data-behavior-clear]').forEach(button=>button.addEventListener('click',async()=>{const record=await ClassDB.get('records',button.dataset.behaviorClear);if(!record)return;await ClassDB.put('records',{...record,status:'cleared'});closeDialog();await renderBehavior();showUndoToast('○を解除しました',async()=>{await ClassDB.put('records',{...record,status:'marked'});renderBehavior();});}));
+    document.getElementById('behavior-history-close').addEventListener('click',requestDialogClose);document.querySelectorAll('[data-behavior-clear]').forEach(button=>button.addEventListener('click',async()=>{const record=await ClassDB.get('records',button.dataset.behaviorClear);if(!record)return;await ClassDB.put('records',{...record,status:'cleared'});closeDialog();await renderBehavior();showUndoToast('○を解除しました',async()=>{await ClassDB.put('records',{...record,status:'marked'});renderBehavior();});}));
   }
   function wireBehaviorCommon(){wireToolHome();document.querySelectorAll('[data-record-mode]').forEach(button=>button.addEventListener('click',()=>{state.toolDraft.recordsMode=button.dataset.recordMode;if(button.dataset.recordMode==='behavior')behaviorDraft().view='input';renderStudentRecords();}));document.querySelector('[data-record-summary]')?.addEventListener('click',()=>{behaviorDraft().view='summary';renderBehavior();});}

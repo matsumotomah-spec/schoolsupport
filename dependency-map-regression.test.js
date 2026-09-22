@@ -1,0 +1,15 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const root=path.resolve(__dirname,"..");
+const map=fs.readFileSync(path.join(root,"JS_DEPENDENCY_MAP.md"),"utf8");
+const reference=fs.readFileSync(path.join(root,"DEVELOPMENT_REFERENCE.md"),"utf8");
+const checklist=fs.readFileSync(path.join(root,"RELEASE_CHECKLIST.md"),"utf8");
+const html=fs.readFileSync(path.join(root,"index.html"),"utf8");
+assert.match(map,/対象：`work\/v130`/);
+for(const file of ["db.js","app-core.js","app-data-sync.js","app.js"])assert.match(map,new RegExp(file.replace(".","\\.")));
+assert.match(html,/app-data-sync\.js\?v=130/);
+for(const file of ["JS_DEPENDENCY_MAP.md","README.md","V130_FIX_LOG.md","R001_REGRESSION_BASELINE.md"])assert.ok(reference.includes(file));
+assert.match(checklist,/実機確認待ち/);
+console.log("dependency-map-regression: passed");

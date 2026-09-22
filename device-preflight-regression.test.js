@@ -1,0 +1,15 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const html=fs.readFileSync(path.resolve(__dirname,"..","index.html"),"utf8");
+const core=fs.readFileSync(path.resolve(__dirname,"..","app-core.js"),"utf8");
+const crypto=fs.readFileSync(path.resolve(__dirname,"..","app-data-crypto.js"),"utf8");
+const migration=fs.readFileSync(path.resolve(__dirname,"..","app-data-migration.js"),"utf8");
+assert.match(html,/name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/);
+assert.match(core,/if\(!state\.classes\.length\)/);
+assert.match(crypto,/replaceYearRaw\(replacement,payload\.yearId\)/);
+assert.match(crypto,/元のデータは変更されていません/);
+assert.match(migration,/state\.classes\.filter\(item=>item\.id!==classItem\.id\)/);
+assert.match(migration,/if\(!state\.classes\.length\)/);
+console.log("device-preflight-regression: passed");

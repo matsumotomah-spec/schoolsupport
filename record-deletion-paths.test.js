@@ -1,0 +1,10 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const root=path.resolve(__dirname,"..");
+const files=fs.readdirSync(root).filter(f=>f.endsWith(".js"));
+for(const file of files)assert.doesNotMatch(fs.readFileSync(path.join(root,file),"utf8"),/ClassDB\.remove\(\x27records\x27/);
+const shell=fs.readFileSync(path.join(root,"app-shell.js"),"utf8");
+assert.match(shell,/function moveToTrash/);
+console.log("record-deletion-paths: passed");

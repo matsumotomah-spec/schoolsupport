@@ -1,0 +1,17 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const vm=require("node:vm");
+const root=path.resolve(__dirname,"..");
+const migration=fs.readFileSync(path.join(root,"app-data-migration.js"),"utf8");
+const data=fs.readFileSync(path.join(root,"app-data.js"),"utf8");
+const fragment=migration.match(/function trashBelongsToCurrentYear\([^\n]+/)[0];
+const predicate=vm.runInNewContext(`${fragment};trashBelongsToCurrentYear;`,{state:{year:{id:"year-2026"},classes:[{id:"class-2026"}]}});
+assert.equal(predicate({kind:"classBundle",classBundle:{class:{yearId:"year-2026"}}}),true);
+assert.equal(predicate({kind:"classBundle",classBundle:{class:{yearId:"year-2025"}}}),false);
+assert.equal(predicate({record:{classId:"class-2026"}}),true);
+assert.equal(predicate({record:{classId:"class-2025"}}),false);
+assert.match(data,/filter\(trashBelongsToCurrentYear\)/);
+assert.match(migration,/if\(!item\|\|!trashBelongsToCurrentYear\(item\)\)return 0/);
+console.log("year-trash-scope-regression: passed");

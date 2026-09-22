@@ -1,0 +1,10 @@
+"use strict";
+const assert=require("node:assert/strict");
+const fs=require("node:fs");
+const path=require("node:path");
+const source=fs.readFileSync(path.resolve(__dirname,"..","app-data-sync.js"),"utf8");
+assert.match(source,/const advancedTab=node=>/);
+assert.match(source,/node\.querySelector\('#archive-inspect'\)/);
+assert.match(source,/node\.id==='data-export'/);
+assert.doesNotMatch(source,/summary\.includes/);
+console.log("data-tab-routing-regression: passed");
