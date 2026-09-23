@@ -684,4 +684,10 @@ button[data-card-role]::before{grid-column:1/-1;justify-self:start}
 .daily-utility,.weekly-utility{margin-top:.5rem;border:1px solid var(--line);border-radius:.65rem;padding:.45rem .65rem;background:var(--panel-soft)}
 .daily-utility summary,.weekly-utility summary{cursor:pointer;font-weight:600;font-size:.9rem}
 .daily-utility .button-row{margin:.5rem 0}.daily-utility .medal-setting{margin-top:.35rem}
+.page[data-page-key="daily"] .daily-guide,.page[data-page-key="weekly"] .weekly-guide{padding:10px 12px}
+.daily-guide .toolbar-line h2,.weekly-guide .toolbar-line h2{margin:0;font-size:1rem}
+.weekly-guide .weekly-heading{margin-top:8px}
+.weekly-guide .current-item{margin-top:8px;padding:7px 10px}
+.homework-after-roster h2{margin:0 0 8px;font-size:1rem}
+.homework-help-button{margin-top:10px}
 @media (min-width:700px){.teacher-tool-shell .daily-guide{padding:.65rem .8rem}.teacher-tool-shell .daily-guide .summary-row{margin:.4rem 0}.teacher-tool-shell .weekly-heading{gap:.5rem}.behavior-category-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}

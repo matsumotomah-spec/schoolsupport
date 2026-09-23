@@ -11,7 +11,7 @@
     const classItem=selectedClass();applyClassTheme(classItem);const term=currentTermRange();
     const all=(await ClassDB.getAllByIndex('records','classId',classItem.id)).filter(item=>['memo','notebookAssessment','supportRecord'].includes(item.type)&&item.date>=term.start&&item.date<=term.end&&normalRecord(item));
     const cards=await teacherRosterCards(classItem.id,[],{status:(_,row)=>{const count=all.filter(item=>item.studentId===row.student.id).length;return count?`${term.label} ${count}件`:'素材なし';},statusClass:(_,row)=>all.some(item=>item.studentId===row.student.id)?'good':'warn'});
-    app.innerHTML=teacherToolShell('所見素材',`<section class="panel"><h1>${esc(classItem.name)}・${term.label}</h1><p class="muted">児童を選ぶと、今学期の児童メモ・ノート評価・学習記録を自動選択します。</p></section>${cards}`);
+    app.innerHTML=teacherToolShell('所見素材',`${cards}<section class="panel report-after-roster"><h1>${esc(classItem.name)}・${term.label}</h1><p class="muted">児童を選ぶと、今学期の児童メモ・ノート評価・学習記録を自動選択します。</p></section>`);
     wireToolHome();wireStudentDetails();document.querySelectorAll('[data-tool-student]').forEach(button=>button.addEventListener('click',()=>renderReportBuilder(button.dataset.toolStudent)));
   }
 

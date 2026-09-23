@@ -1,10 +1,10 @@
-# v130 リリース確認
+# v131 リリース確認
 
 ## 自動検証
 
 - 回帰テストを実行する。
 - すべてのJavaScriptを構文解析する。
-- `index.html`、`app-core.js`、`app.js`、`sw.js` のv130整合を確認する。
+- `index.html`、`app-core.js`、`app.js`、`sw.js` のv131整合を確認する。
 
 ## 実機確認待ち
 
