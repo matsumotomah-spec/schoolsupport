@@ -8,7 +8,7 @@
   const PIN_LENGTH=6;
   const PIN_MAX_FAILURES=5;
   const PIN_LOCK_MS=30*1000;
-  const APP_VERSION='135';
+  const APP_VERSION='136';
   const APP_UPDATED_AT='2026-09-23';
   const PIN_ATTEMPT_KEY='classSupportPinAttemptsV1';
   const COLORS=['#d85b5b','#ef9fb4','#4e78b8','#9adfe8','#efd66e','#397257','#7651a8'];
@@ -21,6 +21,12 @@
     '作品（文・絵）':['丁寧に仕上げた','工夫が見られた','自分らしく表現した']
   };
   const MEMO_TAGS=['集中していた','意欲的だった','自力でできた','工夫していた','最後まで取り組んだ','発表した','考えを伝えた','友達と協力した'];
+  const DEFAULT_CERTIFICATE_TAGS=Object.freeze(['準備や身の回りを整えた','元気に取り組んだ','自分から考えて行動した','最後までやり切った','工夫して取り組んだ','友達と協力した','みんなのために働いた','誰にでも公平に接した','ルールやみんなの物を大切にした','成長が見られた']);
+  const CERTIFICATE_BEHAVIOR_CATEGORY_MAP=Object.freeze({'準備や身の回りを整えた':'life_habits','元気に取り組んだ':'health','自分から考えて行動した':'autonomy','最後までやり切った':'responsibility','工夫して取り組んだ':'creativity','友達と協力した':'kindness','みんなのために働いた':'service','誰にでも公平に接した':'fairness','ルールやみんなの物を大切にした':'public_mind','成長が見られた':'growth'});
+  const CERTIFICATE_CATEGORY_OPTIONS=Object.freeze([{id:'life_habits',label:'基本的な生活習慣'},{id:'health',label:'健康・体力の向上'},{id:'autonomy',label:'自主・自律'},{id:'responsibility',label:'責任感'},{id:'creativity',label:'創意工夫'},{id:'kindness',label:'思いやり・協力'},{id:'service',label:'勤労奉仕'},{id:'fairness',label:'公正・公平'},{id:'public_mind',label:'公共心・公徳心'},{id:'growth',label:'成長・挑戦'}]);
+  const LEGACY_CERTIFICATE_TAGS=Object.freeze(['最後まで取り組んだ','工夫した','友達を助けた','よく発表した','丁寧に仕上げた']);
+  async function certificateTagDefinitionsForInput(){const stored=await ClassDB.getMeta('certificateTagDefinitions',[]),definitions=Array.isArray(stored)?stored:[],custom=definitions.filter(item=>item&&item.label&&!LEGACY_CERTIFICATE_TAGS.includes(item.label)).map(item=>({label:String(item.label).trim(),categoryId:item.categoryId||null}));return[...new Map([...DEFAULT_CERTIFICATE_TAGS.map(label=>({label,categoryId:CERTIFICATE_BEHAVIOR_CATEGORY_MAP[label]||null})),...custom].map(item=>[item.label,item])).values()];}
+  async function certificateTagsForInput(){return(await certificateTagDefinitionsForInput()).map(item=>item.label);}
   const STANDARD_ICONS={daily:'✏️',weekly:'📅',certificate:'🏅',records:'📝',memo:'💡',behavior:'🌱',assessment:'📊',tests:'🔢',grades:'📈',occasional:'📨',seating:'🪑',reports:'💬',support:'🧭',settings:'⚙️'};
   const DEFAULT_EMOJI_ICONS={...STANDARD_ICONS};
   const FOOTER_ITEMS=[['daily','毎日の宿題'],['weekly','週宿題'],['assessment','ノート評価'],['records','児童の記録'],['tests','小テスト'],['occasional','提出物'],['certificate','ミニ賞状'],['grades','成績管理'],['settings','設定']];
@@ -115,7 +121,6 @@
     data:['同期・保存・復元','iPadとPCの記録をまとめたり、故障に備えて保存したりします。','普段は「iPadとPCの記録をまとめる」、月に1回は「故障に備えて保存する」を使います。'],
     support:['学習記録','教科と現在の学習単元を確認し、児童ごとの学習記録を入力します。','児童名を押して記録します。学ぶ単元が変わったときは「学習するまとまりを変更」を押します。'],
     student:['児童概要','未解決の宿題・提出物を確認して解決し、メモ・評価・賞状・提出物を追加できます。','概要の未解決件数または機能別タブを押し、確認・追加ボタンから操作します。'],
-    pupil:['児童用提出画面','一覧で自分の未提出を確認し、毎日の宿題・週宿題・提出物を記録します。','最初に「一覧」で名前を確認し、必要な機能へ移動して自分の名前を押します。',['緑の「提出」、赤の「忘れた」、灰色の「未提出・未確認」を確認します。','名前を押した直後は、色と0.5秒の動きで変更を知らせます。','右上の歯車は先生用です。PC専用モードでもタッチ端末ではPINが必要です。']]
   };
 
   function esc(value){return String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));}

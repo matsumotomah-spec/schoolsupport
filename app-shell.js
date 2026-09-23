@@ -243,15 +243,31 @@
     const classItem=selectedClass();applyClassTheme(classItem);
     const visible=state.pupilOverviewVisibility;if(tool!=='all'&&!visible[tool])tool='all';state.pupilTool=tool;
     const nav=`<nav class="pupil-nav" aria-label="${esc(pupilText('提出画面','ていしゅつ がめん'))}"><button type="button" data-pupil-tool="all" aria-selected="${tool==='all'}">${esc(pupilText('一覧','みる'))}</button>${visible.daily?`<button type="button" data-pupil-tool="daily" aria-selected="${tool==='daily'}">${esc(pupilText('毎日の宿題','きょうの しゅくだい'))}</button>`:''}${visible.weekly?`<button type="button" data-pupil-tool="weekly" aria-selected="${tool==='weekly'}">${esc(pupilText('週宿題','こんしゅうの しゅくだい'))}</button>`:''}${visible.occasional?`<button type="button" data-pupil-tool="occasional" aria-selected="${tool==='occasional'}">${esc(pupilText('提出物','ていしゅつぶつ'))}</button>`:''}</nav>`;
-    app.innerHTML=`<div class="app-shell pupil-screen ${state.pupilKanaMode?'pupil-kana-mode':''}">${headerHtml('',`<button type="button" class="header-button header-icon" id="pupil-help" aria-label="${esc(pupilText('この画面の使い方','この がめんの つかいかた'))}" title="${esc(pupilText('この画面の使い方','この がめんの つかいかた'))}">?</button><button type="button" class="header-button header-icon" id="teacher-entry" aria-label="先生用画面を開く" title="先生用画面を開く">⚙</button>`,false,false)}<main class="page">${nav}<div id="pupil-content"></div></main></div>`;
+    app.innerHTML=`<div class="app-shell pupil-screen ${state.pupilKanaMode?'pupil-kana-mode':''}">${headerHtml('',`<button type="button" class="header-button header-icon" id="teacher-entry" aria-label="先生用画面を開く" title="先生用画面を開く">⚙</button>`,false,false)}<main class="page">${nav}<div id="pupil-content"></div></main></div>`;
     document.getElementById('teacher-entry').addEventListener('click',()=>requireTeacher(()=>{if(!restoreLockedDialog())renderHome();}));
-    document.getElementById('pupil-help').addEventListener('click',()=>openContextHelp('pupil'));
     document.querySelectorAll('[data-pupil-tool]').forEach(button=>button.addEventListener('click',()=>renderPupil(button.dataset.pupilTool)));
     if(tool==='all')await renderPupilAll();
     if(tool==='daily')await renderPupilDaily();
     if(tool==='weekly'){await renderPupilWeekly();await injectWeeklyDeadlineNotice();}
     if(tool==='occasional')await renderPupilOccasional();
     if(!dialog.open)maybePromptWeeklyCreation('pupil');
+    applyPupilCopy();
+  }
+
+  function applyPupilCopy(){
+    const root=document.querySelector('.pupil-screen');
+    if(!root)return;
+    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),nodes=[];
+    while(walker.nextNode())nodes.push(walker.currentNode);
+    nodes.forEach(node=>{
+      node.nodeValue=node.nodeValue
+        .replaceAll('提出するもの一覧','提出状況を確認')
+        .replaceAll('名前を探して、出ていないものを確認してください。提出の操作は上の各ページで行います。','出していないものを確認します。')
+        .replaceAll('じぶんの なまえを さがしてね。だすものを たしかめよう。','だしていない ものを たしかめます。')
+        .replaceAll('先生が今週分を作ると、ここに表示されます。前週までの修正は教師画面で行います。','先生が今週の宿題を用意すると、ここに表示されます。前の週の提出をしたいときは、先生に伝えてください。')
+        .replaceAll('せんせいが つくると、ここに でます。','せんせいが こんしゅうの しゅくだいを よういすると、ここに でます。まえの しゅうの ていしゅつを したいときは、せんせいに つたえてね。')
+        .replaceAll('右上の歯車から教師認証し、名簿を登録してください。','先生用画面を開いて、名簿を登録してください。');
+    });
   }
 
   function dailyForgottenWeight(record){if(record?.forgottenAt||record?.status==='forgotten')return 1;if(record?.partialForgottenAt||record?.hadPartialForgotten||record?.status==='partialForgotten')return .5;return 0;}
@@ -332,6 +348,10 @@
     const enrollments=(await ClassDB.getAllByIndex('enrollments','classId',classId)).filter(item=>!item.deletedAt&&(atDate?(item.startDate||state.year.startDate)<=atDate&&(!item.endDate||item.endDate>=atDate):!item.endDate)).sort((a,b)=>{const ai=order.indexOf(a.studentId),bi=order.indexOf(b.studentId);if(ai>=0||bi>=0)return(ai<0?999:ai)-(bi<0?999:bi);return(a.number||999)-(b.number||999);});
     const studentIds=new Set(enrollments.map(item=>item.studentId)),students=(await ClassDB.getAll('students')).filter(item=>studentIds.has(item.id)),byId=new Map(students.map(item=>[item.id,item]));
     return enrollments.map(enrollment=>({enrollment,student:byId.get(enrollment.studentId)})).filter(row=>row.student);
+  }
+  async function captureSeatSnapshot(classId,atDate=null){
+    const classItem=state.classes.find(item=>item.id===classId),roster=await rosterForClass(classId,true,atDate),layout=Array.isArray(classItem?.activeSeatLayout)&&classItem.activeSeatLayout.length?[...classItem.activeSeatLayout]:roster.map(row=>row.student.id);
+    return{layout,studentIds:roster.map(row=>row.student.id),cols:Math.max(1,Number(classItem?.activeSeatCols)||6),aisles:[...(classItem?.activeSeatAisleAfterColumns||[])],capturedAt:ClassDB.now()};
   }
   async function enrollmentPeriodsForStudent(classId,studentId){return(await ClassDB.getAllByIndex('enrollments','studentId',studentId)).filter(item=>item.classId===classId&&!item.deletedAt).sort((a,b)=>String(b.startDate||'').localeCompare(String(a.startDate||'')));}
   function dateInEnrollment(date,enrollment){return Boolean(date&&enrollment&&(enrollment.startDate||state.year.startDate)<=date&&(!enrollment.endDate||date<=enrollment.endDate));}
