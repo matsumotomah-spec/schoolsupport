@@ -162,7 +162,7 @@
     if(!first)return;
     const roster=await rosterForClass(classItem.id,false),byStudent=new Map(roster.map(row=>[row.student.id,row]));
     const rows=records.map(record=>{const row=byStudent.get(record.studentId),name=row?`${row.enrollment.number||'—'}　${row.student.name}`:'退籍した児童';return`<button type="button" class="record-item" data-notebook-record="${esc(record.id)}"><strong>${esc(name)}</strong><span>${esc(notebookViewpointText(record))}${record.note?`　${esc(record.note)}`:''}</span></button>`;}).join('');
-    openDialog(`<h2>ノート評価の一覧</h2><p class="muted">${esc(NotebookHistory.label(first))}　${esc(first.title||'題名なし')}・${records.length}人分</p><div class="record-list section">${rows}</div><div class="dialog-actions"><button type="button" class="button primary" id="notebook-session-close">閉じる</button></div>`);
+    openDialog(`<h2>ノート評価の一覧</h2><p class="muted">${esc(NotebookHistory.label(first))}　${esc(first.title||'題名なし')}・${records.length}人分</p><div class="record-list section">${rows}</div><div class="dialog-actions"><button type="button" class="button primary" id="notebook-session-close">閉じる</button></div>`);dialog.classList.add('notebook-session-dialog');
     document.querySelectorAll('[data-notebook-record]').forEach(button=>button.addEventListener('click',()=>openNotebookRecordEditor(button.dataset.notebookRecord)));
     document.getElementById('notebook-session-close').addEventListener('click',requestDialogClose);
   }

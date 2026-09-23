@@ -93,7 +93,7 @@
   async function savePupilOverviewOptions(options){state.pupilOverviewVisibility={...state.pupilOverviewVisibility,...options};state.showMonthlyForgotten=state.pupilOverviewVisibility.monthly;await ClassDB.setMeta('pupilOverviewVisibility',state.pupilOverviewVisibility);await ClassDB.setMeta('showMonthlyForgotten',state.showMonthlyForgotten);}
 
   async function openTool(tool){
-    if(tool==='memo')state.toolDraft.recordsMode='memo';if(tool==='behavior')state.toolDraft.recordsMode='behavior';
+    if(tool==='memo')state.toolDraft.recordsMode='memo';if(tool==='behavior'){state.toolDraft.recordsMode='behavior';const draft=state.toolDraft.behavior;if(draft){draft.categoryId=null;draft.view='input';}}
     const routes={daily:renderTeacherDaily,weekly:renderWeekly,certificate:renderCertificates,records:renderStudentRecords,memo:renderStudentRecords,behavior:renderStudentRecords,assessment:renderNotebook,tests:renderTests,grades:renderGradebook,occasional:renderOccasional,support:renderSupport,reports:renderReports,seating:renderSeating};
     if(rolloverDue()&&!state.rolloverContinue&&['daily','weekly','certificate','records','memo','behavior','assessment','tests','grades','occasional','support'].includes(tool)){confirmOldYearContinuation(()=>openTool(tool));return;}
     if(['daily','weekly','certificate','records','memo','behavior','assessment','tests','grades','occasional','support','reports','seating'].includes(tool)&&!(await rosterForClass(selectedClass()?.id)).length){openSettingsPage('classes',{classSettingsView:'roster'});showToast('先に名簿を登録してください');return;}

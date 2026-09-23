@@ -11,7 +11,7 @@ const components=vm.runInNewContext(`${source}\n({settingsChoiceCard,settingsAct
   esc:value=>String(value).replaceAll("&","&amp;").replaceAll("<","&lt;")
 });
 
-assert.match(components.settingsChoiceCard({id:"compact",title:"すっきり",description:"補足を減らします",selected:true}),/data-card-role="選択"/);
+assert.doesNotMatch(components.settingsChoiceCard({id:"compact",title:"すっきり",description:"補足を減らします",selected:true}),/data-card-role="選択"/);
 assert.match(components.settingsChoiceCard({id:"compact",title:"すっきり",description:"補足を減らします",selected:true}),/aria-pressed="true"/);
 assert.match(components.settingsActionCard({id:"backup",title:"ファイルを作る",description:"端末に保存します",action:"保存ファイルを作る"}),/data-card-role="実行"/);
 assert.match(components.settingsStatusCard({title:"保存状態",value:"保存済み"}),/data-card-role="状態"/);
