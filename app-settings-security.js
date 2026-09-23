@@ -2,7 +2,7 @@
 
   function renderSafetySettings(){
     const target=document.getElementById('settings-content');
-    target.innerHTML=`${settingsPageLead('データと安全','端末を替えるときの同期・保存、年度の切替、教師用PINを管理します。','safety')}${settingsRouteCards([['data','同期・保存・復元','iPadとPCの同期、バックアップ、CSV出力、移行を行います。','端末移動・月1回','開く','年度・全クラス共通'],['year','年度・教師用PIN','学期の日付、教師画面PIN、データ保護パスワードを変更します。','年度始め・必要なとき','開く','年度・この端末']])}`;
+    target.innerHTML=`${settingsPageLead('データと安全','端末を替えるときの同期・保存、年度の切替、教師用PINを管理します。','safety')}${settingsRouteCards([['data','同期・保存・復元','iPadとPCの同期、バックアップ、CSV出力、移行を行います。','端末を替えるとき・月1回','開く','年度・全クラス共通'],['year','年度・教師用PIN','学期の日付、教師画面PIN、データ保護パスワードを変更します。','年度始め・必要なとき','開く','年度・この端末']])}`;
     wireSettingsHome(target);wireSettingsRoutes(target);
   }
 

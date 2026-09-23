@@ -8,7 +8,7 @@
   const PIN_LENGTH=6;
   const PIN_MAX_FAILURES=5;
   const PIN_LOCK_MS=30*1000;
-  const APP_VERSION='132';
+  const APP_VERSION='134';
   const APP_UPDATED_AT='2026-09-23';
   const PIN_ATTEMPT_KEY='classSupportPinAttemptsV1';
   const COLORS=['#d85b5b','#ef9fb4','#4e78b8','#9adfe8','#efd66e','#397257','#7651a8'];
@@ -21,10 +21,8 @@
     '作品（文・絵）':['丁寧に仕上げた','工夫が見られた','自分らしく表現した']
   };
   const MEMO_TAGS=['集中していた','意欲的だった','自力でできた','工夫していた','最後まで取り組んだ','発表した','考えを伝えた','友達と協力した'];
-  const STANDARD_ICONS={daily:'宿',weekly:'週',certificate:'賞',records:'記',memo:'メ',behavior:'行',assessment:'B',tests:'テ',grades:'点',occasional:'提',seating:'席',reports:'所',support:'学',settings:'設'};
-  const EMOJI_ICON_CHOICES={daily:['✅','📚','✏️','📝'],weekly:['📅','📘','📒','🗓️'],certificate:['🏅','🎖️','🌟','👏'],records:['📝','🌱','✍️','📌'],memo:['📝','✍️','💡','📌'],behavior:['🌱','✅','⭐','🧭'],assessment:['💯','📊','🅰️','📖'],tests:['✏️','🔢','🧮','📋'],grades:['📈','🧮','📋','🎯'],occasional:['📨','📄','📥','📋'],seating:['🪑','🧩','🏫','↔️'],reports:['✍️','📜','💬','🗒️'],support:['🧭','📚','🧩','🎯']};
-  const REWARD_ICONS=['✨','💯','👍','🌟','🏅','👏','✅','📚','🌈','🚀'];
-  const DEFAULT_EMOJI_ICONS=Object.fromEntries(Object.entries(EMOJI_ICON_CHOICES).map(([id,icons])=>[id,icons[0]]));
+  const STANDARD_ICONS={daily:'✏️',weekly:'📅',certificate:'🏅',records:'📝',memo:'💡',behavior:'🌱',assessment:'📊',tests:'🔢',grades:'📈',occasional:'📨',seating:'🪑',reports:'💬',support:'🧭',settings:'⚙️'};
+  const DEFAULT_EMOJI_ICONS={...STANDARD_ICONS};
   const FOOTER_ITEMS=[['daily','毎日の宿題'],['weekly','週宿題'],['assessment','ノート評価'],['records','児童の記録'],['tests','小テスト'],['occasional','提出物'],['certificate','ミニ賞状'],['grades','成績管理'],['settings','設定']];
   const DEFAULT_FOOTER_LAYOUT=FOOTER_ITEMS.filter(([id])=>id!=='settings').map(([id])=>id);
   function normalizeFooterLayout(value){const valid=[...new Set((Array.isArray(value)?value:[]).filter(id=>FOOTER_ITEMS.some(([known])=>known===id)))];return valid.length>=3?valid:DEFAULT_FOOTER_LAYOUT;}
@@ -62,7 +60,7 @@
     feedback:null,
     iconMode:'standard',
     emojiIcons:{...DEFAULT_EMOJI_ICONS},
-    rewardIcon:'✨',
+    rewardIcon:'🏅',
     testGradeThresholds:null,
     showMonthlyForgotten:true,
     pupilOverviewVisibility:{daily:true,weekly:true,occasional:true,monthly:true,reward:true},
@@ -140,8 +138,8 @@
   function pupilHomeworkDateLabel(value,base=today()){if(!state.pupilKanaMode)return relativeHomeworkLabel(value,base);const age=daysBetween(base,value);if(age===0)return'きょうの ぶん';if(age===1)return'きのうの ぶん';if(age===2)return'おとといの ぶん';const days=['にち','げつ','か','すい','もく','きん','ど'];return `${days[new Date(`${value}T00:00:00`).getDay()]}ようびの ぶん`;}
   function pupilStatusLabel(status){const labels={unconfirmed:['— 未確認','— まだ'],submitted:['✓ 提出','✓ だした'],forgotten:['! 忘れた','! わすれた'],partialForgotten:['△ 一部忘れた','△ すこし わすれた'],unsubmitted:['— 未提出','— まだ'],absent:['— 欠席','— おやすみ']};const pair=labels[status]||[status,status];return pupilText(pair[0],pair[1]);}
   function selectedClass(){return state.classes.find(item=>item.id===state.selectedClassId)||state.classes[0]||null;}
-  function featureIcon(id){return state.iconMode==='emoji'?(state.emojiIcons[id]||DEFAULT_EMOJI_ICONS[id]||(id==='settings'?'⚙️':'●')):(STANDARD_ICONS[id]||'●');}
-  function rewardIconHtml(className='homework-medal'){return`<span class="${className}" title="直近1か月の設定条件を達成" aria-label="直近1か月の設定条件を達成">${esc(state.rewardIcon)}</span>`;}
+  function featureIcon(id){return STANDARD_ICONS[id]||'●';}
+  function rewardIconHtml(className='homework-medal'){return`<span class="${className}" title="直近1か月の設定条件を達成" aria-label="直近1か月の設定条件を達成">🏅</span>`;}
   function isSupportClass(classItem){return classItem?.isSupport??Boolean(classItem?.isOwn&&state.year?.mode==='support');}
   function classSubjects(classItem){return Array.isArray(classItem?.recordSubjects)&&classItem.recordSubjects.length?classItem.recordSubjects:SUBJECTS;}
   function normalizeStudentName(value){return String(value||'').normalize('NFKC').replace(/[\s　・･.,、。]/g,'').toLowerCase();}
@@ -196,7 +194,7 @@
     state.theme=await ClassDB.getMeta('themePreference',window.matchMedia?.('(prefers-color-scheme: dark)').matches?'dark':'light');
     state.iconMode=await ClassDB.getMeta('featureIconMode','standard');
     state.emojiIcons={...DEFAULT_EMOJI_ICONS,...await ClassDB.getMeta('featureEmojiIcons',{})};
-    state.rewardIcon=await ClassDB.getMeta('homeworkRewardIcon','✨');
+    state.rewardIcon=await ClassDB.getMeta('homeworkRewardIcon','🏅');
     const savedTestThresholds=await ClassDB.getMeta('testGradeThresholds',null);state.testGradeThresholds=savedTestThresholds&&['A','B+','B','B-'].every(key=>savedTestThresholds[key]&&typeof savedTestThresholds[key]==='object')?savedTestThresholds:null;
     const legacyMonthly=await ClassDB.getMeta('showMonthlyForgotten',true),savedPupilOverview=await ClassDB.getMeta('pupilOverviewVisibility',{});
     state.pupilOverviewVisibility={daily:true,weekly:true,occasional:true,monthly:legacyMonthly,reward:true,...savedPupilOverview};
@@ -231,7 +229,7 @@
   async function purgeExpiredTrash(){const now=ClassDB.now(),expired=(await ClassDB.getAll('trash')).filter(item=>item.purgeAfter&&item.purgeAfter<now);for(const item of expired)await ClassDB.remove('trash',item.id);}
 
   async function reloadStateFromDb(){
-    state.theme=await ClassDB.getMeta('themePreference',window.matchMedia?.('(prefers-color-scheme: dark)').matches?'dark':'light');state.iconMode=await ClassDB.getMeta('featureIconMode','standard');state.emojiIcons={...DEFAULT_EMOJI_ICONS,...await ClassDB.getMeta('featureEmojiIcons',{})};state.rewardIcon=await ClassDB.getMeta('homeworkRewardIcon','✨');
+    state.theme=await ClassDB.getMeta('themePreference',window.matchMedia?.('(prefers-color-scheme: dark)').matches?'dark':'light');state.iconMode=await ClassDB.getMeta('featureIconMode','standard');state.emojiIcons={...DEFAULT_EMOJI_ICONS,...await ClassDB.getMeta('featureEmojiIcons',{})};state.rewardIcon=await ClassDB.getMeta('homeworkRewardIcon','🏅');
     const thresholds=await ClassDB.getMeta('testGradeThresholds',null);state.testGradeThresholds=thresholds&&['A','B+','B','B-'].every(key=>thresholds[key]&&typeof thresholds[key]==='object')?thresholds:null;const monthly=await ClassDB.getMeta('showMonthlyForgotten',true),overview=await ClassDB.getMeta('pupilOverviewVisibility',{});state.pupilOverviewVisibility={daily:true,weekly:true,occasional:true,monthly,reward:true,...overview};state.showMonthlyForgotten=state.pupilOverviewVisibility.monthly;state.pupilKanaMode=Boolean(await ClassDB.getMeta('pupilKanaMode',false));state.footerLayout=normalizeFooterLayout(await ClassDB.getMeta('footerLayout',DEFAULT_FOOTER_LAYOUT));state.pcPinlessMode=Boolean(await ClassDB.getMeta('pcPinlessMode',false));
     const info=await ClassDB.getMeta('informationMode',null),legacyExplanations=await ClassDB.getMeta('showExplanations',true);state.informationMode=['compact','standard','detailed'].includes(info)?info:(legacyExplanations?'standard':'compact');state.showExplanations=state.informationMode!=='compact';state.rosterDensity=await ClassDB.getMeta('rosterDensity','auto');state.onboardingStep=Number(await ClassDB.getMeta('onboardingStep',0));state.year=await ClassDB.get('years',await ClassDB.getMeta('activeYearId'));state.classes=state.year?(await ClassDB.getAllByIndex('classes','yearId',state.year.id)).sort((a,b)=>(b.isOwn-a.isOwn)||(a.order-b.order)):[];state.selectedClassId=await ClassDB.getMeta('selectedClassId',state.classes[0]?.id||null);if(!state.classes.some(item=>item.id===state.selectedClassId))state.selectedClassId=state.classes[0]?.id||null;state.lastBackupAt=await ClassDB.getMeta('lastBackupAt',null);state.lastSyncAt=await ClassDB.getMeta('lastSyncAt',null);state.backupDismissedUntil=await ClassDB.getMeta('backupDismissedUntil',null);applyTheme();return state;
   }
