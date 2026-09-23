@@ -8,7 +8,7 @@
   const PIN_LENGTH=6;
   const PIN_MAX_FAILURES=5;
   const PIN_LOCK_MS=30*1000;
-  const APP_VERSION='134';
+  const APP_VERSION='135';
   const APP_UPDATED_AT='2026-09-23';
   const PIN_ATTEMPT_KEY='classSupportPinAttemptsV1';
   const COLORS=['#d85b5b','#ef9fb4','#4e78b8','#9adfe8','#efd66e','#397257','#7651a8'];
@@ -27,6 +27,9 @@
   const DEFAULT_FOOTER_LAYOUT=FOOTER_ITEMS.filter(([id])=>id!=='settings').map(([id])=>id);
   function normalizeFooterLayout(value){const valid=[...new Set((Array.isArray(value)?value:[]).filter(id=>FOOTER_ITEMS.some(([known])=>known===id)))];return valid.length>=3?valid:DEFAULT_FOOTER_LAYOUT;}
   function footerLabel(id){return FOOTER_ITEMS.find(([known])=>known===id)?.[1]||id;}
+  function scoreListToolbarHtml(orderKey){return`<div class="score-list-toolbar"><strong>並び方</strong><div class="order-toggle"><button type="button" data-score-order="${esc(orderKey)}" data-score-value="seat">座席順</button><button type="button" data-score-order="${esc(orderKey)}" data-score-value="number">出席番号順</button></div></div>`;}
+  function scoreListGridHtml(className,rows,renderCard,emptyText='名簿がありません。'){const cards=rows.map(renderCard).join('');return`<div class="${esc(className)}">${cards||`<p class="muted">${esc(emptyText)}</p>`}</div>`;}
+  function scoreListOrderState(orderKey,order){document.querySelectorAll(`[data-score-order="${CSS.escape(orderKey)}"]`).forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.scoreValue===order)));}
   const state={
     year:null,
     classes:[],
@@ -171,7 +174,7 @@
     return true;
   }
   dialog.addEventListener('cancel',event=>{event.preventDefault();requestDialogClose();});
-  function openDialog(html){dialog.className='app-dialog';dialog.innerHTML=`<div class="dialog-body">${html}</div>`;dialog.showModal();}
+  function openDialog(html,variant=''){dialog.className=`app-dialog ${variant}`.trim();dialog.innerHTML=`<div class="dialog-body">${html}</div>`;dialog.showModal();}
   function bytesToBase64(bytes){let binary='';bytes.forEach(byte=>binary+=String.fromCharCode(byte));return btoa(binary);}
   function base64ToBytes(value){return Uint8Array.from(atob(value),char=>char.charCodeAt(0));}
   async function hashSecret(secret,saltBase64,iterations=AUTH_ITERATIONS){

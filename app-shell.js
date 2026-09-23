@@ -93,7 +93,14 @@
   async function savePupilOverviewOptions(options){state.pupilOverviewVisibility={...state.pupilOverviewVisibility,...options};state.showMonthlyForgotten=state.pupilOverviewVisibility.monthly;await ClassDB.setMeta('pupilOverviewVisibility',state.pupilOverviewVisibility);await ClassDB.setMeta('showMonthlyForgotten',state.showMonthlyForgotten);}
 
   async function openTool(tool){
-    if(tool==='memo')state.toolDraft.recordsMode='memo';if(tool==='behavior'){state.toolDraft.recordsMode='behavior';const draft=state.toolDraft.behavior;if(draft){draft.categoryId=null;draft.view='input';}}
+    if(tool==='memo')state.toolDraft.recordsMode='memo';
+    if(tool==='behavior'||tool==='records'){
+      const draft=state.toolDraft.behavior;
+      if(tool==='behavior'||state.toolDraft.recordsMode==='behavior'){
+        state.toolDraft.recordsMode='behavior';
+        if(draft){draft.categoryId=null;draft.view='input';}
+      }
+    }
     const routes={daily:renderTeacherDaily,weekly:renderWeekly,certificate:renderCertificates,records:renderStudentRecords,memo:renderStudentRecords,behavior:renderStudentRecords,assessment:renderNotebook,tests:renderTests,grades:renderGradebook,occasional:renderOccasional,support:renderSupport,reports:renderReports,seating:renderSeating};
     if(rolloverDue()&&!state.rolloverContinue&&['daily','weekly','certificate','records','memo','behavior','assessment','tests','grades','occasional','support'].includes(tool)){confirmOldYearContinuation(()=>openTool(tool));return;}
     if(['daily','weekly','certificate','records','memo','behavior','assessment','tests','grades','occasional','support','reports','seating'].includes(tool)&&!(await rosterForClass(selectedClass()?.id)).length){openSettingsPage('classes',{classSettingsView:'roster'});showToast('先に名簿を登録してください');return;}
@@ -235,7 +242,7 @@
     state.route='pupil';state.pupilTool=tool;state.teacherUntil=0;state.sessionSecret=null;clearTimeout(state.lockTimer);await ClassDB.setMeta('lastMode','pupil');
     const classItem=selectedClass();applyClassTheme(classItem);
     const visible=state.pupilOverviewVisibility;if(tool!=='all'&&!visible[tool])tool='all';state.pupilTool=tool;
-    const nav=`<nav class="pupil-nav" aria-label="${esc(pupilText('提出画面','ていしゅつ がめん'))}"><button type="button" data-pupil-tool="all" aria-selected="${tool==='all'}">${esc(pupilText('一覧','みる'))}</button>${visible.daily?`<button type="button" data-pupil-tool="daily" aria-selected="${tool==='daily'}">${esc(pupilText('毎日の宿題','きょうの しゅくだい'))}</button>`:''}${visible.weekly?`<button type="button" data-pupil-tool="weekly" aria-selected="${tool==='weekly'}">${esc(pupilText('週宿題','しゅうの しゅくだい'))}</button>`:''}${visible.occasional?`<button type="button" data-pupil-tool="occasional" aria-selected="${tool==='occasional'}">${esc(pupilText('提出物','ていしゅつもの'))}</button>`:''}</nav>`;
+    const nav=`<nav class="pupil-nav" aria-label="${esc(pupilText('提出画面','ていしゅつ がめん'))}"><button type="button" data-pupil-tool="all" aria-selected="${tool==='all'}">${esc(pupilText('一覧','みる'))}</button>${visible.daily?`<button type="button" data-pupil-tool="daily" aria-selected="${tool==='daily'}">${esc(pupilText('毎日の宿題','きょうの しゅくだい'))}</button>`:''}${visible.weekly?`<button type="button" data-pupil-tool="weekly" aria-selected="${tool==='weekly'}">${esc(pupilText('週宿題','こんしゅうの しゅくだい'))}</button>`:''}${visible.occasional?`<button type="button" data-pupil-tool="occasional" aria-selected="${tool==='occasional'}">${esc(pupilText('提出物','ていしゅつぶつ'))}</button>`:''}</nav>`;
     app.innerHTML=`<div class="app-shell pupil-screen ${state.pupilKanaMode?'pupil-kana-mode':''}">${headerHtml('',`<button type="button" class="header-button header-icon" id="pupil-help" aria-label="${esc(pupilText('この画面の使い方','この がめんの つかいかた'))}" title="${esc(pupilText('この画面の使い方','この がめんの つかいかた'))}">?</button><button type="button" class="header-button header-icon" id="teacher-entry" aria-label="先生用画面を開く" title="先生用画面を開く">⚙</button>`,false,false)}<main class="page">${nav}<div id="pupil-content"></div></main></div>`;
     document.getElementById('teacher-entry').addEventListener('click',()=>requireTeacher(()=>{if(!restoreLockedDialog())renderHome();}));
     document.getElementById('pupil-help').addEventListener('click',()=>openContextHelp('pupil'));
@@ -296,7 +303,7 @@
 
   async function renderPupilOccasional(){
     const classItem=selectedClass();const roster=await rosterForClass(classItem.id,true);const data=await occasionalData(classItem.id);const items=data.items.filter(item=>!item.archived);const medalData=await homeworkMedalData(classItem.id);
-    if(!items.length){document.getElementById('pupil-content').innerHTML=`<section class="panel"><h2>${esc(pupilText('提出物はありません','ていしゅつものは ありません'))}</h2><p class="muted">${esc(pupilText('先生が登録すると、ここに表示されます。','せんせいが とうろくすると、ここに でます。'))}</p></section>`;return;}
+    if(!items.length){document.getElementById('pupil-content').innerHTML=`<section class="panel"><h2>${esc(pupilText('提出物はありません','ていしゅつぶつは ありません'))}</h2><p class="muted">${esc(pupilText('先生が登録すると、ここに表示されます。','せんせいが とうろくすると、ここに でます。'))}</p></section>`;return;}
     const item=items.find(row=>row.id===state.pupilOccasionalId)||items[0];state.pupilOccasionalId=item.id;const records=data.submissions.filter(row=>row.itemId===item.id);const map=new Map(records.map(record=>[record.studentId,record]));
     const choices=items.length>1?`<div class="pupil-item-choices" role="group" aria-label="提出物を選択">${items.map(row=>`<button type="button" data-pupil-occasional-choice="${esc(row.id)}" aria-pressed="${row.id===item.id}">${esc(row.title)}<small>${esc(pupilDateText(row.dueDate))}</small></button>`).join('')}</div>`:'';
     document.getElementById('pupil-content').innerHTML=`${choices}<div class="pupil-current-date">${esc(pupilDateText(item.dueDate))}<span>${esc(item.title)}</span></div><div class="status-legend"><span class="legend-submitted">${esc(pupilText('✓ 提出済み','✓ だした'))}</span><span class="legend-unsubmitted">${esc(pupilStatusLabel('unsubmitted'))}</span></div><div class="summary-row"><span>${esc(pupilText('名前を押して提出を記録します。','じぶんの なまえを おしてね。'))}</span></div>${pupilStudentGrid(classItem,roster,map,'occasional',new Set(),visibleRewardMedals(medalData))}`;
