@@ -8,8 +8,8 @@
   const PIN_LENGTH=6;
   const PIN_MAX_FAILURES=5;
   const PIN_LOCK_MS=30*1000;
-  const APP_VERSION='136';
-  const APP_UPDATED_AT='2026-09-23';
+  const APP_VERSION='140';
+  const APP_UPDATED_AT='2026-09-24';
   const PIN_ATTEMPT_KEY='classSupportPinAttemptsV1';
   const COLORS=['#d85b5b','#ef9fb4','#4e78b8','#9adfe8','#efd66e','#397257','#7651a8'];
   const SUBJECTS=['国語','算数','理科','社会','生活','音楽','図画工作','家庭','体育','外国語','道徳','総合','自立活動'];
@@ -27,9 +27,9 @@
   const LEGACY_CERTIFICATE_TAGS=Object.freeze(['最後まで取り組んだ','工夫した','友達を助けた','よく発表した','丁寧に仕上げた']);
   async function certificateTagDefinitionsForInput(){const stored=await ClassDB.getMeta('certificateTagDefinitions',[]),definitions=Array.isArray(stored)?stored:[],custom=definitions.filter(item=>item&&item.label&&!LEGACY_CERTIFICATE_TAGS.includes(item.label)).map(item=>({label:String(item.label).trim(),categoryId:item.categoryId||null}));return[...new Map([...DEFAULT_CERTIFICATE_TAGS.map(label=>({label,categoryId:CERTIFICATE_BEHAVIOR_CATEGORY_MAP[label]||null})),...custom].map(item=>[item.label,item])).values()];}
   async function certificateTagsForInput(){return(await certificateTagDefinitionsForInput()).map(item=>item.label);}
-  const STANDARD_ICONS={daily:'✏️',weekly:'📅',certificate:'🏅',records:'📝',memo:'💡',behavior:'🌱',assessment:'📊',tests:'🔢',grades:'📈',occasional:'📨',seating:'🪑',reports:'💬',support:'🧭',settings:'⚙️'};
+  const STANDARD_ICONS={daily:'✏️',weekly:'📅',certificate:'🏅',records:'📝',memo:'💡',behavior:'🌱',assessment:'📊',tests:'🔢',grades:'📈',occasional:'📨',cleaning:'🧹',seating:'🪑',reports:'💬',support:'🧭',settings:'⚙️'};
   const DEFAULT_EMOJI_ICONS={...STANDARD_ICONS};
-  const FOOTER_ITEMS=[['daily','毎日の宿題'],['weekly','週宿題'],['assessment','ノート評価'],['records','児童の記録'],['tests','小テスト'],['occasional','提出物'],['certificate','ミニ賞状'],['grades','成績管理'],['settings','設定']];
+  const FOOTER_ITEMS=[['daily','毎日の宿題'],['weekly','週宿題'],['assessment','ノート評価'],['records','児童の記録'],['tests','小テスト'],['occasional','提出物'],['cleaning','掃除の記録'],['certificate','ミニ賞状'],['grades','成績管理'],['settings','設定']];
   const DEFAULT_FOOTER_LAYOUT=FOOTER_ITEMS.filter(([id])=>id!=='settings').map(([id])=>id);
   function normalizeFooterLayout(value){const valid=[...new Set((Array.isArray(value)?value:[]).filter(id=>FOOTER_ITEMS.some(([known])=>known===id)))];return valid.length>=3?valid:DEFAULT_FOOTER_LAYOUT;}
   function footerLabel(id){return FOOTER_ITEMS.find(([known])=>known===id)?.[1]||id;}
@@ -179,6 +179,7 @@
     return true;
   }
   dialog.addEventListener('cancel',event=>{event.preventDefault();requestDialogClose();});
+  dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.dispatchEvent(new Event('cancel',{cancelable:true}));});
   function openDialog(html,variant=''){dialog.className=`app-dialog ${variant}`.trim();dialog.innerHTML=`<div class="dialog-body">${html}</div>`;dialog.showModal();}
   function bytesToBase64(bytes){let binary='';bytes.forEach(byte=>binary+=String.fromCharCode(byte));return btoa(binary);}
   function base64ToBytes(value){return Uint8Array.from(atob(value),char=>char.charCodeAt(0));}

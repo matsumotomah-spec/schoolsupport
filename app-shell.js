@@ -26,6 +26,7 @@
           ${support?toolHtml('records','記','児童の記録',counts.memo,true):toolHtml('daily','✓','毎日の宿題',counts.daily,true)}
           ${support?toolHtml('daily','✓','毎日の宿題',counts.daily):toolHtml('weekly','▣','週宿題',counts.weekly)}
           ${support?toolHtml('weekly','▣','週宿題',counts.weekly):toolHtml('records','記','児童の記録',counts.memo)}
+          ${toolHtml('cleaning','🧹','掃除の記録',0)}
           ${toolHtml('certificate','☆','ミニ賞状',0)}
           ${toolHtml('assessment','A','ノート評価',0)}`}
         </section>
@@ -60,7 +61,7 @@
     const classItem=selectedClass(),own=classItem?.isOwn,support=isSupportClass(classItem),tasks=[],managementTasks=[];
     if(own||support)tasks.push(['daily','毎日の宿題','今日の提出を確認']);
     if(own||support)tasks.push(['weekly','週宿題','今週分の提出を確認']);
-    tasks.push(['records','児童の記録','メモと行動の○を記録'],['assessment','ノート評価','ノートをすばやく評価'],['certificate','ミニ賞状','渡した児童を記録'],['occasional','提出物','書類などの提出を確認'],['tests','小テスト','漢字・計算テストを直接入力']);
+    tasks.push(['records','児童の記録','メモと行動の○を記録'],['assessment','ノート評価','ノートをすばやく評価'],['certificate','ミニ賞状','渡した児童を記録'],['cleaning','掃除の記録','班ごとの取り組みを記録'],['occasional','提出物','書類などの提出を確認'],['tests','小テスト','漢字・計算テストを直接入力']);
     managementTasks.push(['grades','成績管理','紙テスト取込と成績一覧']);
     if(support)managementTasks.push(['support','学習記録','教科・単元ごとに記録']);
     if(own)managementTasks.push(['seating','席替え','条件を設定して席替え'],['reports','所見素材','記録から素材を作成']);
@@ -101,9 +102,9 @@
         if(draft){draft.categoryId=null;draft.view='input';}
       }
     }
-    const routes={daily:renderTeacherDaily,weekly:renderWeekly,certificate:renderCertificates,records:renderStudentRecords,memo:renderStudentRecords,behavior:renderStudentRecords,assessment:renderNotebook,tests:renderTests,grades:renderGradebook,occasional:renderOccasional,support:renderSupport,reports:renderReports,seating:renderSeating};
-    if(rolloverDue()&&!state.rolloverContinue&&['daily','weekly','certificate','records','memo','behavior','assessment','tests','grades','occasional','support'].includes(tool)){confirmOldYearContinuation(()=>openTool(tool));return;}
-    if(['daily','weekly','certificate','records','memo','behavior','assessment','tests','grades','occasional','support','reports','seating'].includes(tool)&&!(await rosterForClass(selectedClass()?.id)).length){openSettingsPage('classes',{classSettingsView:'roster'});showToast('先に名簿を登録してください');return;}
+    const routes={daily:renderTeacherDaily,weekly:renderWeekly,certificate:renderCertificates,records:renderStudentRecords,memo:renderStudentRecords,behavior:renderStudentRecords,assessment:renderNotebook,tests:renderTests,grades:renderGradebook,occasional:renderOccasional,cleaning:renderCleaning,support:renderSupport,reports:renderReports,seating:renderSeating};
+    if(rolloverDue()&&!state.rolloverContinue&&['daily','weekly','certificate','records','memo','behavior','assessment','tests','grades','occasional','cleaning','support'].includes(tool)){confirmOldYearContinuation(()=>openTool(tool));return;}
+    if(['daily','weekly','certificate','records','memo','behavior','assessment','tests','grades','occasional','cleaning','support','reports','seating'].includes(tool)&&!(await rosterForClass(selectedClass()?.id)).length){openSettingsPage('classes',{classSettingsView:'roster'});showToast('先に名簿を登録してください');return;}
     if(tool==='daily'&&state.onboardingStep===3)await setOnboardingStep(4);
     if(routes[tool])routes[tool]();else showToast('この機能は次の実装段階で追加します');
   }
@@ -118,7 +119,7 @@
 
   function teacherToolShell(title,body,actions=''){
     const key=state.activeTool||state.route.replace('teacher-','');
-    const compactPurposeKeys=['daily','weekly','records','certificate','assessment','tests','grades','occasional','reports','seating','data'];const purpose=compactPurposeKeys.includes(key)?'':pagePurposeHtml(pagePurposeFor(key,title));
+    const compactPurposeKeys=['daily','weekly','records','certificate','assessment','tests','grades','occasional','cleaning','reports','seating','data'];const purpose=compactPurposeKeys.includes(key)?'':pagePurposeHtml(pagePurposeFor(key,title));
     return `<div class="app-shell">${headerHtml(title,actions)}<main class="page" data-page-key="${esc(key)}">${onboardingBannerHtml()}${purpose}<div class="page-content" data-page-content="${esc(key)}">${body}</div></main>${key==='student'?'':teacherFooter(key)}</div>`;
   }
 
@@ -129,7 +130,7 @@
   function wirePagePurposeHelp(target=document){target.querySelectorAll('[data-page-purpose-help]').forEach(button=>button.addEventListener('click',()=>openContextHelp(button.dataset.pagePurposeHelp)));}
 
   function pagePurposeFor(key,title){
-    const purposes={daily:'今日の提出状況を児童ごとに記録します。',weekly:'週ごとの宿題の提出状況を確認・記録します。',certificate:'ミニ賞状を渡した記録を残します。',records:'児童の成長や行動を記録します。',assessment:'ノート評価を3観点で記録します。',tests:'小テストの得点を児童ごとに記録します。',grades:'紙テスト・小テスト・ノート評価を成績検討用にまとめて確認します。',occasional:'家庭から集める提出物の状況を確認します。',support:'個別支援級の学習記録を残します。',reports:'所見の根拠になる記録を確認します。',seating:'座席と配慮条件を整えます。',data:'同期・ファイル保存・復元を目的別に行います。'};
+    const purposes={daily:'今日の提出状況を児童ごとに記録します。',weekly:'週ごとの宿題の提出状況を確認・記録します。',certificate:'ミニ賞状を渡した記録を残します。',records:'児童の成長や行動を記録します。',assessment:'ノート評価を3観点で記録します。',tests:'小テストの得点を児童ごとに記録します。',grades:'紙テスト・小テスト・ノート評価を成績検討用にまとめて確認します。',occasional:'家庭から集める提出物の状況を確認します。',cleaning:'掃除の取り組みを班ごとに記録し、クラス全体の結果を発表します。',support:'個別支援級の学習記録を残します。',reports:'所見の根拠になる記録を確認します。',seating:'座席と配慮条件を整えます。',data:'同期・ファイル保存・復元を目的別に行います。'};
     const scope=key==='data'?'年度・全クラス共通':selectedClass()?.name||'現在のクラス';
     const saveState=key==='data'?'操作前に対象と結果を確認します':'記録は端末内へ自動保存';
     return{title,purpose:purposes[key]||'この画面で必要な操作を行います。',scope,saveState,helpKey:key};
@@ -150,7 +151,7 @@
     root.querySelectorAll('.teacher-student-grid,.manual-quiz-grid').forEach(grid=>grid.classList.add('teacher-input-grid'));
   }
 
-  function activeToolRenderer(){return{daily:renderTeacherDaily,weekly:renderWeekly,certificate:renderCertificates,records:renderStudentRecords,memo:renderStudentRecords,behavior:renderStudentRecords,assessment:renderNotebook,tests:renderTests,grades:renderGradebook,occasional:renderOccasional,support:renderSupport,reports:renderReports,seating:renderSeating}[state.activeTool]||renderHome;}
+  function activeToolRenderer(){return{daily:renderTeacherDaily,weekly:renderWeekly,certificate:renderCertificates,records:renderStudentRecords,memo:renderStudentRecords,behavior:renderStudentRecords,assessment:renderNotebook,tests:renderTests,grades:renderGradebook,occasional:renderOccasional,cleaning:renderCleaning,support:renderSupport,reports:renderReports,seating:renderSeating}[state.activeTool]||renderHome;}
   function openPrintPreview({title,caption='',content,returnAction=activeToolRenderer()}){
     document.body.classList.add('print-preview-active');
     app.innerHTML=`<div class="print-preview-shell"><header class="print-preview-toolbar"><div><strong>印刷プレビュー</strong><span>座席表以外の操作部分は印刷されません</span></div><div class="button-row"><button type="button" class="button" id="print-preview-back">戻る</button><button type="button" class="button primary" id="print-preview-print">印刷する</button></div></header><main class="print-document"><h1>${esc(title)}</h1>${caption?`<p class="print-caption">${esc(caption)}</p>`:''}${content}</main></div>`;
@@ -163,6 +164,8 @@
   function wireToolHome(){const key=state.activeTool||state.route.replace('teacher-','');wireTeacherCardRoles();wireTeacherInputPattern();wireCommonHeader(key);wireOnboardingStop();wirePagePurposeHelp();document.querySelector('[data-breadcrumb-home]')?.addEventListener('click',()=>navigateSafely(renderHome));document.querySelectorAll('[data-footer-tool]').forEach(button=>button.addEventListener('click',()=>navigateSafely(()=>openFooterItem(button.dataset.footerTool))));}
 
   function activeSeatGridTemplate(classItem){const cols=Math.max(1,Number(classItem?.activeSeatCols)||6),aisles=new Set((classItem?.activeSeatAisleAfterColumns||[]).map(Number)),tracks=[];for(let column=1;column<=cols;column++){tracks.push('minmax(0,1fr)');if(column<cols&&aisles.has(column))tracks.push('var(--teacher-aisle-track,minmax(18px,.25fr))');}return tracks.join(' ');}
+  function seatSnapshotGridTemplate(snapshot){const cols=Math.max(1,Number(snapshot?.cols)||6),aisles=new Set((snapshot?.aisles||[]).map(Number)),tracks=[];for(let column=1;column<=cols;column++){tracks.push('minmax(0,1fr)');if(column<cols&&aisles.has(column))tracks.push('var(--teacher-aisle-track,minmax(18px,.25fr))');}return tracks.join(' ');}
+  function seatSnapshotRows(snapshot,roster){const layout=Array.isArray(snapshot?.layout)?snapshot.layout:[];if(!layout.length)return{cells:roster,extras:[]};const byId=new Map(roster.map(row=>[row.student.id,row])),placed=new Set(layout.filter(Boolean));return{cells:layout.map(id=>id?byId.get(id)||null:null),extras:roster.filter(row=>!placed.has(row.student.id))};}
   function submissionExempt(row){return Boolean(row?.enrollment?.submissionExempt);}
   function subjectExempt(row,subject){return Boolean(subject&&Array.isArray(row?.enrollment?.excludedSubjects)&&row.enrollment.excludedSubjects.includes(subject));}
 
@@ -188,8 +191,9 @@
         : '';
       const memoDate=lastMemo.get(row.student.id);return `<article class="teacher-student-card ${esc(statusClass)}${feedbackClass(row.student.id)}"><button type="button" class="student-main" data-tool-student="${row.student.id}"><strong>${attendanceNumber}${esc(row.student.name)}</strong>${status?`<span>${esc(status)}</span>`:''}${extra}</button><div class="student-card-footer">${memoDate?`<span title="最後のメモ：${esc(jpDate(memoDate))}">メモ ${esc(slashDate(memoDate))}</span>`:'<span></span>'}<button type="button" class="detail-button" data-student-detail="${row.student.id}" aria-label="${esc(row.student.name)}の詳細">詳細</button></div></article>`;
     };
-    const classItem=state.classes.find(item=>item.id===classId);const useShape=options.preserveSeatShape&&orderMode==='seat'&&classItem?.activeSeatLayout?.length;let body='';let style='';
-    if(useShape){const byId=new Map(roster.map(row=>[row.student.id,row])),cols=Math.max(1,Number(classItem.activeSeatCols)||6),aisles=new Set((classItem.activeSeatAisleAfterColumns||[]).map(Number));body=classItem.activeSeatLayout.map((id,index)=>{const cell=id&&byId.has(id)?card(byId.get(id)):'<div class="teacher-student-card grid-empty"><span>空席</span></div>',column=index%cols+1;return cell+(column<cols&&aisles.has(column)?'<div class="teacher-seat-aisle" aria-hidden="true"></div>':'');}).join('');style=` style="grid-template-columns:${activeSeatGridTemplate(classItem)}"`;}
+    const classItem=state.classes.find(item=>item.id===classId),snapshot=options.seatSnapshot,useSnapshot=Boolean(snapshot?.layout?.length),useShape=orderMode==='seat'&&(useSnapshot||options.preserveSeatShape&&classItem?.activeSeatLayout?.length);let body='';let style='';
+    if(useSnapshot){const{cells,extras}=seatSnapshotRows(snapshot,roster),cols=Math.max(1,Number(snapshot.cols)||6),aisles=new Set((snapshot.aisles||[]).map(Number));body=cells.map((row,index)=>{const cell=row?card(row):'<div class="teacher-student-card grid-empty"><span>空席</span></div>',column=index%cols+1;return cell+(column<cols&&aisles.has(column)?'<div class="teacher-seat-aisle" aria-hidden="true"></div>':'');}).join('')+extras.map(card).join('');style=` style="grid-template-columns:${seatSnapshotGridTemplate(snapshot)}"`;
+    } else if(useShape){const byId=new Map(roster.map(row=>[row.student.id,row])),cols=Math.max(1,Number(classItem.activeSeatCols)||6),aisles=new Set((classItem.activeSeatAisleAfterColumns||[]).map(Number));body=classItem.activeSeatLayout.map((id,index)=>{const cell=id&&byId.has(id)?card(byId.get(id)):'<div class="teacher-student-card grid-empty"><span>空席</span></div>',column=index%cols+1;return cell+(column<cols&&aisles.has(column)?'<div class="teacher-seat-aisle" aria-hidden="true"></div>':'');}).join('');style=` style="grid-template-columns:${activeSeatGridTemplate(classItem)}"`;}
     else body=roster.map(card).join('');
     const autoCompact=roster.length>=30||Number(classItem?.activeSeatCols)>=7,compact=state.rosterDensity==='compact'||(state.rosterDensity==='auto'&&autoCompact);
     const grid=`<div class="roster-jump-wrap"><a class="button roster-jump" href="#teacher-roster-list">児童一覧へ移動 ↓</a></div><section id="teacher-roster-list" class="teacher-student-grid ${useShape?'seat-shaped ':''}${compact?'compact-roster':''}"${style}>${body}</section>`;
@@ -241,15 +245,18 @@
     if(state.onboardingStep===4){await setOnboardingStep(0);showToast('初回の準備が完了しました');}
     state.route='pupil';state.pupilTool=tool;state.teacherUntil=0;state.sessionSecret=null;clearTimeout(state.lockTimer);await ClassDB.setMeta('lastMode','pupil');
     const classItem=selectedClass();applyClassTheme(classItem);
-    const visible=state.pupilOverviewVisibility;if(tool!=='all'&&!visible[tool])tool='all';state.pupilTool=tool;
+    const cleaningCurrent=await cleaningDaily(classItem?.id,today());
+    const visible=state.pupilOverviewVisibility;if(tool!=='all'&&!visible[tool]&&tool!=='cleaning')tool='all';state.pupilTool=tool;
     const nav=`<nav class="pupil-nav" aria-label="${esc(pupilText('提出画面','ていしゅつ がめん'))}"><button type="button" data-pupil-tool="all" aria-selected="${tool==='all'}">${esc(pupilText('一覧','みる'))}</button>${visible.daily?`<button type="button" data-pupil-tool="daily" aria-selected="${tool==='daily'}">${esc(pupilText('毎日の宿題','きょうの しゅくだい'))}</button>`:''}${visible.weekly?`<button type="button" data-pupil-tool="weekly" aria-selected="${tool==='weekly'}">${esc(pupilText('週宿題','こんしゅうの しゅくだい'))}</button>`:''}${visible.occasional?`<button type="button" data-pupil-tool="occasional" aria-selected="${tool==='occasional'}">${esc(pupilText('提出物','ていしゅつぶつ'))}</button>`:''}</nav>`;
     app.innerHTML=`<div class="app-shell pupil-screen ${state.pupilKanaMode?'pupil-kana-mode':''}">${headerHtml('',`<button type="button" class="header-button header-icon" id="teacher-entry" aria-label="先生用画面を開く" title="先生用画面を開く">⚙</button>`,false,false)}<main class="page">${nav}<div id="pupil-content"></div></main></div>`;
     document.getElementById('teacher-entry').addEventListener('click',()=>requireTeacher(()=>{if(!restoreLockedDialog())renderHome();}));
     document.querySelectorAll('[data-pupil-tool]').forEach(button=>button.addEventListener('click',()=>renderPupil(button.dataset.pupilTool)));
+    if(cleaningCurrent&&['input','announcement','announced'].includes(cleaningCurrent.phase)){const button=document.createElement('button');button.type='button';button.dataset.pupilTool='cleaning';button.textContent='掃除';button.setAttribute('aria-selected',String(tool==='cleaning'));button.addEventListener('click',()=>renderPupil('cleaning'));document.querySelector('.pupil-nav').append(button);}
     if(tool==='all')await renderPupilAll();
     if(tool==='daily')await renderPupilDaily();
     if(tool==='weekly'){await renderPupilWeekly();await injectWeeklyDeadlineNotice();}
     if(tool==='occasional')await renderPupilOccasional();
+    if(tool==='cleaning')await renderPupilCleaning();
     if(!dialog.open)maybePromptWeeklyCreation('pupil');
     applyPupilCopy();
   }
