@@ -26,17 +26,16 @@
           ${support?toolHtml('records','記','児童の記録',counts.memo,true):toolHtml('daily','✓','毎日の宿題',counts.daily,true)}
           ${support?toolHtml('daily','✓','毎日の宿題',counts.daily):toolHtml('weekly','▣','週宿題',counts.weekly)}
           ${support?toolHtml('weekly','▣','週宿題',counts.weekly):toolHtml('records','記','児童の記録',counts.memo)}
-          ${toolHtml('cleaning','🧹','掃除の記録',0)}
           ${toolHtml('certificate','☆','ミニ賞状',0)}
           ${toolHtml('assessment','A','ノート評価',0)}`}
         </section>
         ${own||support?`<section class="tools-sub">
           ${toolHtml('occasional','▤','提出物',counts.occasional)}
           ${toolHtml('tests','テ','小テスト',0)}
+          ${own?toolHtml('cleaning','🧹','掃除の記録',0):''}
           ${own?toolHtml('seating','▦','席替え',0):''}
           ${toolHtml('grades','点','成績管理',0)}
           ${own?toolHtml('reports','文','所見素材',0):''}
-          ${support?toolHtml('support','◇','学習記録',counts.support):''}
         </section>`:''}
         <div class="home-footer"><button type="button" class="button primary" id="pupil-mode">児童用の提出画面</button></div>
       </main>${teacherFooter('home')}</div>`;
@@ -63,7 +62,6 @@
     if(own||support)tasks.push(['weekly','週宿題','今週分の提出を確認']);
     tasks.push(['records','児童の記録','メモと行動の○を記録'],['assessment','ノート評価','ノートをすばやく評価'],['certificate','ミニ賞状','渡した児童を記録'],['cleaning','掃除の記録','班ごとの取り組みを記録'],['occasional','提出物','書類などの提出を確認'],['tests','小テスト','漢字・計算テストを直接入力']);
     managementTasks.push(['grades','成績管理','紙テスト取込と成績一覧']);
-    if(support)managementTasks.push(['support','学習記録','教科・単元ごとに記録']);
     if(own)managementTasks.push(['seating','席替え','条件を設定して席替え'],['reports','所見素材','記録から素材を作成']);
     document.getElementById('home-menu-drawer')?.remove();document.getElementById('home-menu-backdrop')?.remove();
     const previous=document.activeElement,backdrop=document.createElement('button'),drawer=document.createElement('aside');backdrop.id='home-menu-backdrop';backdrop.className='home-menu-backdrop';backdrop.type='button';backdrop.setAttribute('aria-label','メニューを閉じる');drawer.id='home-menu-drawer';drawer.className='home-menu-drawer';drawer.setAttribute('role','dialog');drawer.setAttribute('aria-modal','true');drawer.setAttribute('aria-label','やりたいことから選ぶ');drawer.innerHTML=`<div class="home-menu-head"><div><small>操作中</small><h2>${esc(classItem?.name||'クラス未設定')}</h2></div><button type="button" class="header-button header-icon" data-home-menu-close aria-label="閉じる">×</button></div><p class="muted small">毎日の記録は中央・下部メニューから開けます。ここでは、記録の確認と準備・集計をまとめています。</p><h3 class="home-menu-heading">記録する</h3><nav class="home-menu-list" aria-label="記録する">${tasks.map(([id,label,description])=>`<button type="button" data-home-menu-tool="${id}"><span class="tool-icon" aria-hidden="true">${featureIcon(id)}</span><span><strong>${esc(label)}</strong><small>${esc(description)}</small></span><b>›</b></button>`).join('')}</nav>${managementTasks.length?`<div class="home-menu-section"><h3>準備・集計（ときどき）</h3><nav class="home-menu-list" aria-label="準備と集計">${managementTasks.map(([id,label,description])=>`<button type="button" data-home-menu-tool="${id}"><span class="tool-icon" aria-hidden="true">${featureIcon(id)}</span><span><strong>${esc(label)}</strong><small>${esc(description)}</small></span><b>›</b></button>`).join('')}</nav></div>`:''}<div class="home-menu-section"><h3>設定・児童用画面</h3><button type="button" data-home-menu-settings="classes"><span>👥</span><span><strong>クラス・児童</strong><small>クラスや名簿を変更</small></span><b>›</b></button><button type="button" data-home-menu-settings="appearance"><span>◐</span><span><strong>画面と操作</strong><small>表示と下部メニューを変更</small></span><b>›</b></button><button type="button" data-home-menu-settings="data"><span>⇄</span><span><strong>データと安全</strong><small>同期、保存、年度、PIN</small></span><b>›</b></button><button type="button" data-home-menu-pupil><span>☝</span><span><strong>児童用の提出画面</strong><small>児童に操作してもらう</small></span><b>›</b></button></div>`;
@@ -102,7 +100,7 @@
         if(draft){draft.categoryId=null;draft.view='input';}
       }
     }
-    const routes={daily:renderTeacherDaily,weekly:renderWeekly,certificate:renderCertificates,records:renderStudentRecords,memo:renderStudentRecords,behavior:renderStudentRecords,assessment:renderNotebook,tests:renderTests,grades:renderGradebook,occasional:renderOccasional,cleaning:renderCleaning,support:renderSupport,reports:renderReports,seating:renderSeating};
+    const routes={daily:renderTeacherDaily,weekly:renderWeekly,certificate:renderCertificates,records:renderStudentRecords,memo:renderStudentRecords,behavior:renderStudentRecords,assessment:renderNotebook,tests:renderTests,grades:renderGradebook,occasional:renderOccasional,cleaning:renderCleaning,support:renderStudentRecords,reports:renderReports,seating:renderSeating};
     if(rolloverDue()&&!state.rolloverContinue&&['daily','weekly','certificate','records','memo','behavior','assessment','tests','grades','occasional','cleaning','support'].includes(tool)){confirmOldYearContinuation(()=>openTool(tool));return;}
     if(['daily','weekly','certificate','records','memo','behavior','assessment','tests','grades','occasional','cleaning','support','reports','seating'].includes(tool)&&!(await rosterForClass(selectedClass()?.id)).length){openSettingsPage('classes',{classSettingsView:'roster'});showToast('先に名簿を登録してください');return;}
     if(tool==='daily'&&state.onboardingStep===3)await setOnboardingStep(4);
@@ -151,7 +149,7 @@
     root.querySelectorAll('.teacher-student-grid,.manual-quiz-grid').forEach(grid=>grid.classList.add('teacher-input-grid'));
   }
 
-  function activeToolRenderer(){return{daily:renderTeacherDaily,weekly:renderWeekly,certificate:renderCertificates,records:renderStudentRecords,memo:renderStudentRecords,behavior:renderStudentRecords,assessment:renderNotebook,tests:renderTests,grades:renderGradebook,occasional:renderOccasional,cleaning:renderCleaning,support:renderSupport,reports:renderReports,seating:renderSeating}[state.activeTool]||renderHome;}
+  function activeToolRenderer(){return{daily:renderTeacherDaily,weekly:renderWeekly,certificate:renderCertificates,records:renderStudentRecords,memo:renderStudentRecords,behavior:renderStudentRecords,assessment:renderNotebook,tests:renderTests,grades:renderGradebook,occasional:renderOccasional,cleaning:renderCleaning,support:renderStudentRecords,reports:renderReports,seating:renderSeating}[state.activeTool]||renderHome;}
   function openPrintPreview({title,caption='',content,returnAction=activeToolRenderer()}){
     document.body.classList.add('print-preview-active');
     app.innerHTML=`<div class="print-preview-shell"><header class="print-preview-toolbar"><div><strong>印刷プレビュー</strong><span>座席表以外の操作部分は印刷されません</span></div><div class="button-row"><button type="button" class="button" id="print-preview-back">戻る</button><button type="button" class="button primary" id="print-preview-print">印刷する</button></div></header><main class="print-document"><h1>${esc(title)}</h1>${caption?`<p class="print-caption">${esc(caption)}</p>`:''}${content}</main></div>`;
