@@ -8,8 +8,8 @@
   const PIN_LENGTH=6;
   const PIN_MAX_FAILURES=5;
   const PIN_LOCK_MS=30*1000;
-  const APP_VERSION='144';
-  const APP_UPDATED_AT='2026-09-24';
+  const APP_VERSION='147';
+  const APP_UPDATED_AT='2026-09-26';
   const PIN_ATTEMPT_KEY='classSupportPinAttemptsV1';
   const COLORS=['#d85b5b','#ef9fb4','#4e78b8','#9adfe8','#efd66e','#397257','#7651a8'];
   const SUBJECTS=['国語','算数','理科','社会','生活','音楽','図画工作','家庭','体育','外国語','道徳','総合','自立活動'];
@@ -124,7 +124,7 @@
   };
 
   function esc(value){return String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));}
-  function friendlyTerms(value){return String(value??'').replaceAll('新年度パスワード','新しいデータ保護パスワード').replaceAll('年度パスワード','データ保護パスワード').replaceAll('教師用PIN','教師画面PIN').replaceAll('復旧コード','緊急復旧コード').replaceAll('入力候補・タグ','メモ・賞状の選択肢').replaceAll('机約1列分の余白','氏名欄の約半分幅');}
+  function friendlyTerms(value){return String(value??'').replaceAll('緊急復旧コード','__RECOVERY_CODE__').replaceAll('新年度パスワード','新しいデータ保護パスワード').replaceAll('年度パスワード','データ保護パスワード').replaceAll('教師用PIN','教師画面PIN').replaceAll('復旧コード','緊急復旧コード').replaceAll('__RECOVERY_CODE__','緊急復旧コード').replaceAll('月1回のバックアップ','必要なときのバックアップ').replaceAll('月に1回は','必要なときは').replaceAll('端末を替えるとき・月1回','端末を替えるとき・必要なとき').replaceAll('以前のデータを戻したい場合','保存したデータから再開する場合').replaceAll('保存したバックアップから戻す','保存したバックアップから再開').replaceAll('入力候補・タグ','メモ・賞状の選択肢').replaceAll('机約1列分の余白','氏名欄の約半分幅');}
   function applyFriendlyTerms(root){if(!root)return;const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);nodes.forEach(node=>{const changed=friendlyTerms(node.nodeValue);if(changed!==node.nodeValue)node.nodeValue=changed;});root.querySelectorAll?.('[title],[aria-label],[placeholder]').forEach(element=>['title','aria-label','placeholder'].forEach(name=>{if(element.hasAttribute(name))element.setAttribute(name,friendlyTerms(element.getAttribute(name)));}));const daily=root.querySelector?.('.daily-guide');if(daily){const dailyWalker=document.createTreeWalker(daily,NodeFilter.SHOW_TEXT),dailyNodes=[];while(dailyWalker.nextNode())dailyNodes.push(dailyWalker.currentNode);dailyNodes.forEach(node=>{node.nodeValue=node.nodeValue.replaceAll('未確認','未提出');});}}
   function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
   function schoolYear(){const d=new Date();return d.getMonth()>=3?d.getFullYear():d.getFullYear()-1;}
@@ -166,8 +166,8 @@
     document.documentElement.style.setProperty('--action-text',text);
     document.querySelector('meta[name="theme-color"]').setAttribute('content',color);
   }
-  function showToast(message){toastElement.innerHTML=`<span>${esc(message)}</span>`;toastElement.classList.remove('with-action');toastElement.classList.add('show');clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>toastElement.classList.remove('show'),2200);}
-  function showUndoToast(message,undo){toastElement.innerHTML=`<span>${esc(message)}</span><button type="button" aria-label="直前の変更を元に戻す">元に戻す</button>`;toastElement.classList.add('show','with-action');clearTimeout(showToast.timer);const button=toastElement.querySelector('button');let available=true;button.addEventListener('click',async()=>{if(!available)return;available=false;button.disabled=true;await undo();toastElement.classList.remove('show','with-action');showToast('元に戻しました');});showToast.timer=setTimeout(()=>{available=false;toastElement.classList.remove('show','with-action');},10000);}
+  function showToast(message){toastElement.innerHTML=`<span>${esc(friendlyTerms(message))}</span>`;toastElement.classList.remove('with-action');toastElement.classList.add('show');clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>toastElement.classList.remove('show'),2200);}
+  function showUndoToast(message,undo){toastElement.innerHTML=`<span>${esc(message)}</span><button type="button" aria-label="直前の変更を元に戻す">元に戻す</button>`;toastElement.classList.add('show','with-action');clearTimeout(showToast.timer);const button=toastElement.querySelector('button');let available=true;button.addEventListener('click',async()=>{if(!available)return;available=false;button.disabled=true;try{await undo();toastElement.classList.remove('show','with-action');showToast('元に戻しました');}catch(error){console.error(error);available=true;button.disabled=false;toastElement.querySelector('span').textContent='元に戻せませんでした。もう一度お試しください';}});showToast.timer=setTimeout(()=>{available=false;toastElement.classList.remove('show','with-action');},10000);}
   function markFeedback(studentId,status){state.feedback={studentId,status,until:Date.now()+700};}
   function feedbackClass(studentId){const item=state.feedback;if(!item||item.studentId!==studentId||Date.now()>item.until)return'';return` just-updated feedback-${item.status||'changed'}`;}
   function closeDialog(options={}){const form=dialog.querySelector('form');if(form&&!options.keepDraft)clearFormDraft(form);if(dialog.open)dialog.close();if(!options.keepContents)dialog.innerHTML='';dialog.className='app-dialog';}
@@ -180,7 +180,7 @@
   }
   dialog.addEventListener('cancel',event=>{event.preventDefault();requestDialogClose();});
   dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.dispatchEvent(new Event('cancel',{cancelable:true}));});
-  function openDialog(html,variant=''){dialog.className=`app-dialog ${variant}`.trim();dialog.innerHTML=`<div class="dialog-body">${html}</div>`;dialog.showModal();}
+  function openDialog(html,variant=''){dialog.className=`app-dialog ${variant}`.trim();dialog.innerHTML=`<div class="dialog-body">${friendlyTerms(html)}</div>`;dialog.showModal();}
   function bytesToBase64(bytes){let binary='';bytes.forEach(byte=>binary+=String.fromCharCode(byte));return btoa(binary);}
   function base64ToBytes(value){return Uint8Array.from(atob(value),char=>char.charCodeAt(0));}
   async function hashSecret(secret,saltBase64,iterations=AUTH_ITERATIONS){
@@ -247,11 +247,11 @@
     state.route='setup';
     const sy=schoolYear();
     applyClassTheme({color:'#397257'});
-    app.innerHTML=`
+    app.innerHTML=friendlyTerms(`
       <div class="app-shell">
         ${headerHtml('初回設定','',false,false)}
       <main class="page narrow">
-          <section class="welcome-card"><span class="setup-kicker">最初の準備 1 / 2</span><h1>ようこそ</h1><p>まずクラス名と、先生だけが使う番号を登録します。次の画面で児童名を登録すれば、すぐに宿題の提出確認を始められます。</p><ol class="setup-checklist"><li class="current"><strong>いま：</strong>クラスと先生用の番号を決める</li><li><strong>つぎ：</strong>児童の氏名を登録する</li><li><strong>完了：</strong>教師ホームから「毎日の宿題」を開く</li></ol><details class="setup-existing"><summary>以前のデータを戻したい場合</summary><div class="button-row section"><button type="button" class="button" id="setup-restore">保存したバックアップから戻す</button><button type="button" class="button" id="setup-legacy-check">以前の形式のデータを確認</button></div></details></section>
+          <section class="welcome-card"><span class="setup-kicker">最初の準備 1 / 2</span><h1>ようこそ</h1><p>新しくクラスを作る場合は、下から入力します。PCで名簿と座席を準備済みの場合は、受け渡しコードを使えます。</p><div class="button-row section"><button type="button" class="button primary" id="setup-receive-pc">PCから初期設定を受け取る</button></div><ol class="setup-checklist"><li class="current"><strong>いま：</strong>クラスと先生用の番号を決める</li><li><strong>つぎ：</strong>児童の氏名を登録する</li><li><strong>完了：</strong>教師ホームから「毎日の宿題」を開く</li></ol><details class="setup-existing"><summary>以前のデータを戻したい場合</summary><div class="button-row section"><button type="button" class="button" id="setup-restore">保存したバックアップから戻す</button><button type="button" class="button" id="setup-legacy-check">以前の形式のデータを確認</button></div></details></section>
           <div class="setup-steps"><span class="step active"></span><span class="step"></span></div>
           <h1>クラスの準備</h1>
           <p class="muted">上から順に入力してください。「通常はそのままでよい」と書かれた項目は、必要な場合だけ変更します。</p>
@@ -269,11 +269,11 @@
               <div class="field"><label for="setup-end">後期終了日</label><input class="input" id="setup-end" type="date" value="${sy+1}-03-31" required></div>
             </div></details>
             <section class="setup-block"><h2><span>2</span> 先生用の番号を決める</h2><p class="muted small">児童用画面から教師ホームへ戻るときに使います。数字6桁を決めてください。</p><div class="form-grid">
-            <div class="field"><label for="setup-pin">教師用PIN（6桁）</label><input class="input pin-input" id="setup-pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" required></div>
+            <div class="field"><label for="setup-pin">教師画面PIN（6桁）</label><input class="input pin-input" id="setup-pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" required></div>
             <div class="field"><label for="setup-pin2">PIN確認</label><input class="input pin-input" id="setup-pin2" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="new-password" required></div>
             </div></section>
             <section class="setup-block"><h2><span>3</span> 保存データを守る言葉を決める</h2><p class="muted small">月1回のバックアップや、iPadとPCの記録をまとめるときに使います。普段の画面移動では入力しません。</p><div class="form-grid">
-            <div class="field"><label for="setup-password">年度パスワード</label><input class="input" id="setup-password" type="password" autocomplete="new-password" minlength="8" required></div>
+            <div class="field"><label for="setup-password">データ保護パスワード</label><input class="input" id="setup-password" type="password" autocomplete="new-password" minlength="8" required></div>
             <div class="field"><label for="setup-password2">パスワード確認</label><input class="input" id="setup-password2" type="password" autocomplete="new-password" minlength="8" required></div>
             <div class="field full"><p class="muted small">PCログイン時のパスワードのように、自分には覚えやすく、ほかの人には推測されにくい8文字以上がおすすめです。</p></div>
             <div class="field full"><label for="setup-hint">忘れたときのヒント（児童名などは入れない）</label><input class="input" id="setup-hint"></div>
@@ -281,10 +281,11 @@
             <div class="field full setup-submit"><p class="error" id="setup-error" role="alert"></p><button class="button primary large-action" type="submit">保存して児童登録へ進む</button><p class="muted small">次の画面で、緊急時に使うコードを一度だけ保存します。</p></div>
           </form>
         </main>
-      </div>`;
+      </div>`);
     wireColorChoices(document.getElementById('setup-colors'));
     const toggleSetupClass=()=>{const support=document.getElementById('setup-mode').value==='support';document.getElementById('setup-general-name').hidden=support;document.getElementById('setup-support-name').hidden=!support;document.getElementById('setup-group').required=!support;document.getElementById('setup-class').required=support;};document.getElementById('setup-mode').addEventListener('change',toggleSetupClass);toggleSetupClass();
     document.getElementById('setup-restore').addEventListener('click',openPasswordRecovery);
+    document.getElementById('setup-receive-pc').addEventListener('click',openSetupTransferReceive);
     document.getElementById('setup-legacy-check').addEventListener('click',()=>{const legacy=LegacyMigration.fromStorage();showToast(legacy.length?`${legacy.length}件の旧データが見つかりました。初期設定後に移行できます`:'旧データは見つかりませんでした');});
     document.getElementById('setup-form').addEventListener('submit',prepareSetup);
   }
@@ -313,8 +314,8 @@
     const start=document.getElementById('setup-start').value,term=document.getElementById('setup-term').value,end=document.getElementById('setup-end').value;
     if(password!==password2){error.textContent='パスワードが一致しません。';return;}
     if(password.length<8){error.textContent='パスワードは8文字以上にしてください。';return;}
-    if(pin!==pin2){error.textContent='教師用PINが一致しません。';return;}
-    if(!/^\d{6}$/.test(pin)){error.textContent='教師用PINは数字6桁で設定してください。';return;}
+    if(pin!==pin2){error.textContent='教師画面PINが一致しません。';return;}
+    if(!/^\d{6}$/.test(pin)){error.textContent='教師画面PINは数字6桁で設定してください。';return;}
     if(!(start<=term&&term<=end)){error.textContent='年度と学期の日付順を確認してください。';return;}
     error.textContent='';
     const code=recoveryCode();
@@ -333,16 +334,16 @@
     state.route='setup-recovery';
     const {code}=state.setupDraft;
     app.innerHTML=`
-      <div class="app-shell">${headerHtml('復旧コード','',false,false)}
+      <div class="app-shell">${headerHtml('緊急復旧コード','',false,false)}
       <main class="page narrow"><div class="setup-steps"><span class="step active"></span><span class="step active"></span></div>
-        <h1>復旧コードを別に保管</h1><p class="muted">年度パスワードを忘れたときに使います。端末やバックアップと別の場所へ保管してください。</p>
-        <section class="panel"><p class="field-label">${esc(state.setupDraft.year.label)} 復旧コード</p><p style="font-size:1.35rem;letter-spacing:.08em;font-weight:600;word-break:break-all">${esc(code)}</p>
+        <h1>緊急復旧コードを別に保管</h1><p class="muted">データ保護パスワードを忘れたときに使います。端末やバックアップと別の場所へ保管してください。</p>
+        <section class="panel"><p class="field-label">${esc(state.setupDraft.year.label)} 緊急復旧コード</p><p style="font-size:1.35rem;letter-spacing:.08em;font-weight:600;word-break:break-all">${esc(code)}</p>
           <div class="button-row"><button type="button" class="button" id="copy-code">コピー</button><button type="button" class="button" id="save-code">TXT保存</button><button type="button" class="button" id="print-code">印刷</button></div>
         </section>
         <form id="recovery-form" class="panel"><div class="field"><label for="recovery-confirm">保管したコードを再入力</label><input class="input" id="recovery-confirm" autocomplete="off" required></div><p class="error" id="recovery-error" role="alert"></p><div class="button-row end"><button type="button" class="button" id="setup-back">戻る</button><button type="submit" class="button primary">設定を完了</button></div></form>
       </main>${teacherFooter('home')}</div>`;
-    document.getElementById('copy-code').addEventListener('click',async()=>{await navigator.clipboard.writeText(code);showToast('復旧コードをコピーしました');});
-    document.getElementById('save-code').addEventListener('click',()=>downloadText(`クラス支援_${state.setupDraft.year.label}_復旧コード.txt`,`${state.setupDraft.year.label}\n復旧コード: ${code}\nパスワードヒント: ${state.setupDraft.year.passwordHint||'（なし）'}\n`));
+    document.getElementById('copy-code').addEventListener('click',async()=>{await navigator.clipboard.writeText(code);showToast('緊急復旧コードをコピーしました');});
+    document.getElementById('save-code').addEventListener('click',()=>downloadText(`クラス支援_${state.setupDraft.year.label}_緊急復旧コード.txt`,`${state.setupDraft.year.label}\n緊急復旧コード: ${code}\nパスワードヒント: ${state.setupDraft.year.passwordHint||'（なし）'}\n`));
     document.getElementById('print-code').addEventListener('click',()=>window.print());
     document.getElementById('setup-back').addEventListener('click',renderSetup);
     document.getElementById('recovery-form').addEventListener('submit',completeSetup);
@@ -351,7 +352,7 @@
   async function completeSetup(event){
     event.preventDefault();
     const input=document.getElementById('recovery-confirm').value.trim().toUpperCase();
-    if(input!==state.setupDraft.code){document.getElementById('recovery-error').textContent='復旧コードが一致しません。';return;}
+    if(input!==state.setupDraft.code){document.getElementById('recovery-error').textContent='緊急復旧コードが一致しません。';return;}
     const year=await ClassDB.put('years',state.setupDraft.year);
     const classItem=await ClassDB.put('classes',{...state.setupDraft.classItem,yearId:year.id});
     await ClassDB.setMeta('activeYearId',year.id);
@@ -366,7 +367,7 @@
 
   function downloadText(name,text){name=friendlyTerms(name);text=friendlyTerms(text);const type=/\.json$/i.test(name)?'application/json;charset=utf-8':'text/plain;charset=utf-8',blob=new Blob([text],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   function downloadCsv(name,text){const blob=new Blob([text],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-  async function runOnce(button,operation){if(!button||button.dataset.busy==='true')return;button.dataset.busy='true';button.disabled=true;button.setAttribute('aria-busy','true');try{return await operation();}finally{button.disabled=false;button.dataset.busy='false';button.removeAttribute('aria-busy');}}
+  async function runOnce(button,operation){if(!button||button.dataset.busy==='true')return;button.dataset.busy='true';button.disabled=true;button.setAttribute('aria-busy','true');try{return await operation();}catch(error){console.error(error);showToast('保存できませんでした。もう一度お試しください');return undefined;}finally{button.disabled=false;button.dataset.busy='false';button.removeAttribute('aria-busy');}}
 
   function isDesktopDevice(){const ua=String(navigator.userAgent||'');return !/Android|iPhone|iPad|iPod|Mobile/i.test(ua)&&Number(navigator.maxTouchPoints||0)===0;}
   function pcPinlessEligible(){return Boolean(state.pcPinlessMode&&isDesktopDevice());}
@@ -411,22 +412,22 @@
   }
 
   function openAnnualTeacherAuth(onSuccess){
-    openDialog(`<h2>年度パスワードで認証</h2><p class="muted">PINを忘れた場合の認証です。認証後は教師用PINを変更できます。</p>${state.year?.passwordHint?`<p class="panel small">ヒント：${esc(state.year.passwordHint)}</p>`:''}<form id="annual-auth-form"><div class="field"><label for="auth-password">年度パスワード</label><input class="input" id="auth-password" type="password" autocomplete="current-password" autofocus required></div><p class="error" id="auth-error" role="alert"></p><div class="button-row"><button type="button" class="button ghost" id="auth-recovery">年度パスワードも忘れた場合</button></div><div class="dialog-actions"><button type="button" class="button" id="auth-cancel">キャンセル</button><button type="submit" class="button primary">認証</button></div></form>`);
+    openDialog(`<h2>データ保護パスワードで認証</h2><p class="muted">教師画面PINを忘れた場合の認証です。認証後は教師画面PINを変更できます。</p>${state.year?.passwordHint?`<p class="panel small">ヒント：${esc(state.year.passwordHint)}</p>`:''}<form id="annual-auth-form"><div class="field"><label for="auth-password">データ保護パスワード</label><input class="input" id="auth-password" type="password" autocomplete="current-password" autofocus required></div><p class="error" id="auth-error" role="alert"></p><div class="button-row"><button type="button" class="button ghost" id="auth-recovery">パスワードも忘れた場合</button></div><div class="dialog-actions"><button type="button" class="button" id="auth-cancel">キャンセル</button><button type="submit" class="button primary">認証</button></div></form>`);
     document.getElementById('auth-cancel').addEventListener('click',requestDialogClose);
     document.getElementById('auth-recovery').addEventListener('click',openPasswordRecovery);
     document.getElementById('annual-auth-form').addEventListener('submit',async event=>{
       event.preventDefault();const password=document.getElementById('auth-password').value;
-      if(!await verifySecret(password,state.year.auth)){document.getElementById('auth-error').textContent='年度パスワードが違います。';return;}
+      if(!await verifySecret(password,state.year.auth)){document.getElementById('auth-error').textContent='データ保護パスワードが違います。';return;}
       state.pinFailures=0;state.pinLockedUntil=0;savePinAttempts();closeDialog();unlockTeacher(password);onSuccess();
     });
   }
 
   function openPinMigration(onSuccess){
-    openDialog(`<h2>教師用PINを設定</h2><p class="muted">従来データを安全に引き継ぐため、年度パスワードで一度確認し、日常用の6桁PINを設定します。</p><form id="pin-migration-form"><div class="field"><label for="migration-password">現在の年度パスワード</label><input class="input" id="migration-password" type="password" autocomplete="current-password" required autofocus></div><div class="form-grid section"><div class="field"><label for="migration-pin">新しい教師用PIN</label><input class="input pin-input" id="migration-pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></div><div class="field"><label for="migration-pin2">PIN確認</label><input class="input pin-input" id="migration-pin2" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></div></div><p class="error" id="pin-migration-error"></p><div class="dialog-actions"><button type="button" class="button" id="pin-migration-cancel">キャンセル</button><button type="submit" class="button primary">PINを設定して開く</button></div></form>`);
+    openDialog(`<h2>教師画面PINを設定</h2><p class="muted">従来データを安全に引き継ぐため、データ保護パスワードで一度確認し、日常用の数字6桁を設定します。</p><form id="pin-migration-form"><div class="field"><label for="migration-password">現在のデータ保護パスワード</label><input class="input" id="migration-password" type="password" autocomplete="current-password" required autofocus></div><div class="form-grid section"><div class="field"><label for="migration-pin">新しい教師画面PIN</label><input class="input pin-input" id="migration-pin" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></div><div class="field"><label for="migration-pin2">PIN確認</label><input class="input pin-input" id="migration-pin2" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required></div></div><p class="error" id="pin-migration-error"></p><div class="dialog-actions"><button type="button" class="button" id="pin-migration-cancel">キャンセル</button><button type="submit" class="button primary">PINを設定して開く</button></div></form>`);
     document.getElementById('pin-migration-cancel').addEventListener('click',requestDialogClose);
     document.getElementById('pin-migration-form').addEventListener('submit',async event=>{
       event.preventDefault();const error=document.getElementById('pin-migration-error'),password=document.getElementById('migration-password').value,pin=document.getElementById('migration-pin').value,pin2=document.getElementById('migration-pin2').value;
-      if(!await verifySecret(password,state.year.auth)){error.textContent='年度パスワードが違います。';return;}
+      if(!await verifySecret(password,state.year.auth)){error.textContent='データ保護パスワードが違います。';return;}
       if(pin!==pin2){error.textContent='PINが一致しません。';return;}
       if(!/^\d{6}$/.test(pin)){error.textContent='PINは数字6桁で設定してください。';return;}
       state.year=await ClassDB.put('years',{...state.year,pinAuth:await createVerifier(pin)});closeDialog();unlockTeacher(password);showToast('教師用PINを設定しました');onSuccess();
@@ -437,15 +438,15 @@
     if(state.sessionSecret)return Promise.resolve(true);
     return new Promise(resolve=>{
       let settled=false;const finish=value=>{if(settled)return;settled=true;dialog.removeEventListener('cancel',onDialogCancel);resolve(value);};const onDialogCancel=()=>finish(false);
-      openDialog(`<h2>年度パスワードを入力</h2><p class="muted">暗号化・復号を行うときだけ必要です。PCログイン時のパスワードのように、本人には覚えやすく他人には推測されにくいものを入力してください。</p>${state.year?.passwordHint?`<p class="panel small">ヒント：${esc(state.year.passwordHint)}</p>`:''}<form id="crypto-auth-form"><div class="field"><label for="crypto-password">年度パスワード</label><input class="input" id="crypto-password" type="password" autocomplete="current-password" autofocus required></div><p class="error" id="crypto-auth-error"></p><div class="dialog-actions"><button type="button" class="button" id="crypto-auth-cancel">キャンセル</button><button type="submit" class="button primary">続ける</button></div></form>`);
+      openDialog(`<h2>データ保護パスワードを入力</h2><p class="muted">暗号化・復号を行うときだけ必要です。年度が変わっても同じものを続けて使えます。</p>${state.year?.passwordHint?`<p class="panel small">ヒント：${esc(state.year.passwordHint)}</p>`:''}<form id="crypto-auth-form"><div class="field"><label for="crypto-password">データ保護パスワード</label><input class="input" id="crypto-password" type="password" autocomplete="current-password" autofocus required></div><p class="error" id="crypto-auth-error"></p><div class="dialog-actions"><button type="button" class="button" id="crypto-auth-cancel">キャンセル</button><button type="submit" class="button primary">続ける</button></div></form>`);
       dialog.addEventListener('cancel',onDialogCancel,{once:true});
       document.getElementById('crypto-auth-cancel').addEventListener('click',()=>{if(requestDialogClose())finish(false);});
-      document.getElementById('crypto-auth-form').addEventListener('submit',async event=>{event.preventDefault();const password=document.getElementById('crypto-password').value;if(!await verifySecret(password,state.year.auth)){document.getElementById('crypto-auth-error').textContent='年度パスワードが違います。';return;}state.sessionSecret=password;closeDialog();finish(true);});
+      document.getElementById('crypto-auth-form').addEventListener('submit',async event=>{event.preventDefault();const password=document.getElementById('crypto-password').value;if(!await verifySecret(password,state.year.auth)){document.getElementById('crypto-auth-error').textContent='データ保護パスワードが違います。';return;}state.sessionSecret=password;closeDialog();finish(true);});
     });
   }
 
   function openPasswordRecovery(){
-    openDialog(`<h2>復旧コードで開く</h2><p class="muted">この端末にデータが残っていれば、復旧コードだけで年度パスワードを再設定できます。新しい端末やデータ消失時は暗号化バックアップも選んでください。</p>${state.year?.passwordHint?`<p class="panel small">パスワードのヒント：${esc(state.year.passwordHint)}</p>`:''}<form id="password-recovery-form"><div class="field"><label for="recovery-backup-file">暗号化バックアップ（別端末・データ消失時のみ）</label><input class="input" id="recovery-backup-file" type="file" accept=".json,application/json"></div><div class="field section"><label for="recovery-code-input">復旧コード</label><input class="input" id="recovery-code-input" autocomplete="off" required></div><div class="form-grid section"><div class="field"><label for="recovery-new-password">新しい年度パスワード</label><input class="input" id="recovery-new-password" type="password" minlength="8" required></div><div class="field"><label for="recovery-new-password2">新しいパスワードの確認</label><input class="input" id="recovery-new-password2" type="password" minlength="8" required></div></div><p class="error" id="password-recovery-error"></p><div class="dialog-actions"><button type="button" class="button" id="password-recovery-cancel">キャンセル</button><button type="submit" class="button primary">復旧してパスワードを変更</button></div></form>`);
+    openDialog(`<h2>緊急復旧コードで開く</h2><p class="muted">この端末にデータが残っていれば、緊急復旧コードだけでデータ保護パスワードを再設定できます。新しい端末やデータ消失時は暗号化バックアップも選んでください。</p>${state.year?.passwordHint?`<p class="panel small">パスワードのヒント：${esc(state.year.passwordHint)}</p>`:''}<form id="password-recovery-form"><div class="field"><label for="recovery-backup-file">暗号化バックアップ（別端末・データ消失時のみ）</label><input class="input" id="recovery-backup-file" type="file" accept=".json,application/json"></div><div class="field section"><label for="recovery-code-input">緊急復旧コード</label><input class="input" id="recovery-code-input" autocomplete="off" required></div><div class="form-grid section"><div class="field"><label for="recovery-new-password">新しいデータ保護パスワード</label><input class="input" id="recovery-new-password" type="password" minlength="8" required></div><div class="field"><label for="recovery-new-password2">新しいパスワードの確認</label><input class="input" id="recovery-new-password2" type="password" minlength="8" required></div></div><p class="error" id="password-recovery-error"></p><div class="dialog-actions"><button type="button" class="button" id="password-recovery-cancel">キャンセル</button><button type="submit" class="button primary">復旧してパスワードを変更</button></div></form>`);
     document.getElementById('password-recovery-cancel').addEventListener('click',requestDialogClose);document.getElementById('password-recovery-form').addEventListener('submit',recoverPasswordFromBackup);
   }
 
@@ -456,7 +457,7 @@
     if(password.length<8){error.textContent='新しいパスワードは8文字以上にしてください。';return;}
     error.textContent='復旧処理中です…';
     try{
-      if(!file&&state.year){if(!await verifySecret(code,state.year.recoveryAuth))throw new Error('復旧コードが一致しません');state.year=await ClassDB.put('years',{...state.year,auth:await createVerifier(password),recoverySecretProtected:await protectText(code,password)});unlockTeacher(password);closeDialog();showToast('復旧コードで年度パスワードを再設定しました');renderHome();return;}
+      if(!file&&state.year){if(!await verifySecret(code,state.year.recoveryAuth))throw new Error('緊急復旧コードが一致しません');state.year=await ClassDB.put('years',{...state.year,auth:await createVerifier(password),recoverySecretProtected:await protectText(code,password)});unlockTeacher(password);closeDialog();showToast('緊急復旧コードでデータ保護パスワードを再設定しました');renderHome();return;}
       if(!file)throw new Error('この端末に年度データがないため、暗号化バックアップを選んでください');
       const envelope=validateEncryptedEnvelope(JSON.parse(await readImportText(file,'暗号化バックアップ'))),payload=validateSyncPayload(await decryptEnvelope(envelope,code,'recovery'));
       const payloadYear=payload.data.years.find(item=>item.id===payload.yearId);
@@ -469,7 +470,7 @@
       const replacement={...payload.data,years:payload.data.years.map(item=>item.id===updatedYear.id?updatedYear:item),meta};
       openDialog(`<h2>${esc(payload.yearLabel)}を復旧しますか</h2><p>クラス ${classes.length}件、児童 ${payload.data.students.length}人、記録 ${payload.data.records.length}件を確認しました。</p><p class="notice"><strong>この端末に現在ある新形式データを、選んだバックアップの内容へ置き換えます。</strong><br>以前のツール用データは削除しません。</p><div class="dialog-actions"><button type="button" class="button" id="recovery-replace-cancel">キャンセル</button><button type="button" class="button primary" id="recovery-replace-confirm">確認して復旧</button></div>`);
       document.getElementById('recovery-replace-cancel').addEventListener('click',requestDialogClose);
-document.getElementById('recovery-replace-confirm').addEventListener('click',event=>runOnce(event.currentTarget,async()=>{try{await ClassDB.replaceAllRaw(replacement);await reloadStateFromDb();unlockTeacher(password);closeDialog();showToast('バックアップを復旧し、新しい年度パスワードを設定しました');renderHome();}catch(problem){openDialog(`<h2>復旧を完了できませんでした</h2><p>${esc(problem.message||'端末への保存に失敗しました')}</p><p class="muted">元のデータは変更されていません。空き容量を確認して、もう一度お試しください。</p><div class="dialog-actions"><button type="button" class="button primary" id="recovery-error-close">OK</button></div>`);document.getElementById('recovery-error-close').addEventListener('click',requestDialogClose);}}));
+document.getElementById('recovery-replace-confirm').addEventListener('click',event=>runOnce(event.currentTarget,async()=>{try{await ClassDB.replaceAllRaw(replacement);await reloadStateFromDb();unlockTeacher(password);closeDialog();showToast('バックアップを復旧し、新しいデータ保護パスワードを設定しました');renderHome();}catch(problem){openDialog(`<h2>復旧を完了できませんでした</h2><p>${esc(problem.message||'端末への保存に失敗しました')}</p><p class="muted">元のデータは変更されていません。空き容量を確認して、もう一度お試しください。</p><div class="dialog-actions"><button type="button" class="button primary" id="recovery-error-close">OK</button></div>`);document.getElementById('recovery-error-close').addEventListener('click',requestDialogClose);}}));
     }catch(problem){error.textContent=problem.message||'復旧できませんでした';}
   }
 

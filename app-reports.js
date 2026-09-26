@@ -1,24 +1,30 @@
 "use strict";
 
-  function currentTermRange(){
-    const first=today()<=state.year.firstTermEnd;
-    return{label:first?'前期':'後期',start:first?state.year.startDate:moveDate(state.year.firstTermEnd,1),end:first?state.year.firstTermEnd:state.year.endDate};
+  function reportPeriodRange(choice='current'){
+    if(choice==='year')return{label:'年間',start:state.year.startDate,end:state.year.endDate};
+    if(choice==='front')return{label:'前期',start:state.year.startDate,end:state.year.firstTermEnd};
+    if(choice==='back')return{label:'後期',start:moveDate(state.year.firstTermEnd,1),end:state.year.endDate};
+    const first=today()<=state.year.firstTermEnd;return reportPeriodRange(first?'front':'back');
   }
+  function currentTermRange(){return reportPeriodRange('current');}
 
   async function renderReports(){
     if(!teacherActive()){renderPupil();return;}
     state.route='teacher-reports';state.activeTool='reports';
-    const classItem=selectedClass();applyClassTheme(classItem);const term=currentTermRange();
+    const classItem=selectedClass();applyClassTheme(classItem);const periodChoice=state.toolDraft.reportPeriod||'current',term=reportPeriodRange(periodChoice);
     const all=(await ClassDB.getAllByIndex('records','classId',classItem.id)).filter(item=>['memo','notebookAssessment','supportRecord','certificate'].includes(item.type)&&item.date>=term.start&&item.date<=term.end&&normalRecord(item));
     const cards=await teacherRosterCards(classItem.id,[],{status:(_,row)=>{const count=all.filter(item=>item.studentId===row.student.id).length;return count?`${term.label} ${count}件`:'素材なし';},statusClass:(_,row)=>all.some(item=>item.studentId===row.student.id)?'good':'warn'});
-    app.innerHTML=teacherToolShell('所見素材',`${cards}<section class="panel report-after-roster"><h1>${esc(classItem.name)}・${term.label}</h1><p class="muted">児童を選ぶと、今学期の児童メモ・ノート評価・学習記録・賞状記録を自動選択します。</p></section>`);
-    wireToolHome();wireStudentDetails();document.querySelectorAll('[data-tool-student]').forEach(button=>button.addEventListener('click',()=>renderReportBuilder(button.dataset.toolStudent)));
+    app.innerHTML=teacherToolShell('所見素材',`${cards}<section class="panel report-after-roster"><div class="toolbar-line"><div><h1>${esc(classItem.name)}・${term.label}</h1><p class="muted">児童を選ぶと、選んだ期間の児童メモ・ノート評価・学習記録・賞状記録を自動選択します。</p></div><label class="field compact-field" for="report-period">対象期間<select class="select" id="report-period"><option value="current" ${periodChoice==='current'?'selected':''}>現在の学期</option><option value="front" ${periodChoice==='front'?'selected':''}>前期</option><option value="back" ${periodChoice==='back'?'selected':''}>後期</option><option value="year" ${periodChoice==='year'?'selected':''}>年間</option></select></label></div></section>`);
+    wireToolHome();wireStudentDetails();document.getElementById('report-period').addEventListener('change',event=>{state.toolDraft.reportPeriod=event.target.value;renderReports();});document.querySelectorAll('[data-tool-student]').forEach(button=>button.addEventListener('click',()=>renderReportBuilder(button.dataset.toolStudent)));
   }
 
   async function renderReportBuilder(studentId){
     if(!teacherActive()){renderPupil();return;}
     state.route='teacher-report-builder';const classItem=selectedClass();const student=await ClassDB.get('students',studentId);if(!student){renderReports();return;}
-    const term=currentTermRange();const records=(await ClassDB.getAllByIndex('records','studentId',studentId)).filter(item=>item.classId===classItem.id&&['memo','notebookAssessment','supportRecord','certificate'].includes(item.type)&&item.date>=term.start&&item.date<=term.end&&normalRecord(item)).sort((a,b)=>a.date.localeCompare(b.date)||a.updatedAt.localeCompare(b.updatedAt));
+    const term=reportPeriodRange(state.toolDraft.reportPeriod||'current');let records=(await ClassDB.getAllByIndex('records','studentId',studentId)).filter(item=>item.classId===classItem.id&&['memo','notebookAssessment','supportRecord','certificate'].includes(item.type)&&item.date>=term.start&&item.date<=term.end&&normalRecord(item));
+    const cleaningDays=(await ClassDB.getAllByIndex('records','classId',classItem.id)).filter(item=>item.type==='cleaningDaily'&&['announcement','announced'].includes(item.phase)&&item.date>=term.start&&item.date<=term.end&&normalRecord(item));
+    const cleaningEntries=cleaningDays.filter(day=>day.groups?.some(group=>group.selectedIds?.includes(studentId)&&!(group.absentIds||[]).includes(studentId))).map(day=>({id:`cleaningDutySummary_${day.id}_${studentId}`,type:'cleaningDutySummary',classId:classItem.id,studentId,date:day.date,detail:'掃除で自分の仕事をしていたと班で確認'}));
+    records=[...records,...cleaningEntries].sort((a,b)=>a.date.localeCompare(b.date)||(a.updatedAt||'').localeCompare(b.updatedAt||''));
     app.innerHTML=teacherToolShell('所見素材',`<div class="button-row" style="justify-content:space-between"><button type="button" class="button" id="reports-back">一覧へ戻る</button><div><h1>${esc(student.name)}</h1><p class="muted">${esc(classItem.name)}・${term.label}</p></div></div><section class="panel section"><div class="button-row" style="justify-content:space-between"><div><h2>使用する記録</h2><p class="muted">すべて選択済みです。不要な記録だけ外してください。</p></div><div class="button-row"><button type="button" class="button" id="report-all">すべて選択</button><button type="button" class="button" id="report-none">すべて外す</button></div></div><div class="report-records">${records.map(reportRecordChoiceHtml).join('')||'<p class="muted">この期間の対象記録はありません。</p>'}</div></section><section class="report-columns section"><div class="panel"><div class="button-row" style="justify-content:space-between"><h2>所見素材</h2><div class="button-row"><button type="button" class="button" data-copy-report="materials">コピー</button><button type="button" class="button" data-save-report="materials">TXT保存</button></div></div><textarea class="textarea report-output" id="report-materials" readonly></textarea></div><div class="panel"><div class="button-row" style="justify-content:space-between"><h2>AI用プロンプト</h2><div class="button-row"><button type="button" class="button" data-copy-report="prompt">コピー</button><button type="button" class="button" data-save-report="prompt">TXT保存</button></div></div><textarea class="textarea report-output" id="report-prompt" readonly></textarea></div></section>`);
     wireToolHome();document.getElementById('reports-back').addEventListener('click',renderReports);
     const refresh=async()=>{const selected=records.filter(record=>document.querySelector(`[data-report-record="${record.id}"]`)?.checked);const materials=buildReportMaterials(selected,student,classItem,term);const template=await ClassDB.getMeta('reportPromptTemplate',defaultReportPrompt());document.getElementById('report-materials').value=materials;document.getElementById('report-prompt').value=fillReportPrompt(template,{name:student.name,className:classItem.name,term:term.label,materials});};
@@ -30,11 +36,12 @@
   }
 
   function reportRecordChoiceHtml(record){
-    const labels={memo:'児童メモ',notebookAssessment:'ノート評価',supportRecord:'学習記録',certificate:'ミニ賞状'};let detail='';
+    const labels={memo:'児童メモ',notebookAssessment:'ノート評価',supportRecord:'学習記録',certificate:'ミニ賞状',cleaningDutySummary:'掃除'};let detail='';
     if(record.type==='memo')detail=`${record.subject||'教科なし'}${record.unit?`「${record.unit}」`:''}　${(record.tags||[]).join('・')}${record.text?`　${record.text}`:''}`;
     if(record.type==='notebookAssessment')detail=`${record.subject||''}　${record.unit||''}　${record.title||''}　${notebookViewpointText(record)}${record.note?`　${record.note}`:''}`;
     if(record.type==='supportRecord')detail=`${record.subject||''}　${record.unit||''}　${flattenSupportTags(record).join('・')}${record.text?`　${record.text}`:''}`;
     if(record.type==='certificate')detail=`${(record.tags||[]).join('・')}${record.text?`　${record.text}`:''}`;
+    if(record.type==='cleaningDutySummary')detail=record.detail||'掃除で仕事をしていた記録';
     return `<label class="report-record"><input type="checkbox" data-report-record="${record.id}" checked><span><strong>${esc(shortJpDate(record.date))}　${labels[record.type]}</strong><small>${esc(detail.trim())}</small></span></label>`;
   }
 
@@ -146,4 +153,3 @@
     const detail='掃除の記録：対象 '+targetDays+'日中 '+selectedDays+'日を確認'+(absentDays?'（欠席 '+absentDays+'日）':'');
     return [{id:'cleaning_report_'+classId+'_'+studentId+'_'+term.start+'_'+term.end,type:'cleaningDutySummary',classId,studentId,date:term.end,detail,updatedAt:term.end+'T23:59:59.999Z'}];
   }
-
