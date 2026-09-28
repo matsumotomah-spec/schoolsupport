@@ -195,7 +195,12 @@
       const attendanceNumber=orderMode==='number'&&row.enrollment.number!==null&&row.enrollment.number!==undefined&&row.enrollment.number!==''
         ? `<span class="student-number" aria-label="出席番号${esc(row.enrollment.number)}">${esc(row.enrollment.number)}</span>`
         : '';
-      const memoDate=lastMemo.get(row.student.id);return `<article class="teacher-student-card ${esc(statusClass)}${feedbackClass(row.student.id)}"><button type="button" class="student-main" data-tool-student="${row.student.id}"><strong>${attendanceNumber}${esc(row.student.name)}</strong>${status?`<span>${esc(status)}</span>`:''}${extra}</button><div class="student-card-footer">${memoDate?`<span title="最後のメモ：${esc(jpDate(memoDate))}">メモ ${esc(slashDate(memoDate))}</span>`:'<span></span>'}<button type="button" class="detail-button" data-student-detail="${row.student.id}" aria-label="${esc(row.student.name)}の詳細">詳細</button></div></article>`;
+      const memoDate=lastMemo.get(row.student.id),showDetails=options.showDetails!==false,showMemoDate=options.showMemoDate!==false;
+      const footerItems=[];
+      if(showMemoDate)footerItems.push(memoDate?`<span title="最後のメモ：${esc(jpDate(memoDate))}">メモ ${esc(slashDate(memoDate))}</span>`:'<span></span>');
+      if(showDetails)footerItems.push(`<button type="button" class="detail-button" data-student-detail="${row.student.id}" aria-label="${esc(row.student.name)}の詳細">詳細</button>`);
+      const footer=footerItems.length?`<div class="student-card-footer">${footerItems.join('')}</div>`:'';
+      return `<article class="teacher-student-card ${esc(statusClass)}${feedbackClass(row.student.id)}"><button type="button" class="student-main" data-tool-student="${row.student.id}"><strong>${attendanceNumber}${esc(row.student.name)}</strong>${status?`<span>${esc(status)}</span>`:''}${extra}</button>${footer}</article>`;
     };
     const classItem=state.classes.find(item=>item.id===classId),snapshot=options.seatSnapshot,useSnapshot=Boolean(snapshot?.layout?.length),useShape=orderMode==='seat'&&(useSnapshot||options.preserveSeatShape&&classItem?.activeSeatLayout?.length);let body='';let style='';
     if(useSnapshot){const{cells,extras}=seatSnapshotRows(snapshot,roster),cols=Math.max(1,Number(snapshot.cols)||6),aisles=new Set((snapshot.aisles||[]).map(Number));body=cells.map((row,index)=>{const cell=row?card(row):'<div class="teacher-student-card grid-empty"><span>空席</span></div>',column=index%cols+1;return cell+(column<cols&&aisles.has(column)?'<div class="teacher-seat-aisle" aria-hidden="true"></div>':'');}).join('')+extras.map(card).join('');style=` style="grid-template-columns:${seatSnapshotGridTemplate(snapshot)}"`;
