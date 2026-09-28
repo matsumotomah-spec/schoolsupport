@@ -8,7 +8,7 @@
   const PIN_LENGTH=6;
   const PIN_MAX_FAILURES=5;
   const PIN_LOCK_MS=30*1000;
-  const APP_VERSION='147';
+  const APP_VERSION='149';
   const APP_UPDATED_AT='2026-09-26';
   const PIN_ATTEMPT_KEY='classSupportPinAttemptsV1';
   const COLORS=['#d85b5b','#ef9fb4','#4e78b8','#9adfe8','#efd66e','#397257','#7651a8'];
@@ -232,7 +232,11 @@
     state.selectedClassId=await ClassDB.getMeta('selectedClassId',state.classes[0]?.id||null);
     state.lastBackupAt=await ClassDB.getMeta('lastBackupAt',null);state.lastSyncAt=await ClassDB.getMeta('lastSyncAt',null);state.backupDismissedUntil=await ClassDB.getMeta('backupDismissedUntil',null);
     if(!state.classes.some(item=>item.id===state.selectedClassId))state.selectedClassId=state.classes[0]?.id||null;
-    requireTeacher(renderHome);
+    // Shared/touch devices always restart in the pupil-safe screen.  A teacher
+    // opens the teacher area explicitly and authenticates from there.  Keep
+    // the opt-in desktop-only PIN bypass behavior for staff-room PCs.
+    if(pcPinlessEligible()){requireTeacher(renderHome);return;}
+    await renderPupil('all');
   }
 
   async function purgeExpiredTrash(){const now=ClassDB.now(),expired=(await ClassDB.getAll('trash')).filter(item=>item.purgeAfter&&item.purgeAfter<now);for(const item of expired)await ClassDB.remove('trash',item.id);}
@@ -243,6 +247,12 @@
     const info=await ClassDB.getMeta('informationMode',null),legacyExplanations=await ClassDB.getMeta('showExplanations',true);state.informationMode=['compact','standard','detailed'].includes(info)?info:(legacyExplanations?'standard':'compact');state.showExplanations=state.informationMode!=='compact';state.rosterDensity=await ClassDB.getMeta('rosterDensity','auto');state.onboardingStep=Number(await ClassDB.getMeta('onboardingStep',0));state.year=await ClassDB.get('years',await ClassDB.getMeta('activeYearId'));state.classes=state.year?(await ClassDB.getAllByIndex('classes','yearId',state.year.id)).sort((a,b)=>(b.isOwn-a.isOwn)||(a.order-b.order)):[];state.selectedClassId=await ClassDB.getMeta('selectedClassId',state.classes[0]?.id||null);if(!state.classes.some(item=>item.id===state.selectedClassId))state.selectedClassId=state.classes[0]?.id||null;state.lastBackupAt=await ClassDB.getMeta('lastBackupAt',null);state.lastSyncAt=await ClassDB.getMeta('lastSyncAt',null);state.backupDismissedUntil=await ClassDB.getMeta('backupDismissedUntil',null);applyTheme();return state;
   }
 
+  function setupStartGuideHtml(){
+    const pc=isDesktopDevice();
+    if(pc)return `<section class="welcome-card setup-start-guide"><span class="setup-kicker">最初の準備：PC</span><h1>PCでクラスを準備します</h1><p>先にこのPCでクラス設定と名簿を用意し、そのあとiPadへ受け渡します。iPadで最初から名簿を作る必要はありません。</p><ol class="setup-flow-list"><li><strong>この画面でクラス・教師画面PIN・データ保護パスワードを保存</strong></li><li><strong>次の画面で名簿を貼り付け</strong><span>座席は必要なときだけ設定します。</span></li><li><strong>名簿画面からiPad用の受け渡しコードを作る</strong><span>作ったコードをTeams本文などへ貼ります。</span></li></ol><div class="button-row section"><button type="button" class="button primary" id="setup-start-pc">クラス設定を始める ▶</button></div></section>`;
+    return `<section class="welcome-card setup-start-guide"><span class="setup-kicker">最初の準備：iPad</span><h1>PCで準備したクラスを受け取ります</h1><p>PCで作ったクラス設定・名簿を、このiPadへまとめて受け取れます。</p><ol class="setup-flow-list"><li><strong>Teams本文などで、PCからの受け渡しコードを開く</strong></li><li><strong>「PCからクラスを受け取る」を押し、コードを貼り付ける</strong></li><li><strong>PCと同じデータ保護パスワードを入力して、年度・人数を確認</strong></li></ol><div class="button-row section"><button type="button" class="button primary large-action" id="setup-receive-pc">PCからクラスを受け取る ▶</button></div><details class="setup-existing"><summary>PCを使わず、このiPadだけでクラスを作る場合</summary><p class="muted small">このiPadで年度・クラス・名簿を順に登録します。</p><button type="button" class="button" id="setup-start-local">このiPadでクラス設定を始める ▶</button></details></section>`;
+  }
+
   function renderSetup(){
     state.route='setup';
     const sy=schoolYear();
@@ -251,10 +261,9 @@
       <div class="app-shell">
         ${headerHtml('初回設定','',false,false)}
       <main class="page narrow">
-          <section class="welcome-card"><span class="setup-kicker">最初の準備 1 / 2</span><h1>ようこそ</h1><p>新しくクラスを作る場合は、下から入力します。PCで名簿と座席を準備済みの場合は、受け渡しコードを使えます。</p><div class="button-row section"><button type="button" class="button primary" id="setup-receive-pc">PCから初期設定を受け取る</button></div><ol class="setup-checklist"><li class="current"><strong>いま：</strong>クラスと先生用の番号を決める</li><li><strong>つぎ：</strong>児童の氏名を登録する</li><li><strong>完了：</strong>教師ホームから「毎日の宿題」を開く</li></ol><details class="setup-existing"><summary>以前のデータを戻したい場合</summary><div class="button-row section"><button type="button" class="button" id="setup-restore">保存したバックアップから戻す</button><button type="button" class="button" id="setup-legacy-check">以前の形式のデータを確認</button></div></details></section>
+          ${setupStartGuideHtml()}
           <div class="setup-steps"><span class="step active"></span><span class="step"></span></div>
-          <h1>クラスの準備</h1>
-          <p class="muted">上から順に入力してください。「通常はそのままでよい」と書かれた項目は、必要な場合だけ変更します。</p>
+          <details class="setup-local-fallback" id="setup-manual" ${isDesktopDevice()?'open':''}><summary>${isDesktopDevice()?'クラス設定を入力する':'このiPadでクラスを作る'}</summary><p class="muted">上から順に入力してください。「通常はそのままでよい」と書かれた項目は、必要な場合だけ変更します。</p>
           <form id="setup-form" class="panel setup-form">
             <section class="setup-block"><h2><span>1</span> クラスを登録</h2><div class="form-grid">
             <div class="field"><label for="setup-year">年度</label><input class="input" id="setup-year" type="number" min="2020" max="2100" value="${sy}" required></div>
@@ -279,13 +288,16 @@
             <div class="field full"><label for="setup-hint">忘れたときのヒント（児童名などは入れない）</label><input class="input" id="setup-hint"></div>
             </div></section>
             <div class="field full setup-submit"><p class="error" id="setup-error" role="alert"></p><button class="button primary large-action" type="submit">保存して児童登録へ進む</button><p class="muted small">次の画面で、緊急時に使うコードを一度だけ保存します。</p></div>
-          </form>
+          </form></details>
+          <details class="setup-existing setup-restore-panel"><summary>保存したデータから再開する場合</summary><div class="button-row section"><button type="button" class="button" id="setup-restore">保存したバックアップから再開</button><button type="button" class="button" id="setup-legacy-check">以前の形式のデータを確認</button></div></details>
         </main>
       </div>`);
     wireColorChoices(document.getElementById('setup-colors'));
     const toggleSetupClass=()=>{const support=document.getElementById('setup-mode').value==='support';document.getElementById('setup-general-name').hidden=support;document.getElementById('setup-support-name').hidden=!support;document.getElementById('setup-group').required=!support;document.getElementById('setup-class').required=support;};document.getElementById('setup-mode').addEventListener('change',toggleSetupClass);toggleSetupClass();
     document.getElementById('setup-restore').addEventListener('click',openPasswordRecovery);
-    document.getElementById('setup-receive-pc').addEventListener('click',openSetupTransferReceive);
+    document.getElementById('setup-receive-pc')?.addEventListener('click',openSetupTransferReceive);
+    document.getElementById('setup-start-pc')?.addEventListener('click',()=>{const manual=document.getElementById('setup-manual');manual.open=true;manual.scrollIntoView({behavior:'smooth',block:'start'});document.getElementById('setup-year')?.focus({preventScroll:true});});
+    document.getElementById('setup-start-local')?.addEventListener('click',()=>{const manual=document.getElementById('setup-manual');manual.open=true;manual.scrollIntoView({behavior:'smooth',block:'start'});document.getElementById('setup-year')?.focus({preventScroll:true});});
     document.getElementById('setup-legacy-check').addEventListener('click',()=>{const legacy=LegacyMigration.fromStorage();showToast(legacy.length?`${legacy.length}件の旧データが見つかりました。初期設定後に移行できます`:'旧データは見つかりませんでした');});
     document.getElementById('setup-form').addEventListener('submit',prepareSetup);
   }
@@ -475,8 +487,8 @@ document.getElementById('recovery-replace-confirm').addEventListener('click',eve
   }
 
   async function setOnboardingStep(step){state.onboardingStep=step;await ClassDB.setMeta('onboardingStep',step);}
-  function onboardingTarget(){if(state.onboardingStep===2)return state.classSettingsView==='roster'?['[data-roster-row="0"] [data-field="name"]','氏名の入力欄']:["#home-open-roster",'「児童を登録する」'];if(state.onboardingStep===3)return state.classSettingsView==='roster'?['#roster-start-daily','「毎日の宿題を始める」']:['[data-tool="daily"]','「毎日の宿題」'];if(state.onboardingStep===4)return state.route==='teacher-home'?['#pupil-mode','「児童用の提出画面」']:['[data-common-home]','左上のタイトル または 右上のホーム'];return null;}
-  function onboardingBannerHtml(){if(!state.onboardingStep)return'';const data={2:['2 / 4','児童を登録します','氏名を入力して、右側の「この児童を登録」を押します。'],3:['3 / 4','毎日の宿題を確認します','名簿登録はできています。次は毎日の提出確認を開きます。'],4:['4 / 4','児童用画面を確認します','最後に、児童が提出する画面を開いて確認します。']}[state.onboardingStep],target=onboardingTarget();if(!data)return'';return`<section class="onboarding-banner"><span>はじめの準備 ${data[0]}</span><div><strong>${data[1]}</strong><p>${data[2]}</p></div><div class="button-row"><button type="button" class="button primary" data-onboarding-highlight>${esc(target?.[1]||'押す場所')}を強調</button><button type="button" class="button" data-onboarding-stop>案内を終了</button></div></section>`;}
+  function onboardingTarget(){if(state.onboardingStep===2)return state.classSettingsView==='roster'?['[data-roster-row="0"] [data-field="name"]','氏名の入力欄']:["#home-open-roster",'「児童を登録する」'];if(state.onboardingStep===3){if(isDesktopDevice())return state.classSettingsView==='roster'?['#roster-transfer-ipad','「iPad用の受け渡しコードを作る」']:['[data-common-settings]','「設定」'];return state.classSettingsView==='roster'?['#roster-open-pupil','「児童用画面を確認」']:['#pupil-mode','「児童用の提出画面」'];}if(state.onboardingStep===4)return state.route==='teacher-home'?['#pupil-mode','「児童用の提出画面」']:['[data-common-home]','左上のタイトル または 右上のホーム'];return null;}
+  function onboardingBannerHtml(){if(!state.onboardingStep)return'';const step3=isDesktopDevice()?['3 / 3','iPadへ初期設定を渡します','名簿を受け渡しコードにして、iPadでコピーできる場所へ貼り付けます。']:['3 / 3','児童用画面を確認します','児童が提出を入力する画面を開いて確認します。'],data={2:['2 / 3','児童を登録します','氏名を入力して、右側の「この児童を登録」を押します。'],3:step3,4:['3 / 3','児童用画面を確認します','児童が提出を入力する画面を開いて確認します。']}[state.onboardingStep],target=onboardingTarget();if(!data)return'';return`<section class="onboarding-banner"><span>はじめの準備 ${data[0]}</span><div><strong>${data[1]}</strong><p>${data[2]}</p></div><div class="button-row"><button type="button" class="button primary" data-onboarding-highlight>${esc(target?.[1]||'押す場所')}を強調</button><button type="button" class="button" data-onboarding-stop>案内を終了</button></div></section>`;}
   function highlightOnboardingTarget(){const target=onboardingTarget(),elements=target?[...document.querySelectorAll(target[0])]:[];if(!elements.length){showToast('この画面には次の操作がありません。教師用ホームまたは名簿画面を開いてください。');return;}document.querySelectorAll('.onboarding-target,.onboarding-target-choice').forEach(node=>node.classList.remove('onboarding-target','onboarding-target-choice'));elements.forEach(element=>{element.classList.add('onboarding-target');if(elements.length>1)element.classList.add('onboarding-target-choice');});elements[0].scrollIntoView({behavior:'smooth',block:'center'});elements[0].focus?.({preventScroll:true});}
   async function restartOnboarding(){const classItem=selectedClass();if(!classItem){renderSetup();return;}const roster=await rosterForClass(classItem.id);await setOnboardingStep(roster.length?3:2);renderHome();}
   function wireOnboardingStop(){document.querySelector('[data-onboarding-stop]')?.addEventListener('click',async()=>{await setOnboardingStep(0);document.querySelector('.onboarding-banner')?.remove();showToast('初回案内を終了しました');});document.querySelector('[data-onboarding-highlight]')?.addEventListener('click',highlightOnboardingTarget);}

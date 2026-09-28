@@ -1,14 +1,36 @@
 "use strict";
 const CLEANING_CONFIG_TYPE='cleaningDutyConfig';
 const CLEANING_DAILY_TYPE='cleaningDutyDaily';
+const CLEANING_RATING_CIRCLE='circle';
+const CLEANING_RATING_DOUBLE='double';
 function cleaningConfigId(classId){return 'cleaningConfig_'+classId;}
 function cleaningDailyId(classId,date){return 'cleaningDaily_'+classId+'_'+date;}
 function cleaningPalette(index){return ['#397257','#4e78b8','#7651a8','#c06d31','#b04e6b','#287b83','#8c6b20','#697d32','#8d5d9d','#38735e'][index%10];}
+function cleaningRatingValue(rating){return rating===CLEANING_RATING_DOUBLE?1:rating===CLEANING_RATING_CIRCLE?0.8:0;}
+function cleaningRatingLabel(rating){return rating===CLEANING_RATING_DOUBLE?'◎ 最初から最後までよく働いた':rating===CLEANING_RATING_CIRCLE?'○ 普通にやれた':'まだ選んでいない';}
+function cleaningRatingMap(group){
+  if(group?.ratings&&typeof group.ratings==='object'&&!Array.isArray(group.ratings))return Object.fromEntries(Object.entries(group.ratings).filter(([,rating])=>[CLEANING_RATING_CIRCLE,CLEANING_RATING_DOUBLE].includes(rating)));
+  // v148以前の「評価する」は1人分として集計されていたため、過去の点数を変えず◎として読む。
+  return Object.fromEntries((group?.selectedIds||[]).map(id=>[id,CLEANING_RATING_DOUBLE]));
+}
+function cleaningNextRating(rating){return rating===CLEANING_RATING_CIRCLE?CLEANING_RATING_DOUBLE:rating===CLEANING_RATING_DOUBLE?null:CLEANING_RATING_CIRCLE;}
+function cleaningStudentRating(record,studentId){
+  const group=(record?.groups||[]).find(item=>(item.memberIds||[]).includes(studentId));
+  if(!group||(group.absentIds||[]).includes(studentId))return null;
+  return cleaningRatingMap(group)[studentId]||null;
+}
+function setCleaningGroupRatings(group,ratings){
+  group.ratings=Object.fromEntries([...ratings].filter(([,rating])=>[CLEANING_RATING_CIRCLE,CLEANING_RATING_DOUBLE].includes(rating)));
+  group.selectedIds=Object.keys(group.ratings);
+}
 function cleaningScore(record){
   if(!record||!['announcement','announced'].includes(record.phase))return null;
-  const targets=record.groups.flatMap(g=>g.memberIds.filter(id=>!g.absentIds.includes(id)));
-  const selected=new Set(record.groups.flatMap(g=>g.selectedIds||[]));
-  return targets.length?{achieved:targets.filter(id=>selected.has(id)).length,target:targets.length,score:Math.round(targets.filter(id=>selected.has(id)).length/targets.length*100)}:null;
+  let target=0,equivalent=0,circle=0,double=0;
+  for(const group of record.groups||[]){
+    const absent=new Set(group.absentIds||[]),ratings=cleaningRatingMap(group);
+    for(const id of group.memberIds||[]){if(absent.has(id))continue;target+=1;const rating=ratings[id];equivalent+=cleaningRatingValue(rating);if(rating===CLEANING_RATING_DOUBLE)double+=1;if(rating===CLEANING_RATING_CIRCLE)circle+=1;}
+  }
+  return target?{equivalent,target,circle,double,score:Math.round(equivalent/target*100)}:null;
 }
 async function cleaningConfig(classId){
   return classId?ClassDB.get('records',cleaningConfigId(classId)):null;
@@ -37,7 +59,7 @@ async function saveCleaningConfig(config){
 }
 async function createCleaningDaily(config,date){
   const roster=await cleaningRoster(config.classId),ids=new Set(roster.map(x=>x.student.id));
-  const groups=(config.groups||[]).map(g=>({id:g.id,name:g.name,color:g.color,memberIds:(g.memberIds||[]).filter(id=>ids.has(id)),cleaningLeaderId:g.cleaningLeaderId||null,groupLeaderId:g.groupLeaderId||null,representativeId:g.cleaningLeaderId||g.groupLeaderId||null,selectedIds:[],absentIds:[],confirmed:false})).filter(g=>g.memberIds.length);
+  const groups=(config.groups||[]).map(g=>({id:g.id,name:g.name,color:g.color,memberIds:(g.memberIds||[]).filter(id=>ids.has(id)),cleaningLeaderId:g.cleaningLeaderId||null,groupLeaderId:g.groupLeaderId||null,representativeId:g.cleaningLeaderId||g.groupLeaderId||null,ratings:{},selectedIds:[],absentIds:[],confirmed:false})).filter(g=>g.memberIds.length);
   const assigned=new Set(groups.flatMap(g=>g.memberIds));
   if(!groups.length||roster.some(row=>!assigned.has(row.student.id))){showToast('掃除班の設定を確認してください');return null;}
   return ClassDB.put('records',{id:cleaningDailyId(config.classId,date),type:CLEANING_DAILY_TYPE,yearId:state.year.id,classId:config.classId,studentId:null,date,phase:'input',groups,startedAt:ClassDB.now()});
@@ -54,7 +76,7 @@ async function renderCleaning(){
   }else{
     const done=daily.groups.filter(g=>g.confirmed).length,score=cleaningScore(daily);
     const groupRows=daily.groups.map(g=>'<li><i style="background:'+esc(g.color)+'"></i><strong>'+esc(g.name)+'</strong><span>'+ (g.confirmed?'確認済み':'入力中')+'</span></li>').join('');
-    const scoreText=score?'<strong>'+score.score+'点</strong><span>'+score.achieved+'/'+score.target+'人を確認</span>':'<span>全班の入力後に点数を計算します。</span>';
+    const scoreText=score?'<strong>'+score.score+'点</strong><span>◎ '+score.double+'人・○ '+score.circle+'人／対象 '+score.target+'人</span>':'<span>全班の入力後に点数を計算します。</span>';
     let actions='<button type="button" class="button primary" id="cleaning-open-pupil">児童用の掃除入力を開く</button>';
     if(daily.phase==='input'&&done===daily.groups.length)actions+='<button type="button" class="button primary" id="cleaning-finalize">結果を確定する</button>';
     if(daily.phase==='announcement')actions='<button type="button" class="button" id="cleaning-edit">先生が修正する</button><button type="button" class="button primary" id="cleaning-open-pupil">発表画面を開く</button>';
@@ -112,24 +134,24 @@ async function renderPupilCleaningInput(record){
   const roster=await cleaningRoster(record.classId),names=new Map(roster.map(row=>[row.student.id,row.student.name]));
   const pending=record.groups.filter(g=>!g.confirmed),groupId=pending.some(g=>g.id===state.toolDraft.cleaningPupilGroupId)?state.toolDraft.cleaningPupilGroupId:pending[0]?.id;
   if(!groupId){document.getElementById('pupil-content').innerHTML='<section class="pupil-cleaning-empty"><h1>入力が終わりました</h1><p>iPadを先生に渡してください。</p></section>';return;}
-  state.toolDraft.cleaningPupilGroupId=groupId;const group=record.groups.find(g=>g.id===groupId),selected=new Set(group.selectedIds||[]);
-  const cards=group.memberIds.map(id=>'<button type="button" class="cleaning-pupil-card '+(selected.has(id)?'selected':'')+'" data-cleaning-pupil-student="'+id+'" aria-pressed="'+selected.has(id)+'"><strong>'+esc(names.get(id)||'児童')+'</strong><span>'+(selected.has(id)?'評価する':'評価しない')+(id===group.representativeId?'・班員に確認':'')+'</span></button>').join('');
-  document.getElementById('pupil-content').innerHTML='<section class="panel pupil-cleaning-input"><div class="toolbar-line"><div><p class="cleaning-kicker">掃除の記録</p><h1>'+esc(group.name)+'の班の代表</h1><p>自分の仕事をしていた人を押してください。</p></div><span class="cleaning-progress-badge">'+record.groups.filter(g=>g.confirmed).length+'/'+record.groups.length+'班</span></div><div class="cleaning-pupil-grid">'+cards+'</div><p class="muted small">押すたびに「評価する」「評価しない」が切り替わります。</p><div class="cleaning-confirm-area"><p>確定後の修正は先生に伝えてください。</p><button type="button" class="button primary" id="cleaning-group-confirm">この班を確定</button></div></section>';
-  document.querySelectorAll('[data-cleaning-pupil-student]').forEach(b=>b.onclick=async()=>{const current=await cleaningDaily(record.classId,today()),target=current.groups.find(g=>g.id===groupId);if(target.confirmed)return;const values=new Set(target.selectedIds||[]),id=b.dataset.cleaningPupilStudent;values.has(id)?values.delete(id):values.add(id);target.selectedIds=[...values];await ClassDB.put('records',current);renderPupilCleaningInput(current);});
+  state.toolDraft.cleaningPupilGroupId=groupId;const group=record.groups.find(g=>g.id===groupId),ratings=cleaningRatingMap(group);
+  const cards=group.memberIds.map(id=>{const rating=ratings[id]||'',label=cleaningRatingLabel(rating);return'<button type="button" class="cleaning-pupil-card rating-'+(rating||'none')+'" data-cleaning-pupil-student="'+id+'" data-cleaning-rating="'+rating+'" aria-label="'+esc((names.get(id)||'児童')+'：'+label)+'"><strong>'+esc(names.get(id)||'児童')+'</strong><b>'+(rating===CLEANING_RATING_DOUBLE?'◎':rating===CLEANING_RATING_CIRCLE?'○':'—')+'</b><span>'+esc(label)+(id===group.representativeId?'・班員に確認':'')+'</span></button>';}).join('');
+  document.getElementById('pupil-content').innerHTML='<section class="panel pupil-cleaning-input"><div class="toolbar-line"><div><p class="cleaning-kicker">掃除の記録</p><h1>'+esc(group.name)+'の班の代表</h1><p>班の人を押して、今日の仕事の様子を選んでください。</p></div><span class="cleaning-progress-badge">'+record.groups.filter(g=>g.confirmed).length+'/'+record.groups.length+'班</span></div><div class="cleaning-rating-guide"><span><b>○</b> 普通にやれた</span><span><b>◎</b> 最初から最後までよく働いた</span></div><div class="cleaning-pupil-grid">'+cards+'</div><p class="muted small">押すたびに「○ → ◎ → 未評価」の順で変わります。確定するまでは何度でも直せます。</p><div class="cleaning-confirm-area"><p>確定後の修正は先生に伝えてください。</p><button type="button" class="button primary" id="cleaning-group-confirm">この班を確定</button></div></section>';
+  document.querySelectorAll('[data-cleaning-pupil-student]').forEach(b=>b.onclick=async()=>{const current=await cleaningDaily(record.classId,today()),target=current.groups.find(g=>g.id===groupId);if(target.confirmed)return;const values=new Map(Object.entries(cleaningRatingMap(target))),id=b.dataset.cleaningPupilStudent,next=cleaningNextRating(values.get(id));next?values.set(id,next):values.delete(id);setCleaningGroupRatings(target,values);await ClassDB.put('records',current);renderPupilCleaningInput(current);});
   document.getElementById('cleaning-group-confirm').onclick=event=>runOnce(event.currentTarget,async()=>{const current=await cleaningDaily(record.classId,today()),target=current?.groups.find(g=>g.id===groupId);if(!target||target.confirmed)return;target.confirmed=true;target.confirmedAt=ClassDB.now();await ClassDB.put('records',current);state.toolDraft.cleaningPupilGroupId=null;showToast(current.groups.every(g=>g.confirmed)?'全ての班の入力が終わりました。先生に渡してください':'次の班へ進みます');renderPupilCleaning();});
 }
 async function renderCleaningTeacherEdit(daily){
-  const roster=await cleaningRoster(daily.classId),selected=new Set(daily.groups.flatMap(g=>g.selectedIds||[])),absent=new Set(daily.groups.flatMap(g=>g.absentIds||[]));
-  const cards=roster.map(row=>'<article class="cleaning-teacher-card '+(selected.has(row.student.id)?'selected':'')+'"><button type="button" data-cleaning-edit-student="'+row.student.id+'" aria-pressed="'+selected.has(row.student.id)+'"><strong>'+esc(row.student.name)+'</strong><span>'+ (selected.has(row.student.id)?'評価する':'評価しない')+'</span></button><label><input type="checkbox" data-cleaning-absent="'+row.student.id+'" '+(absent.has(row.student.id)?'checked':'')+'> 欠席</label></article>').join('');
-  app.innerHTML=teacherToolShell('掃除の記録を確認','<section class="panel"><h2>'+esc(jpDate(daily.date))+'の入力を確認</h2><p class="muted">児童名を押すと評価する／しないを変更します。欠席はチェックで設定します。</p><div class="cleaning-teacher-grid">'+cards+'</div><div class="button-row section"><button type="button" class="button" id="cleaning-edit-cancel">戻る</button><button type="button" class="button primary" id="cleaning-edit-save">修正を保存</button></div></section>');
+  const roster=await cleaningRoster(daily.classId),ratings=new Map(daily.groups.flatMap(group=>Object.entries(cleaningRatingMap(group)))),absent=new Set(daily.groups.flatMap(g=>g.absentIds||[]));
+  const cards=roster.map(row=>{const rating=ratings.get(row.student.id)||'';return'<article class="cleaning-teacher-card rating-'+(rating||'none')+'"><button type="button" data-cleaning-edit-student="'+row.student.id+'"><strong>'+esc(row.student.name)+'</strong><b>'+(rating===CLEANING_RATING_DOUBLE?'◎':rating===CLEANING_RATING_CIRCLE?'○':'—')+'</b><span>'+esc(cleaningRatingLabel(rating))+'</span></button><label><input type="checkbox" data-cleaning-absent="'+row.student.id+'" '+(absent.has(row.student.id)?'checked':'')+'> 欠席</label></article>';}).join('');
+  app.innerHTML=teacherToolShell('掃除の記録を確認','<section class="panel"><h2>'+esc(jpDate(daily.date))+'の入力を確認</h2><p class="muted">児童名を押すと「○ → ◎ → 未評価」の順で変わります。欠席はチェックで設定します。</p><div class="cleaning-rating-guide"><span><b>○</b> 普通にやれた</span><span><b>◎</b> 最初から最後までよく働いた</span></div><div class="cleaning-teacher-grid">'+cards+'</div><div class="button-row section"><button type="button" class="button" id="cleaning-edit-cancel">戻る</button><button type="button" class="button primary" id="cleaning-edit-save">修正を保存</button></div></section>');
   wireToolHome();
-  document.querySelectorAll('[data-cleaning-edit-student]').forEach(b=>b.onclick=()=>{const id=b.dataset.cleaningEditStudent;selected.has(id)?selected.delete(id):selected.add(id);b.closest('article').classList.toggle('selected',selected.has(id));b.querySelector('span').textContent=selected.has(id)?'評価する':'評価しない';});
+  document.querySelectorAll('[data-cleaning-edit-student]').forEach(b=>b.onclick=()=>{const id=b.dataset.cleaningEditStudent,next=cleaningNextRating(ratings.get(id));next?ratings.set(id,next):ratings.delete(id);const card=b.closest('article');card.classList.remove('rating-none','rating-circle','rating-double');card.classList.add('rating-'+(next||'none'));b.querySelector('b').textContent=next===CLEANING_RATING_DOUBLE?'◎':next===CLEANING_RATING_CIRCLE?'○':'—';b.querySelector('span').textContent=cleaningRatingLabel(next);});
   document.getElementById('cleaning-edit-cancel').onclick=renderCleaning;
-  document.getElementById('cleaning-edit-save').onclick=event=>runOnce(event.currentTarget,async()=>{const latest=await cleaningDaily(daily.classId,daily.date);if(!latest)return;const absentIds=new Set([...document.querySelectorAll('[data-cleaning-absent]:checked')].map(x=>x.dataset.cleaningAbsent));latest.groups.forEach(g=>{g.absentIds=g.memberIds.filter(id=>absentIds.has(id));g.selectedIds=g.memberIds.filter(id=>selected.has(id)&&!absentIds.has(id));});await ClassDB.put('records',latest);showToast('修正を保存しました');renderCleaning();});
+  document.getElementById('cleaning-edit-save').onclick=event=>runOnce(event.currentTarget,async()=>{const latest=await cleaningDaily(daily.classId,daily.date);if(!latest)return;const absentIds=new Set([...document.querySelectorAll('[data-cleaning-absent]:checked')].map(x=>x.dataset.cleaningAbsent));latest.groups.forEach(g=>{g.absentIds=g.memberIds.filter(id=>absentIds.has(id));setCleaningGroupRatings(g,new Map(g.memberIds.filter(id=>!absentIds.has(id)&&ratings.has(id)).map(id=>[id,ratings.get(id)])));});await ClassDB.put('records',latest);showToast('修正を保存しました');renderCleaning();});
 }
 async function cleaningSummary(classId){
   const items=(await ClassDB.getAllByIndex('records','classId',classId)).filter(r=>r.type===CLEANING_DAILY_TYPE&&['announcement','announced'].includes(r.phase)&&r.date>=currentWeekStart()&&r.date<=moveDate(currentWeekStart(),6)),counts=new Map();
-  items.forEach(r=>r.groups.forEach(g=>{const selected=new Set(g.selectedIds||[]),absent=new Set(g.absentIds||[]);g.memberIds.forEach(id=>{if(selected.has(id)&&!absent.has(id))counts.set(id,(counts.get(id)||0)+1);});}));
+  items.forEach(r=>r.groups.forEach(g=>{const ratings=cleaningRatingMap(g),absent=new Set(g.absentIds||[]);g.memberIds.forEach(id=>{if(!absent.has(id))counts.set(id,(counts.get(id)||0)+cleaningRatingValue(ratings[id]));});}));
   const roster=await cleaningRoster(classId);
-  return '<section class="panel cleaning-week-summary"><h2>今週の掃除の記録</h2><p class="muted">勤労奉仕や責任感を考えるための補助資料です。件数だけで評価は決めません。</p><div class="cleaning-week-list">'+roster.map(row=>'<span><strong>'+esc(row.student.name)+'</strong> '+(counts.get(row.student.id)||0)+'点</span>').join('')+'</div></section>';
+  return '<section class="panel cleaning-week-summary"><h2>今週の掃除の記録</h2><p class="muted">◎は1.0点、○は0.8点です。勤労奉仕や責任感を考える補助資料として使い、点数だけで評価は決めません。</p><div class="cleaning-week-list">'+roster.map(row=>'<span><strong>'+esc(row.student.name)+'</strong> '+(counts.get(row.student.id)||0).toFixed(1)+'点</span>').join('')+'</div></section>';
 }

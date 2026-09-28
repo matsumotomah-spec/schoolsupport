@@ -23,7 +23,7 @@
     state.route='teacher-report-builder';const classItem=selectedClass();const student=await ClassDB.get('students',studentId);if(!student){renderReports();return;}
     const term=reportPeriodRange(state.toolDraft.reportPeriod||'current');let records=(await ClassDB.getAllByIndex('records','studentId',studentId)).filter(item=>item.classId===classItem.id&&['memo','notebookAssessment','supportRecord','certificate'].includes(item.type)&&item.date>=term.start&&item.date<=term.end&&normalRecord(item));
     const cleaningDays=(await ClassDB.getAllByIndex('records','classId',classItem.id)).filter(item=>item.type==='cleaningDaily'&&['announcement','announced'].includes(item.phase)&&item.date>=term.start&&item.date<=term.end&&normalRecord(item));
-    const cleaningEntries=cleaningDays.filter(day=>day.groups?.some(group=>group.selectedIds?.includes(studentId)&&!(group.absentIds||[]).includes(studentId))).map(day=>({id:`cleaningDutySummary_${day.id}_${studentId}`,type:'cleaningDutySummary',classId:classItem.id,studentId,date:day.date,detail:'掃除で自分の仕事をしていたと班で確認'}));
+    const cleaningEntries=cleaningDays.map(day=>[day,cleaningStudentRating(day,studentId)]).filter(([,rating])=>rating).map(([day,rating])=>({id:`cleaningDutySummary_${day.id}_${studentId}`,type:'cleaningDutySummary',classId:classItem.id,studentId,date:day.date,detail:rating===CLEANING_RATING_DOUBLE?'掃除で最初から最後までよく働いた（◎）':'掃除で普通に仕事ができた（○）'}));
     records=[...records,...cleaningEntries].sort((a,b)=>a.date.localeCompare(b.date)||(a.updatedAt||'').localeCompare(b.updatedAt||''));
     app.innerHTML=teacherToolShell('所見素材',`<div class="button-row" style="justify-content:space-between"><button type="button" class="button" id="reports-back">一覧へ戻る</button><div><h1>${esc(student.name)}</h1><p class="muted">${esc(classItem.name)}・${term.label}</p></div></div><section class="panel section"><div class="button-row" style="justify-content:space-between"><div><h2>使用する記録</h2><p class="muted">すべて選択済みです。不要な記録だけ外してください。</p></div><div class="button-row"><button type="button" class="button" id="report-all">すべて選択</button><button type="button" class="button" id="report-none">すべて外す</button></div></div><div class="report-records">${records.map(reportRecordChoiceHtml).join('')||'<p class="muted">この期間の対象記録はありません。</p>'}</div></section><section class="report-columns section"><div class="panel"><div class="button-row" style="justify-content:space-between"><h2>所見素材</h2><div class="button-row"><button type="button" class="button" data-copy-report="materials">コピー</button><button type="button" class="button" data-save-report="materials">TXT保存</button></div></div><textarea class="textarea report-output" id="report-materials" readonly></textarea></div><div class="panel"><div class="button-row" style="justify-content:space-between"><h2>AI用プロンプト</h2><div class="button-row"><button type="button" class="button" data-copy-report="prompt">コピー</button><button type="button" class="button" data-save-report="prompt">TXT保存</button></div></div><textarea class="textarea report-output" id="report-prompt" readonly></textarea></div></section>`);
     wireToolHome();document.getElementById('reports-back').addEventListener('click',renderReports);
@@ -141,15 +141,15 @@
 
   async function cleaningReportEntries(classId,studentId,term){
     const records=(await ClassDB.getAllByIndex('records','classId',classId)).filter(item=>item.type==='cleaningDutyDaily'&&['announcement','announced'].includes(item.phase)&&item.date>=term.start&&item.date<=term.end);
-    let targetDays=0,selectedDays=0,absentDays=0;
+    let targetDays=0,circleDays=0,doubleDays=0,absentDays=0,points=0;
     records.forEach(record=>{
       const group=(record.groups||[]).find(item=>(item.memberIds||[]).includes(studentId));
       if(!group)return;
       if((group.absentIds||[]).includes(studentId)){absentDays+=1;return;}
       targetDays+=1;
-      if((group.selectedIds||[]).includes(studentId))selectedDays+=1;
+      const rating=cleaningRatingMap(group)[studentId];points+=cleaningRatingValue(rating);if(rating===CLEANING_RATING_DOUBLE)doubleDays+=1;if(rating===CLEANING_RATING_CIRCLE)circleDays+=1;
     });
     if(!targetDays&&!absentDays)return [];
-    const detail='掃除の記録：対象 '+targetDays+'日中 '+selectedDays+'日を確認'+(absentDays?'（欠席 '+absentDays+'日）':'');
+    const detail='掃除の記録：対象 '+targetDays+'日、◎ '+doubleDays+'日・○ '+circleDays+'日、合計 '+points.toFixed(1)+'点'+(absentDays?'（欠席 '+absentDays+'日）':'');
     return [{id:'cleaning_report_'+classId+'_'+studentId+'_'+term.start+'_'+term.end,type:'cleaningDutySummary',classId,studentId,date:term.end,detail,updatedAt:term.end+'T23:59:59.999Z'}];
   }
