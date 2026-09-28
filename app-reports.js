@@ -141,15 +141,15 @@
 
   async function cleaningReportEntries(classId,studentId,term){
     const records=(await ClassDB.getAllByIndex('records','classId',classId)).filter(item=>item.type==='cleaningDutyDaily'&&['announcement','announced'].includes(item.phase)&&item.date>=term.start&&item.date<=term.end);
-    let targetDays=0,circleDays=0,doubleDays=0,absentDays=0,points=0;
+    let targetDays=0,circleDays=0,doubleDays=0,triangleDays=0,dashDays=0,dashExcludedDays=0,absentDays=0,points=0;
+    const history=(await ClassDB.getAllByIndex('records','classId',classId)).filter(item=>item.type==='cleaningDutyDaily');
     records.forEach(record=>{
       const group=(record.groups||[]).find(item=>(item.memberIds||[]).includes(studentId));
       if(!group)return;
       if((group.absentIds||[]).includes(studentId)){absentDays+=1;return;}
-      targetDays+=1;
-      const rating=cleaningRatingMap(group)[studentId];points+=cleaningRatingValue(rating);if(rating===CLEANING_RATING_DOUBLE)doubleDays+=1;if(rating===CLEANING_RATING_CIRCLE)circleDays+=1;
+      const rating=cleaningRatingMap(group)[studentId];if(rating===CLEANING_RATING_DASH){dashDays+=1;const weight=cleaningDashWeight(cleaningDashStreakBefore(record,studentId,history)+1);if(weight===null){dashExcludedDays+=1;return;}points+=weight;targetDays+=1;return;}targetDays+=1;points+=cleaningRatingValue(rating);if(rating===CLEANING_RATING_DOUBLE)doubleDays+=1;if(rating===CLEANING_RATING_CIRCLE)circleDays+=1;if(rating===CLEANING_RATING_TRIANGLE)triangleDays+=1;
     });
     if(!targetDays&&!absentDays)return [];
-    const detail='掃除の記録：対象 '+targetDays+'日、◎ '+doubleDays+'日・○ '+circleDays+'日、合計 '+points.toFixed(1)+'点'+(absentDays?'（欠席 '+absentDays+'日）':'');
+    const detail='掃除の記録：対象 '+targetDays+'日、◎ '+doubleDays+'日・○ '+circleDays+'日・△ '+triangleDays+'日・－ '+dashDays+'日（初回対象外 '+dashExcludedDays+'日）、合計 '+points.toFixed(1)+'点'+(absentDays?'（欠席 '+absentDays+'日）':'');
     return [{id:'cleaning_report_'+classId+'_'+studentId+'_'+term.start+'_'+term.end,type:'cleaningDutySummary',classId,studentId,date:term.end,detail,updatedAt:term.end+'T23:59:59.999Z'}];
   }
