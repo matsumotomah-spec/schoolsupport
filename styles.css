@@ -235,11 +235,11 @@ button[data-card-role]::before{grid-column:1/-1;justify-self:start}
 .student-card{min-height:96px;border:2px solid var(--line);border-radius:12px;background:var(--surface);color:var(--text);padding:10px;cursor:pointer;display:grid;place-items:center;text-align:center;position:relative;transition:background .18s,border-color .18s,transform .18s}
 .student-card strong{font-weight:600}
 .student-card .state{display:block;color:var(--muted);margin-top:5px;font-size:.85rem}
-.student-card.submitted{background:light-dark(#dcecf7,#153a56);border-color:light-dark(#0072b2,#62b6e4)}
-.student-card.forgotten{background:light-dark(#fce5d5,#5a2d16);border-color:light-dark(#d55e00,#ffad75)}
-.student-card.partialForgotten{background:light-dark(#fff0c5,#493b1d);border-color:light-dark(#b07b00,#e8bd58)}
-.student-card.absent{background:light-dark(#ece3f4,#403050);border-color:light-dark(#7b4b9c,#c9a9df)}
-.student-card.unsubmitted{background:light-dark(#ecefed,#252a28);border-color:light-dark(#8c9891,#66716b)}
+.student-card.attending,.student-card.submitted{background:light-dark(#d8f3e2,#153d2a);border-color:light-dark(#16804b,#69ce98)}
+.student-card.forgotten{background:light-dark(#ffe0e0,#562222);border-color:light-dark(#c62828,#ff8d8d)}
+.student-card.partialForgotten{background:light-dark(#fff0c2,#4d3911);border-color:light-dark(#b56a00,#efbd54)}
+.student-card.absent{background:light-dark(#e2e8ff,#2c335d);border-color:light-dark(#4f5fb3,#aab6ff)}
+.student-card.unsubmitted{background:light-dark(#edf0ee,#252a28);border-color:light-dark(#738078,#7e8b83)}
 .student-card.unconfirmed{border-style:dashed}
 .student-card.exchange-seat-only{background:var(--surface);border-color:var(--line);border-style:solid;cursor:default;opacity:1}
 .student-card.pupil-status-hidden{background:var(--surface);border-color:var(--line);border-style:solid}
@@ -266,17 +266,18 @@ button[data-card-role]::before{grid-column:1/-1;justify-self:start}
 .quiz-score-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(110px,.55fr);gap:8px;margin-top:9px}.quiz-score-actions .button{min-height:48px}
 #manual-quiz-form.quiz-picker-open #manual-quiz-roster{padding-bottom:min(350px,45dvh)}
 .student-card .state{min-width:82px;border-radius:999px;padding:4px 9px;font-weight:700}
-.student-card .state.submitted{color:light-dark(#073b5c,#d9f1ff);background:light-dark(#c7e3f5,#12405e)}
-.student-card .state.forgotten{color:light-dark(#7b3000,#fff0e6);background:light-dark(#f8cba9,#6d300f)}
-.student-card .state.partialForgotten{color:light-dark(#624500,#fff4c7);background:light-dark(#ffe39a,#594611)}
-.student-card .state.absent{color:light-dark(#51326c,#f0e8f7);background:light-dark(#dac7e8,#513d63)}
+.student-card .state.attending,.student-card .state.submitted{color:light-dark(#07552e,#e6fff0);background:light-dark(#bfe8ce,#205239)}
+.student-card .state.forgotten{color:light-dark(#831818,#ffecec);background:light-dark(#ffc4c4,#702b2b)}
+.student-card .state.partialForgotten{color:light-dark(#704300,#fff3c4);background:light-dark(#ffdc83,#604915)}
+.student-card .state.absent{color:light-dark(#303f91,#eef0ff);background:light-dark(#cbd4ff,#3b4679)}
 .student-card .state.unsubmitted{color:var(--text);background:var(--surface-2)}
 .student-card .state.unconfirmed{color:var(--muted);background:var(--surface-2)}
 .student-card.has-prior-forgotten{box-shadow:inset 0 0 0 3px var(--danger)}
 .prior-flag{display:block;margin-top:5px;padding:3px 7px;border-radius:10px;background:var(--danger);color:#fff;font-size:.76rem;font-weight:600}
 .summary-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;color:var(--muted)}
 .summary-row strong{color:var(--text)}
-.pupil-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.status-summary{justify-content:center;gap:8px}.status-summary>span{border:2px solid var(--line);border-radius:999px;padding:6px 11px;font-weight:700}.status-summary .summary-attending,.status-summary .summary-submitted{background:light-dark(#d8f3e2,#153d2a);border-color:light-dark(#16804b,#69ce98);color:light-dark(#07552e,#e6fff0)}.status-summary .summary-forgotten{background:light-dark(#ffe0e0,#562222);border-color:light-dark(#c62828,#ff8d8d);color:light-dark(#831818,#ffecec)}.status-summary .summary-partial{background:light-dark(#fff0c2,#4d3911);border-color:light-dark(#b56a00,#efbd54);color:light-dark(#704300,#fff3c4)}.status-summary .summary-absent{background:light-dark(#e2e8ff,#2c335d);border-color:light-dark(#4f5fb3,#aab6ff);color:light-dark(#303f91,#eef0ff)}.status-summary .summary-unsubmitted{background:var(--surface-2);border-color:light-dark(#738078,#7e8b83);color:var(--text)}
+.pupil-nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:14px}
 .pupil-nav button{min-width:0;min-height:48px;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--text);padding:8px;cursor:pointer;font-weight:600;white-space:normal;overflow-wrap:anywhere}
 .pupil-nav button[aria-selected="true"]{background:var(--class-color);border-color:var(--class-color);color:var(--class-text)}
 .pupil-date-row{display:grid;grid-template-columns:52px 1fr 52px;gap:10px;align-items:center;margin:4px 0 16px;text-align:center}
@@ -287,11 +288,12 @@ button[data-card-role]::before{grid-column:1/-1;justify-self:start}
 .pupil-current-date{text-align:center;font-size:1.35rem;font-weight:700;margin:4px 0 16px}
 .pupil-current-date span{display:block;color:var(--muted);font-size:.95rem;font-weight:500;margin-top:3px}
 .status-legend{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:-5px 0 14px}
-.status-legend span{border-radius:999px;padding:5px 10px;font-size:.82rem;font-weight:700;border:1px solid var(--line)}
-.legend-submitted{background:light-dark(#dcecf7,#153a56);color:light-dark(#073b5c,#d9f1ff);border-color:light-dark(#0072b2,#62b6e4)!important}
-.legend-forgotten{background:light-dark(#fce5d5,#5a2d16);color:light-dark(#7b3000,#fff0e6);border-color:light-dark(#d55e00,#ffad75)!important}
-.legend-partial{background:light-dark(#fff0c5,#493b1d);color:light-dark(#624500,#fff4c7);border-color:light-dark(#b07b00,#e8bd58)!important}
-.legend-absent{background:light-dark(#ece3f4,#403050);color:light-dark(#51326c,#f0e8f7);border-color:light-dark(#7b4b9c,#c9a9df)!important}
+.status-legend span{border-radius:999px;padding:5px 10px;font-size:.82rem;font-weight:700;border:2px solid var(--line)}
+.legend-attending,.legend-submitted{background:light-dark(#d8f3e2,#153d2a);color:light-dark(#07552e,#e6fff0);border-color:light-dark(#16804b,#69ce98)!important}
+.legend-forgotten{background:light-dark(#ffe0e0,#562222);color:light-dark(#831818,#ffecec);border-color:light-dark(#c62828,#ff8d8d)!important}
+.legend-partial{background:light-dark(#fff0c2,#4d3911);color:light-dark(#704300,#fff3c4);border-color:light-dark(#b56a00,#efbd54)!important}
+.legend-absent{background:light-dark(#e2e8ff,#2c335d);color:light-dark(#303f91,#eef0ff);border-color:light-dark(#4f5fb3,#aab6ff)!important}
+.pupil-attendance-head{text-align:center;margin-bottom:14px}.pupil-attendance-head>p{color:var(--muted);margin:-6px auto 14px;max-width:720px}.pupil-tap-order{text-align:center;color:var(--muted);font-weight:600;margin:-4px 0 14px}
 .daily-absence-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,112px),1fr));gap:8px;margin-top:14px;max-height:min(52vh,560px);overflow-y:auto;overflow-x:hidden;padding:3px;min-width:0}.daily-absence-seat{min-height:58px;display:grid;cursor:pointer;min-width:0}.daily-absence-seat input{position:absolute;opacity:0}.daily-absence-seat span{min-height:58px;display:flex;align-items:center;justify-content:center;gap:5px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);font-weight:700;transition:background .15s,border-color .15s,transform .15s;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.daily-absence-seat small{font-weight:600;color:var(--muted);flex:0 0 auto}.daily-absence-seat em{font-size:.68rem;font-style:normal;color:var(--muted)}.daily-absence-seat.exchange-seat-only{cursor:default;opacity:.72}.daily-absence-seat.exchange-seat-only span{flex-wrap:wrap;white-space:normal}.daily-absence-seat input:checked+span{background:light-dark(#e7edf1,#303c47);border-color:#718093;box-shadow:inset 0 0 0 1px #718093;transform:translateY(-1px)}.daily-absence-empty{min-height:58px;border-radius:10px;background:color-mix(in srgb,var(--surface-2) 55%,transparent)}
 .legend-unsubmitted,.legend-unconfirmed{background:var(--surface-2);color:var(--muted)}
 .pupil-overview-head{text-align:center;margin:4px 0 16px}.pupil-overview-head p{color:var(--muted);margin-bottom:0}
@@ -318,7 +320,7 @@ button[data-card-role]::before{grid-column:1/-1;justify-self:start}
 .weekly-renewal{border-left-color:var(--class-color)}
 .weekly-auto-forget-notice{border-left-color:var(--danger);background:color-mix(in srgb,var(--danger) 8%,var(--surface))}
 .just-updated{animation:status-confirm .5s ease-out}
-.feedback-submitted{--feedback-ring:#0072b2}.feedback-forgotten{--feedback-ring:#d55e00}.feedback-partialForgotten{--feedback-ring:#b07b00}.feedback-absent{--feedback-ring:#7b4b9c}.feedback-unsubmitted,.feedback-unconfirmed{--feedback-ring:#7d8882}
+.feedback-attending,.feedback-submitted{--feedback-ring:#16804b}.feedback-forgotten{--feedback-ring:#c62828}.feedback-partialForgotten{--feedback-ring:#b56a00}.feedback-absent{--feedback-ring:#4f5fb3}.feedback-unsubmitted,.feedback-unconfirmed{--feedback-ring:#738078}
 @keyframes status-confirm{0%{transform:scale(.96);box-shadow:0 0 0 0 color-mix(in srgb,var(--feedback-ring,var(--class-color)) 55%,transparent)}45%{transform:scale(1.025);box-shadow:0 0 0 7px color-mix(in srgb,var(--feedback-ring,var(--class-color)) 18%,transparent)}100%{transform:scale(1);box-shadow:0 0 0 0 transparent}}
 
 .teacher-student-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
@@ -794,4 +796,14 @@ button[data-card-role]::before{grid-column:1/-1;justify-self:start}
 .cleaning-week-list span{padding:.4rem .55rem;border:1px solid var(--line);border-radius:9px;font-size:.86rem}
 .cleaning-teacher-card>button{border:0;background:transparent;color:inherit;width:100%;text-align:left;padding:0 0 .35rem}
 .cleaning-teacher-card label{font-size:.85rem;color:var(--muted)}
+.cleaning-score-guide{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem .8rem;margin:.8rem 0;padding:.75rem .9rem;border:2px solid light-dark(#3a7d5a,#67b887);border-radius:12px;background:light-dark(#e7f5ec,#173528)}
+.cleaning-score-guide strong{color:light-dark(#185c39,#9ce0b5)}.cleaning-score-guide span{font-size:.86rem;color:var(--muted)}
+.cleaning-pupil-grid,.cleaning-teacher-grid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));align-items:start}
+.cleaning-pupil-card,.cleaning-teacher-card{padding:.7rem;border-width:2px;display:grid;gap:.6rem}
+.cleaning-assessment-name{display:grid;grid-template-columns:1fr auto;align-items:center;gap:.2rem .6rem}.cleaning-assessment-name strong{font-size:1.05rem}.cleaning-assessment-name>b{grid-column:2;grid-row:1 / span 2;min-width:2.3rem;min-height:2.3rem;display:grid;place-items:center;border-radius:50%;background:var(--soft);font-size:1.05rem}.cleaning-assessment-name span{font-size:.8rem;color:var(--muted)}
+.cleaning-criteria-list{display:grid;gap:.38rem}.cleaning-criteria-list button{display:grid;grid-template-columns:1.8rem 1fr;align-items:center;gap:.45rem;min-height:48px;padding:.42rem .55rem;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--text);text-align:left;cursor:pointer}.cleaning-criteria-list button>b{display:grid;place-items:center;width:1.65rem;height:1.65rem;border-radius:50%;background:var(--soft);color:var(--muted)}.cleaning-criteria-list button>span{font-size:.84rem;line-height:1.3}.cleaning-criteria-list button[aria-pressed=true]{border-color:light-dark(#21834f,#66c68e);background:light-dark(#dff4e7,#173e2a)}.cleaning-criteria-list button[aria-pressed=true]>b{background:light-dark(#21834f,#66c68e);color:#fff}.cleaning-criteria-list button[aria-pressed=true]>b::after{content:'✓';font-size:.8rem}.cleaning-criteria-list button[aria-pressed=true]>b{font-size:0}
+.cleaning-unavailable{min-height:44px;border:1px solid light-dark(#65799f,#8297c5);border-radius:9px;background:light-dark(#edf1f8,#252e42);color:var(--text);padding:.5rem;cursor:pointer}.cleaning-unavailable[aria-pressed=true]{border-width:2px;background:light-dark(#d9e3f5,#303d60);font-weight:800}
+.cleaning-pupil-card.assessment-count-3,.cleaning-teacher-card.assessment-count-3{border-color:light-dark(#31805a,#67bd8a);background:light-dark(#eff9f3,#142f23)}.cleaning-pupil-card.assessment-count-4,.cleaning-teacher-card.assessment-count-4{border-color:light-dark(#16734a,#83d7a5);background:light-dark(#ddf4e6,#143a27)}.cleaning-pupil-card.assessment-unavailable,.cleaning-teacher-card.assessment-unavailable{border-color:light-dark(#65799f,#8297c5);background:light-dark(#edf1f8,#252e42)}
+.cleaning-score-controls{display:grid;grid-template-columns:minmax(220px,1fr) repeat(2,minmax(170px,.7fr));gap:.8rem;align-items:end;margin-top:1rem;padding:1rem;border:2px solid var(--action);border-radius:14px;background:var(--soft)}.cleaning-score-controls h3,.cleaning-score-controls p{margin:0}.cleaning-score-controls label{display:grid;gap:.3rem;font-weight:700}.cleaning-score-controls label span{font-size:.76rem;color:var(--muted);font-weight:400}
 @media(max-width:700px){.cleaning-setup-grid{grid-template-columns:1fr}.cleaning-pupil-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.cleaning-result-summary{align-items:flex-start;flex-direction:column}}
+@media(max-width:700px){.cleaning-pupil-grid,.cleaning-teacher-grid{grid-template-columns:1fr}.cleaning-score-controls{grid-template-columns:1fr}.cleaning-criteria-list button>span{font-size:.9rem}}
