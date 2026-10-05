@@ -146,6 +146,14 @@
     return value;
   }
 
+  async function setMetaMany(values={}){
+    const entries=Object.entries(values);
+    if(!entries.length)return values;
+    const timestamp=now(),currentDeviceId=deviceId();
+    await applyBatch({puts:{meta:entries.map(([key,value])=>({key,value,updatedAt:timestamp,deviceId:currentDeviceId}))}});
+    return values;
+  }
+
   async function resetAll(){
     await applyBatch({clear:STORES});
   }
@@ -192,5 +200,5 @@
     await applyBatch({puts:incoming,deletes:{years:[yearId].filter(id=>!ids('years').has(id)),classes:remove('classes',classes),enrollments:remove('enrollments',enrollments),records:remove('records',records),trash:remove('trash',trash),students:deletableStudents.filter(id=>!ids('students').has(id)),meta:staleYearMeta}});
   }
 
-  window.ClassDB={open,uid,now,deviceId,get,getAll,getAllByIndex,put,putMany,putRaw,putManyRaw,remove,getMeta,setMeta,applyBatch,replaceAllRaw,replaceYearRaw,resetAll};
+  window.ClassDB={open,uid,now,deviceId,get,getAll,getAllByIndex,put,putMany,putRaw,putManyRaw,remove,getMeta,setMeta,setMetaMany,applyBatch,replaceAllRaw,replaceYearRaw,resetAll};
 })();

@@ -8,9 +8,15 @@
   const PIN_LENGTH=6;
   const PIN_MAX_FAILURES=5;
   const PIN_LOCK_MS=30*1000;
-  const APP_VERSION='153';
-  const APP_UPDATED_AT='2026-10-03';
+  const APP_VERSION='158';
+  const APP_UPDATED_AT='2026-10-05';
   const PIN_ATTEMPT_KEY='classSupportPinAttemptsV1';
+  const CLEANING_DRAFT_KEY_PREFIX='classSupportCleaningDraftV1:';
+  const CLEANING_DRAFT_MAX_BYTES=200000;
+  const CLEANING_DRAFT_TTL_MS=7*24*60*60*1000;
+  const MANUAL_QUIZ_DRAFT_KEY_PREFIX='classSupportManualQuizDraftV1:';
+  const MANUAL_QUIZ_DRAFT_MAX_BYTES=100000;
+  const MANUAL_QUIZ_DRAFT_TTL_MS=7*24*60*60*1000;
   const COLORS=['#d85b5b','#ef9fb4','#4e78b8','#9adfe8','#efd66e','#397257','#7651a8'];
   const SUBJECTS=['国語','算数','理科','社会','生活','音楽','図画工作','家庭','体育','外国語','道徳','総合','自立活動'];
   const SUPPORT_TAGS={
@@ -50,6 +56,8 @@
     classSettingsView:'list',
     rosterDraft:[],
     rosterLoadedForClassId:null,
+    rosterCache:new Map(),
+    cleaningHistoryCache:new Map(),
     activeTool:null,
     toolDraft:{},
     pupilTool:'all',
@@ -100,12 +108,62 @@
   }
   function hasUnsavedDraft(){return rosterDraftIsDirty()||state.drafts.forms.size>0;}
   function clearUnsavedDrafts(){markRosterDraftDirty(false);state.drafts.forms.clear();}
+  function cleaningDraftStorageKey(yearId=state.year?.id,classId=state.selectedClassId){return yearId&&classId?`${CLEANING_DRAFT_KEY_PREFIX}${yearId}:${classId}`:'';}
+  function clearRecoverableCleaningDraft(yearId=state.year?.id,classId=state.selectedClassId){const key=cleaningDraftStorageKey(yearId,classId);if(!key)return;try{localStorage.removeItem(key);}catch{}}
+  function persistRecoverableCleaningDraft(draft){
+    const key=cleaningDraftStorageKey(),dailyId=draft?.id,date=draft?.date;
+    if(!key||!dailyId||!date)return false;
+    try{
+      const savedAt=Date.now(),payload=JSON.stringify({version:1,yearId:state.year.id,classId:state.selectedClassId,dailyId,date,savedAt,expiresAt:savedAt+CLEANING_DRAFT_TTL_MS,draft});
+      if(new TextEncoder().encode(payload).byteLength>CLEANING_DRAFT_MAX_BYTES)return false;
+      localStorage.setItem(key,payload);return true;
+    }catch{return false;}
+  }
+  function restoreRecoverableCleaningDraft(){
+    const key=cleaningDraftStorageKey();if(!key)return null;
+    try{
+      const raw=localStorage.getItem(key);if(!raw)return null;
+      if(new TextEncoder().encode(raw).byteLength>CLEANING_DRAFT_MAX_BYTES){localStorage.removeItem(key);return null;}
+      const saved=JSON.parse(raw),valid=saved?.version===1&&saved.yearId===state.year?.id&&saved.classId===state.selectedClassId&&saved.dailyId&&saved.date&&saved.draft?.id===saved.dailyId&&saved.draft?.date===saved.date&&Array.isArray(saved.draft?.groups)&&Number(saved.expiresAt)>Date.now();
+      if(!valid){localStorage.removeItem(key);return null;}
+      state.toolDraft.cleaningTeacherEdit=saved.draft;state.toolDraft.cleaningTeacherEditDirty=true;state.drafts.forms.add('cleaning-edit-form');return saved.draft;
+    }catch{try{localStorage.removeItem(key);}catch{}return null;}
+  }
+  function discardRecoverableCleaningDraft(){if(!state.toolDraft?.cleaningTeacherEdit)return;clearRecoverableCleaningDraft();state.drafts.forms.delete('cleaning-edit-form');state.toolDraft.cleaningTeacherEdit=null;state.toolDraft.cleaningTeacherEditDirty=false;}
+  function manualQuizDraftStorageKey(yearId=state.year?.id,classId=state.selectedClassId){return yearId&&classId?`${MANUAL_QUIZ_DRAFT_KEY_PREFIX}${yearId}:${classId}`:'';}
+  function clearRecoverableManualQuizDraft(yearId=state.year?.id,classId=state.selectedClassId){const key=manualQuizDraftStorageKey(yearId,classId);if(!key)return;try{localStorage.removeItem(key);}catch{}}
+  function normalizeManualQuizDraft(draft){
+    const scores=Object.fromEntries(Object.entries(draft?.scores||{}).filter(([studentId,point])=>studentId&&Number.isFinite(point)&&point>=0&&point<=100).map(([studentId,point])=>[studentId,Math.round(point)]));
+    return{kind:draft?.kind==='calculation'?'calculation':'kanji',date:typeof draft?.date==='string'?draft.date:'',title:typeof draft?.title==='string'?draft.title.slice(0,200):'',orderMode:draft?.orderMode==='number'?'number':'seat',inputMode:draft?.inputMode==='direct'?'direct':'buttons',sourceTestId:typeof draft?.sourceTestId==='string'?draft.sourceTestId:'',scores};
+  }
+  function persistRecoverableManualQuizDraft(draft){
+    const key=manualQuizDraftStorageKey(),normalized=normalizeManualQuizDraft(draft);if(!key||!normalized.date)return false;
+    try{const savedAt=Date.now(),payload=JSON.stringify({version:1,yearId:state.year.id,classId:state.selectedClassId,savedAt,expiresAt:savedAt+MANUAL_QUIZ_DRAFT_TTL_MS,draft:normalized});if(new TextEncoder().encode(payload).byteLength>MANUAL_QUIZ_DRAFT_MAX_BYTES)return false;localStorage.setItem(key,payload);return true;}catch{return false;}
+  }
+  function restoreRecoverableManualQuizDraft(){
+    const key=manualQuizDraftStorageKey();if(!key)return null;
+    try{const raw=localStorage.getItem(key);if(!raw)return null;if(new TextEncoder().encode(raw).byteLength>MANUAL_QUIZ_DRAFT_MAX_BYTES){localStorage.removeItem(key);return null;}const saved=JSON.parse(raw),draft=normalizeManualQuizDraft(saved?.draft),valid=saved?.version===1&&saved.yearId===state.year?.id&&saved.classId===state.selectedClassId&&Number(saved.expiresAt)>Date.now()&&draft.date;if(!valid){localStorage.removeItem(key);return null;}return draft;}catch{try{localStorage.removeItem(key);}catch{}return null;}
+  }
+  function discardRecoverableManualQuizDraft(){clearRecoverableManualQuizDraft();state.drafts.forms.delete('manual-quiz-form');}
   function normalRecord(item){return Boolean(item&&!item.needsReview&&!item.deletedAt);}
-  async function navigateSafely(action){if(rosterDraftIsDirty()&&state.route==='teacher-settings'&&state.settingsTab==='classes'&&state.classSettingsView==='roster'){const saved=await saveRoster({silent:true,rerender:false});if(!saved)return;action();return;}if(hasUnsavedDraft()&&!window.confirm('入力中の変更が保存されていません。移動しますか？'))return;clearUnsavedDrafts();action();}
+  function dailyHomeworkId(classId,date,studentId){return `daily_${classId}_${date}_${studentId}`;}
+  function legacyImportedDailyHomeworkId(classId,date,studentId){return `dailyHomework_${classId}_${date}_${studentId}`;}
+  function attendanceDailyId(classId,date,studentId){return `attendance_${classId}_${date}_${studentId}`;}
+  const SUBMISSION_STATUS_SCOPES={
+    submitted:new Set(['daily','weekly','occasional']),
+    forgotten:new Set(['daily','weekly']),
+    partialForgotten:new Set(['daily']),
+    absent:new Set(['daily','weekly','occasional']),
+    unconfirmed:new Set(['daily']),
+    unsubmitted:new Set(['weekly','occasional'])
+  };
+  function submissionStatusAllowed(status,type){return Boolean(SUBMISSION_STATUS_SCOPES[status]?.has(type));}
+  async function navigateSafely(action){if(rosterDraftIsDirty()&&state.route==='teacher-settings'&&state.settingsTab==='classes'&&state.classSettingsView==='roster'){const saved=await saveRoster({silent:true,rerender:false});if(!saved)return;action();return;}if(hasUnsavedDraft()&&!window.confirm('入力中の変更が保存されていません。移動しますか？'))return;if(hasUnsavedDraft()){discardRecoverableCleaningDraft();discardRecoverableManualQuizDraft();}clearUnsavedDrafts();action();}
 
   const HELP_TOPICS={
     home:['教師用ホーム','操作するクラスを選び、今日使う機能を開きます。「要対応○人」は確認が必要な児童数です。','児童に渡すときは、画面下の「児童用の提出画面」を押してください。',['最初に上部の「操作中」で現在のクラスを確認します。','大きい機能ボタン、または画面下部の機能名を押します。','週の初めに案内が出たら、今週分の週宿題を作るか選びます。']],
-    daily:['毎日の宿題','その日の提出状況と、今週の未解決の忘れ物を確認します。','教師用では、児童名を押すたびに提出→忘れた→欠席→未提出の順で切り替わります。',['児童用では、提出→忘れた→一部忘れた→未確認の順です。','一部忘れたは月間0.5回として集計し、達成アイコンの対象外になります。','児童詳細の「宿題・提出物」から、児童用画面で個別に状態を隠せます。']],
+    daily:['毎日の宿題','その日の提出状況と、今週の未解決の忘れ物を確認します。','教師用では、児童名を押すたびに提出→忘れた→未確認の順で切り替わります。欠席は出欠タブまたは欠席の一括設定で記録します。',['児童用では、提出→忘れた→一部忘れた→未確認の順です。','一部忘れたは月間0.5回として集計し、達成アイコンの対象外になります。','児童詳細の「宿題・提出物」から、児童用画面で個別に状態を隠せます。']],
+    cleaning:['掃除の記録','班ごとの入力を確認し、先生が得点を確定してから児童用の発表画面を開きます。','班を設定済みなら「今日の入力を開始」を押し、児童用の掃除入力を開きます。',['班の代表が各班の入力を確定したら、先生画面へ戻ります。','すべての班が確認済みになったら「結果を確定する」を押します。','必要なら先生が修正してから、日直にiPadを渡して発表します。']],
     weekly:['週宿題','毎週または今週限りの宿題を作り、提出状況を記録します。','児童名を押すたびに、提出→忘れた→未提出の順で切り替わります。',['「毎週」にしても年度末まで一括作成しません。','次の月曜日以降に案内が出たら「今週分を作る」を押します。','土曜日の自動忘れを設定すると、金曜日までに未提出の児童を自動で「忘れた」にします。設定した日数以上の欠席児童は免除されます。']],
     records:['児童の記録','児童メモと行動の○を、同じ入口から記録・集計します。','一般級はカテゴリーを選んでから児童を押します。個別支援級は児童を選び、メモと行動の○をまとめて記録します。',['行動の○は、見つけたよい姿の記録です。○がない日は、できなかったという意味ではありません。','期間集計では、記録した○の件数を通知表作成時の材料として確認できます。']],
     memo:['児童メモ','児童を選び、教科とプラス評価タグを選ぶだけで保存できます。','個別支援級では、今期にメモがない教科を上部に表示します。'],
@@ -125,7 +183,6 @@
 
   function esc(value){return String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));}
   function friendlyTerms(value){return String(value??'').replaceAll('緊急復旧コード','__RECOVERY_CODE__').replaceAll('新年度パスワード','新しいデータ保護パスワード').replaceAll('年度パスワード','データ保護パスワード').replaceAll('教師用PIN','教師画面PIN').replaceAll('復旧コード','緊急復旧コード').replaceAll('__RECOVERY_CODE__','緊急復旧コード').replaceAll('月1回のバックアップ','必要なときのバックアップ').replaceAll('月に1回は','必要なときは').replaceAll('端末を替えるとき・月1回','端末を替えるとき・必要なとき').replaceAll('以前のデータを戻したい場合','保存したデータから再開する場合').replaceAll('保存したバックアップから戻す','保存したバックアップから再開').replaceAll('入力候補・タグ','メモ・賞状の選択肢').replaceAll('机約1列分の余白','氏名欄の約半分幅');}
-  function applyFriendlyTerms(root){if(!root)return;const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);nodes.forEach(node=>{const changed=friendlyTerms(node.nodeValue);if(changed!==node.nodeValue)node.nodeValue=changed;});root.querySelectorAll?.('[title],[aria-label],[placeholder]').forEach(element=>['title','aria-label','placeholder'].forEach(name=>{if(element.hasAttribute(name))element.setAttribute(name,friendlyTerms(element.getAttribute(name)));}));const daily=root.querySelector?.('.daily-guide');if(daily){const dailyWalker=document.createTreeWalker(daily,NodeFilter.SHOW_TEXT),dailyNodes=[];while(dailyWalker.nextNode())dailyNodes.push(dailyWalker.currentNode);dailyNodes.forEach(node=>{node.nodeValue=node.nodeValue.replaceAll('未確認','未提出');});}}
   function today(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
   function schoolYear(){const d=new Date();return d.getMonth()>=3?d.getFullYear():d.getFullYear()-1;}
   function yearNumberOf(year){const direct=Number(year?.yearNumber);if(Number.isFinite(direct)&&direct>0)return direct;const match=String(year?.label||'').match(/\d{4}/);return match?Number(match[0]):0;}
@@ -200,6 +257,8 @@
     if(!window.crypto?.subtle)throw new Error('暗号化機能を利用できません。GitHub PagesのURL（https://）から開いてください。');
     await ClassDB.open();
     await purgeExpiredTrash();
+    await reconcileLegacyDailyHomeworkIds();
+    await migrateAttendanceRecordsV155();
     state.theme=await ClassDB.getMeta('themePreference',window.matchMedia?.('(prefers-color-scheme: dark)').matches?'dark':'light');
     state.iconMode=await ClassDB.getMeta('featureIconMode','standard');
     state.emojiIcons={...DEFAULT_EMOJI_ICONS,...await ClassDB.getMeta('featureEmojiIcons',{})};
@@ -232,6 +291,7 @@
     state.selectedClassId=await ClassDB.getMeta('selectedClassId',state.classes[0]?.id||null);
     state.lastBackupAt=await ClassDB.getMeta('lastBackupAt',null);state.lastSyncAt=await ClassDB.getMeta('lastSyncAt',null);state.backupDismissedUntil=await ClassDB.getMeta('backupDismissedUntil',null);
     if(!state.classes.some(item=>item.id===state.selectedClassId))state.selectedClassId=state.classes[0]?.id||null;
+    restoreRecoverableCleaningDraft();
     // Shared/touch devices always restart in the pupil-safe screen.  A teacher
     // opens the teacher area explicitly and authenticates from there.  Keep
     // the opt-in desktop-only PIN bypass behavior for staff-room PCs.
@@ -380,6 +440,9 @@
   function downloadText(name,text){name=friendlyTerms(name);text=friendlyTerms(text);const type=/\.json$/i.test(name)?'application/json;charset=utf-8':'text/plain;charset=utf-8',blob=new Blob([text],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   function downloadCsv(name,text){const blob=new Blob([text],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   async function runOnce(button,operation){if(!button||button.dataset.busy==='true')return;button.dataset.busy='true';button.disabled=true;button.setAttribute('aria-busy','true');try{return await operation();}catch(error){console.error(error);showToast('保存できませんでした。もう一度お試しください');return undefined;}finally{button.disabled=false;button.dataset.busy='false';button.removeAttribute('aria-busy');}}
+  const SAVE_OPERATION_LABELS={saved:'保存済み',dirty:'変更あり',saving:'保存中…',failed:'保存失敗'};
+  function saveOperationStatusHtml(id,state='saved'){const safeState=SAVE_OPERATION_LABELS[state]?state:'saved';return`<span class="operation-save-status" id="${esc(id)}" data-save-state="${safeState}" role="status" aria-live="polite">${SAVE_OPERATION_LABELS[safeState]}</span>`;}
+  function setSaveOperationStatus(id,state){const target=document.getElementById(id),safeState=SAVE_OPERATION_LABELS[state]?state:'saved';if(!target)return;target.dataset.saveState=safeState;target.textContent=SAVE_OPERATION_LABELS[safeState];}
 
   function isDesktopDevice(){const ua=String(navigator.userAgent||'');return !/Android|iPhone|iPad|iPod|Mobile/i.test(ua)&&Number(navigator.maxTouchPoints||0)===0;}
   function pcPinlessEligible(){return Boolean(state.pcPinlessMode&&isDesktopDevice());}
@@ -388,7 +451,7 @@
   function sensitiveDraftForm(form){return Boolean(form?.querySelector('input[type="password"],.pin-input,[id*="password" i],[id*="credential" i],[id*="recovery" i],[id*="secret" i]'));}
   function preserveLockedDialog(){const form=dialog.querySelector('form');if(!form||!state.drafts.forms.has(formDraftKey(form))||sensitiveDraftForm(form))return false;const nodes=[];while(dialog.firstChild)nodes.push(dialog.removeChild(dialog.firstChild));state.lockedDialogNodes=nodes;return nodes.length>0;}
   function restoreLockedDialog(){if(!state.lockedDialogNodes?.length)return false;dialog.innerHTML='';state.lockedDialogNodes.forEach(node=>dialog.appendChild(node));state.lockedDialogNodes=null;dialog.showModal();return true;}
-  function lockTeacherSession(){const preserved=preserveLockedDialog();state.sessionSecret=null;state.pendingSync=null;if(!preserved)clearUnsavedDrafts();closeDialog({keepContents:preserved});if(state.route.startsWith('teacher'))renderPupil();}
+  function lockTeacherSession(){const preserved=preserveLockedDialog(),recoverableCleaningDraft=Boolean(state.toolDraft?.cleaningTeacherEdit);state.sessionSecret=null;state.pendingSync=null;if(!preserved&&!recoverableCleaningDraft)clearUnsavedDrafts();closeDialog({keepContents:preserved});if(state.route.startsWith('teacher'))renderPupil();}
   function scheduleLock(){clearTimeout(state.lockTimer);const wait=Math.max(0,state.teacherUntil-Date.now());state.lockTimer=setTimeout(()=>{if(pcPinlessEligible()&&state.route.startsWith('teacher')){state.teacherUntil=Date.now()+AUTH_MS;scheduleLock();return;}lockTeacherSession();},wait);}
   function touchTeacher(){if(!state.route.startsWith('teacher')||!teacherActive())return;state.teacherUntil=Date.now()+AUTH_MS;scheduleLock();}
   document.addEventListener('pointerdown',touchTeacher,{passive:true});
