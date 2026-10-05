@@ -8,7 +8,7 @@
   const PIN_LENGTH=6;
   const PIN_MAX_FAILURES=5;
   const PIN_LOCK_MS=30*1000;
-  const APP_VERSION='161';
+  const APP_VERSION='163';
   const APP_UPDATED_AT='2026-10-05';
   const PIN_ATTEMPT_KEY='classSupportPinAttemptsV1';
   const CLEANING_DRAFT_KEY_PREFIX='classSupportCleaningDraftV1:';

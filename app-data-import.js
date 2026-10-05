@@ -25,6 +25,7 @@
     if(!payload.data||typeof payload.data!=='object'||Array.isArray(payload.data))throw new Error('保存データの本体がありません');
     const stores=['years','classes','students','enrollments','records','trash','meta'];let total=0;
     for(const store of stores){const items=payload.data[store];if(!Array.isArray(items))throw new Error(`${store}のデータ形式が正しくありません`);total+=items.length;if(total>200000)throw new Error('保存件数が多すぎるため読み込めません');const key=store==='meta'?'key':'id',seen=new Set();for(const item of items){if(!item||typeof item!=='object'||Array.isArray(item)||typeof item[key]!=='string'||!item[key])throw new Error(`${store}に識別情報のないデータがあります`);if(seen.has(item[key]))throw new Error(`${store}に同じ識別情報が重複しています`);seen.add(item[key]);for(const unsafe of ['__proto__','prototype','constructor'])if(Object.prototype.hasOwnProperty.call(item,unsafe))throw new Error(`${store}に安全でない項目があります`);}}
+    const dailyOnly=['daily-records','daily-delta'].includes(payload.syncScope);if(dailyOnly)return payload;
     const yearIds=new Set(payload.data.years.map(item=>item.id)),classIds=new Set(payload.data.classes.map(item=>item.id)),studentIds=new Set(payload.data.students.map(item=>item.id)),enrollmentKeys=new Set(payload.data.enrollments.map(item=>`${item.classId}|${item.studentId}`));
     if(!yearIds.has(payload.yearId))throw new Error('対象年度と年度データが一致しません');
     for(const item of payload.data.classes)if(!yearIds.has(item.yearId))throw new Error('所属年度が不明なクラスがあります');

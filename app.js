@@ -1,6 +1,6 @@
 "use strict";
 
-  if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=161',{updateViaCache:'none'}).then(registration=>registration.update()).catch(()=>{}));
+  if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=163',{updateViaCache:'none'}).then(registration=>registration.update()).catch(()=>{}));
   const updateVisualViewportInset=()=>{
     const viewport=window.visualViewport;
     const layoutHeight=Math.max(window.innerHeight||0,document.documentElement?.clientHeight||0);
