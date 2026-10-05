@@ -8,7 +8,7 @@
   const PIN_LENGTH=6;
   const PIN_MAX_FAILURES=5;
   const PIN_LOCK_MS=30*1000;
-  const APP_VERSION='158';
+  const APP_VERSION='161';
   const APP_UPDATED_AT='2026-10-05';
   const PIN_ATTEMPT_KEY='classSupportPinAttemptsV1';
   const CLEANING_DRAFT_KEY_PREFIX='classSupportCleaningDraftV1:';
@@ -17,6 +17,9 @@
   const MANUAL_QUIZ_DRAFT_KEY_PREFIX='classSupportManualQuizDraftV1:';
   const MANUAL_QUIZ_DRAFT_MAX_BYTES=100000;
   const MANUAL_QUIZ_DRAFT_TTL_MS=7*24*60*60*1000;
+  const WEEKLY_CREATOR_DRAFT_KEY_PREFIX='classSupportWeeklyCreatorDraftV1:';
+  const WEEKLY_CREATOR_DRAFT_MAX_BYTES=20000;
+  const WEEKLY_CREATOR_DRAFT_TTL_MS=7*24*60*60*1000;
   const COLORS=['#d85b5b','#ef9fb4','#4e78b8','#9adfe8','#efd66e','#397257','#7651a8'];
   const SUBJECTS=['国語','算数','理科','社会','生活','音楽','図画工作','家庭','体育','外国語','道徳','総合','自立活動'];
   const SUPPORT_TAGS={
@@ -145,6 +148,12 @@
     try{const raw=localStorage.getItem(key);if(!raw)return null;if(new TextEncoder().encode(raw).byteLength>MANUAL_QUIZ_DRAFT_MAX_BYTES){localStorage.removeItem(key);return null;}const saved=JSON.parse(raw),draft=normalizeManualQuizDraft(saved?.draft),valid=saved?.version===1&&saved.yearId===state.year?.id&&saved.classId===state.selectedClassId&&Number(saved.expiresAt)>Date.now()&&draft.date;if(!valid){localStorage.removeItem(key);return null;}return draft;}catch{try{localStorage.removeItem(key);}catch{}return null;}
   }
   function discardRecoverableManualQuizDraft(){clearRecoverableManualQuizDraft();state.drafts.forms.delete('manual-quiz-form');}
+  function weeklyCreatorDraftStorageKey(yearId=state.year?.id,classId=state.selectedClassId){return yearId&&classId?`${WEEKLY_CREATOR_DRAFT_KEY_PREFIX}${yearId}:${classId}`:'';}
+  function clearRecoverableWeeklyCreatorDraft(yearId=state.year?.id,classId=state.selectedClassId){const key=weeklyCreatorDraftStorageKey(yearId,classId);if(!key)return;try{localStorage.removeItem(key);}catch{}}
+  function normalizeWeeklyCreatorDraft(draft){return{title:typeof draft?.title==='string'?draft.title.slice(0,120):'',dueDate:/^\d{4}-\d{2}-\d{2}$/.test(draft?.dueDate||'')?draft.dueDate:'',recurring:draft?.recurring!==false};}
+  function persistRecoverableWeeklyCreatorDraft(draft){const key=weeklyCreatorDraftStorageKey(),normalized=normalizeWeeklyCreatorDraft(draft);if(!key||!normalized.dueDate)return false;try{const savedAt=Date.now(),payload=JSON.stringify({version:1,yearId:state.year.id,classId:state.selectedClassId,savedAt,expiresAt:savedAt+WEEKLY_CREATOR_DRAFT_TTL_MS,draft:normalized});if(new TextEncoder().encode(payload).byteLength>WEEKLY_CREATOR_DRAFT_MAX_BYTES)return false;localStorage.setItem(key,payload);return true;}catch{return false;}}
+  function restoreRecoverableWeeklyCreatorDraft(){const key=weeklyCreatorDraftStorageKey();if(!key)return null;try{const raw=localStorage.getItem(key);if(!raw)return null;if(new TextEncoder().encode(raw).byteLength>WEEKLY_CREATOR_DRAFT_MAX_BYTES){localStorage.removeItem(key);return null;}const saved=JSON.parse(raw),draft=normalizeWeeklyCreatorDraft(saved?.draft),valid=saved?.version===1&&saved.yearId===state.year?.id&&saved.classId===state.selectedClassId&&Number(saved.expiresAt)>Date.now()&&draft.dueDate;if(!valid){localStorage.removeItem(key);return null;}return draft;}catch{try{localStorage.removeItem(key);}catch{}return null;}}
+  function discardRecoverableWeeklyCreatorDraft(){clearRecoverableWeeklyCreatorDraft();state.drafts.forms.delete('weekly-create-form');}
   function normalRecord(item){return Boolean(item&&!item.needsReview&&!item.deletedAt);}
   function dailyHomeworkId(classId,date,studentId){return `daily_${classId}_${date}_${studentId}`;}
   function legacyImportedDailyHomeworkId(classId,date,studentId){return `dailyHomework_${classId}_${date}_${studentId}`;}
@@ -158,7 +167,7 @@
     unsubmitted:new Set(['weekly','occasional'])
   };
   function submissionStatusAllowed(status,type){return Boolean(SUBMISSION_STATUS_SCOPES[status]?.has(type));}
-  async function navigateSafely(action){if(rosterDraftIsDirty()&&state.route==='teacher-settings'&&state.settingsTab==='classes'&&state.classSettingsView==='roster'){const saved=await saveRoster({silent:true,rerender:false});if(!saved)return;action();return;}if(hasUnsavedDraft()&&!window.confirm('入力中の変更が保存されていません。移動しますか？'))return;if(hasUnsavedDraft()){discardRecoverableCleaningDraft();discardRecoverableManualQuizDraft();}clearUnsavedDrafts();action();}
+  async function navigateSafely(action){if(rosterDraftIsDirty()&&state.route==='teacher-settings'&&state.settingsTab==='classes'&&state.classSettingsView==='roster'){const saved=await saveRoster({silent:true,rerender:false});if(!saved)return;action();return;}if(hasUnsavedDraft()&&!window.confirm('入力中の変更が保存されていません。移動しますか？'))return;if(hasUnsavedDraft()){discardRecoverableCleaningDraft();discardRecoverableManualQuizDraft();discardRecoverableWeeklyCreatorDraft();}clearUnsavedDrafts();action();}
 
   const HELP_TOPICS={
     home:['教師用ホーム','操作するクラスを選び、今日使う機能を開きます。「要対応○人」は確認が必要な児童数です。','児童に渡すときは、画面下の「児童用の提出画面」を押してください。',['最初に上部の「操作中」で現在のクラスを確認します。','大きい機能ボタン、または画面下部の機能名を押します。','週の初めに案内が出たら、今週分の週宿題を作るか選びます。']],

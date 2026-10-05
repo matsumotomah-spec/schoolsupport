@@ -1,6 +1,15 @@
 "use strict";
 
-  if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=158',{updateViaCache:'none'}).then(registration=>registration.update()).catch(()=>{}));
+  if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js?v=161',{updateViaCache:'none'}).then(registration=>registration.update()).catch(()=>{}));
+  const updateVisualViewportInset=()=>{
+    const viewport=window.visualViewport;
+    const layoutHeight=Math.max(window.innerHeight||0,document.documentElement?.clientHeight||0);
+    const inset=viewport?Math.max(0,Math.round(layoutHeight-viewport.height-viewport.offsetTop)):0;
+    document.documentElement.style.setProperty('--visual-viewport-inset',`${inset}px`);
+  };
+  updateVisualViewportInset();
+  if(window.visualViewport){window.visualViewport.addEventListener('resize',updateVisualViewportInset);window.visualViewport.addEventListener('scroll',updateVisualViewportInset);}
+  window.addEventListener('resize',updateVisualViewportInset);
   window.addEventListener('error',event=>{console.error(event.error||event.message);showToast('画面処理でエラーが発生しました');});
   window.addEventListener('unhandledrejection',event=>{console.error(event.reason);showToast('保存処理を完了できませんでした。もう一度お試しください');});
   window.addEventListener('online',()=>{updateConnectionStatus();showToast('オンラインに戻りました');});

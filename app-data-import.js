@@ -1,6 +1,7 @@
 "use strict";
 
   const MAX_IMPORT_BYTES=25*1024*1024;
+  const MAX_DECOMPRESSED_IMPORT_BYTES=64*1024*1024;
 
   async function readImportText(file,label='ファイル'){
     if(!file)throw new Error(`${label}を選択してください`);
@@ -10,9 +11,10 @@
 
   function validateEncryptedEnvelope(envelope){
     if(!envelope||typeof envelope!=='object'||Array.isArray(envelope))throw new Error('暗号化ファイルの形式が正しくありません');
-    if(envelope.format!=='class-support-encrypted'||![1,2].includes(Number(envelope.version)))throw new Error('対応していない暗号化ファイルです');
+    if(envelope.format!=='class-support-encrypted'||![1,2,3].includes(Number(envelope.version)))throw new Error('対応していない暗号化ファイルです');
     if(!envelope.crypto||typeof envelope.crypto!=='object'||typeof envelope.ciphertext!=='string'||!envelope.ciphertext)throw new Error('暗号化データが不足しています');
     if(envelope.ciphertext.length>MAX_IMPORT_BYTES*2)throw new Error('暗号化データが大きすぎます');
+    if(Number(envelope.version)===3&&(!envelope.compression||envelope.compression.algorithm!=='gzip'||!Number.isInteger(envelope.compression.originalBytes)||envelope.compression.originalBytes<1||envelope.compression.originalBytes>MAX_DECOMPRESSED_IMPORT_BYTES))throw new Error('圧縮情報が正しくありません');
     return envelope;
   }
 
